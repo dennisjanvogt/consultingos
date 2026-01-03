@@ -1,6 +1,6 @@
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = import.meta.env.VITE_AI_MODEL || 'google/gemini-2.0-flash-001'
+const MODEL = import.meta.env.VITE_AI_MODEL || 'google/gemini-3-flash-preview'
 
 export interface Tool {
   type: 'function'
