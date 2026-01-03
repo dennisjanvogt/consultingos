@@ -1,0 +1,27 @@
+from ninja import NinjaAPI
+from ninja.security import django_auth
+
+api = NinjaAPI(
+    title='ConsultingOS API',
+    version='1.0.0',
+)
+
+# Import routers from apps
+from apps.users.api import router as users_router
+from apps.customers.api import router as customers_router
+from apps.invoices.api import router as invoices_router
+from apps.company_settings.api import router as settings_router
+from apps.documents.api import router as documents_router
+from apps.calendar.api import router as calendar_router
+from apps.kanban.api import router as kanban_router
+from apps.timetracking.api import router as timetracking_router
+
+# Register routers
+api.add_router('/auth/', users_router, tags=['Auth'])
+api.add_router('/customers/', customers_router, tags=['Customers'])
+api.add_router('/invoices/', invoices_router, tags=['Invoices'])
+api.add_router('/settings/', settings_router, tags=['Settings'])
+api.add_router('/documents/', documents_router, tags=['Documents'])
+api.add_router('/calendar/', calendar_router, tags=['Calendar'])
+api.add_router('/kanban/', kanban_router, tags=['Kanban'])
+api.add_router('/timetracking/', timetracking_router, tags=['Time Tracking'])

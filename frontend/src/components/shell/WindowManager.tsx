@@ -1,0 +1,201 @@
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { useEffect, useRef } from 'react'
+import type { Window as WindowType } from '@/stores/windowStore'
+import { useWindowStore } from '@/stores/windowStore'
+import { Window } from './Window'
+
+interface WindowManagerProps {
+  windows: WindowType[]
+}
+
+export function WindowManager({ windows }: WindowManagerProps) {
+  const activeWindowId = useWindowStore((state) => state.activeWindowId)
+  const stageManagerEnabled = useWindowStore((state) => state.stageManagerEnabled)
+  const showThumbnails = useWindowStore((state) => state.showStageThumbnails)
+  const setShowThumbnails = useWindowStore((state) => state.setShowStageThumbnails)
+  const focusWindow = useWindowStore((state) => state.focusWindow)
+  const centerActiveWindow = useWindowStore((state) => state.centerActiveWindow)
+
+  const hideTimeoutRef = useRef<number | null>(null)
+
+  // Zentriere aktives Fenster wenn es wechselt (nur im Stage Manager)
+  useEffect(() => {
+    if (stageManagerEnabled && activeWindowId) {
+      centerActiveWindow()
+    }
+  }, [activeWindowId, stageManagerEnabled, centerActiveWindow])
+
+  // Verstecke Thumbnails wenn Stage Manager deaktiviert wird
+  useEffect(() => {
+    if (!stageManagerEnabled) {
+      setShowThumbnails(false)
+    }
+  }, [stageManagerEnabled, setShowThumbnails])
+
+  const visibleWindows = windows.filter((w) => !w.isMinimized)
+  const activeWindow = visibleWindows.find((w) => w.id === activeWindowId)
+  const inactiveWindows = visibleWindows.filter((w) => w.id !== activeWindowId)
+
+  // Stage Manager Modus
+  if (stageManagerEnabled && visibleWindows.length > 0) {
+    return (
+      <LayoutGroup>
+        {/* Thumbnail-Leiste oben für inaktive Fenster - nur bei Hover am oberen Rand */}
+        <AnimatePresence mode="popLayout">
+          {inactiveWindows.length > 0 && showThumbnails && (
+            <motion.div
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -100, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              className="absolute left-1/2 -translate-x-1/2 top-4 z-[9999] flex flex-row gap-4"
+              onMouseEnter={() => {
+                if (hideTimeoutRef.current) {
+                  clearTimeout(hideTimeoutRef.current)
+                  hideTimeoutRef.current = null
+                }
+                setShowThumbnails(true)
+              }}
+              onMouseLeave={() => {
+                hideTimeoutRef.current = window.setTimeout(() => {
+                  setShowThumbnails(false)
+                }, 1300)
+              }}
+            >
+              {inactiveWindows.map((window, index) => (
+                <ScaledWindowThumbnail
+                  key={window.id}
+                  window={window}
+                  index={index}
+                  onClick={() => focusWindow(window.id)}
+                  horizontal
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Aktives Fenster mit Layout-Animation */}
+        <AnimatePresence mode="popLayout">
+          {activeWindow && !activeWindow.isMaximized && (
+            <motion.div
+              key={activeWindow.id}
+              layoutId={`window-${activeWindow.id}`}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0, x: -100 }}
+              transition={{
+                type: 'spring',
+                stiffness: 280,
+                damping: 28,
+                layout: { type: 'spring', stiffness: 240, damping: 28 }
+              }}
+              className="absolute"
+              style={{
+                left: activeWindow.position.x,
+                top: activeWindow.position.y,
+                zIndex: activeWindow.zIndex,
+              }}
+            >
+              <Window window={activeWindow} isStageManaged />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Maximiertes Fenster - direkt gerendert ohne Positions-Wrapper */}
+        {activeWindow && activeWindow.isMaximized && (
+          <Window window={activeWindow} />
+        )}
+      </LayoutGroup>
+    )
+  }
+
+  // Normaler Modus: Alle Fenster frei positioniert
+  return (
+    <>
+      {visibleWindows.map((window) => (
+        <Window key={window.id} window={window} />
+      ))}
+    </>
+  )
+}
+
+interface ScaledWindowThumbnailProps {
+  window: WindowType
+  index: number
+  onClick: () => void
+  horizontal?: boolean
+}
+
+function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWindowThumbnailProps) {
+  // Kleinere Thumbnails für horizontale Ansicht
+  const thumbnailWidth = horizontal ? 140 : 180
+  const thumbnailHeight = (window.size.height / window.size.width) * thumbnailWidth
+  const scale = thumbnailWidth / window.size.width
+
+  return (
+    <motion.button
+      layoutId={`window-${window.id}`}
+      initial={{ scale: 0.8, opacity: 0, y: horizontal ? -30 : 0, x: horizontal ? 0 : -40 }}
+      animate={{ scale: 1, opacity: 1, y: 0, x: 0 }}
+      exit={{ scale: 0.8, opacity: 0, y: horizontal ? -30 : 0, x: horizontal ? 0 : -40 }}
+      transition={{
+        type: 'spring',
+        stiffness: 280,
+        damping: 26,
+        delay: index * 0.05,
+      }}
+      whileHover={{ scale: 1.08, y: horizontal ? 8 : 0, x: horizontal ? 0 : 12 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={onClick}
+      className="group relative cursor-pointer"
+      style={{ width: thumbnailWidth, height: thumbnailHeight + 24 }}
+    >
+      {/* Thumbnail Container mit Glaseffekt */}
+      <div
+        className="absolute top-0 left-0 right-0 rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-2xl shadow-xl border border-white/40 dark:border-gray-700/60 overflow-hidden transition-all duration-300 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.35)] group-hover:border-white/60 dark:group-hover:border-gray-500"
+        style={{ height: thumbnailHeight }}
+      >
+        {/* Skalierter Fenster-Inhalt */}
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            width: window.size.width,
+            height: window.size.height,
+            pointerEvents: 'none',
+          }}
+        >
+          <Window window={window} isThumbnail />
+        </div>
+
+        {/* Hover Glow Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        {/* Subtle shine effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+
+      {/* Active Indicator - oben bei horizontal, links bei vertikal */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        whileHover={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+        className={horizontal
+          ? "absolute left-1/2 -translate-x-1/2 -top-2 h-1.5 w-12 rounded-full bg-gradient-to-r from-violet-400 to-violet-600 origin-center shadow-lg shadow-violet-500/40"
+          : "absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-full bg-gradient-to-b from-violet-400 to-violet-600 origin-center shadow-lg shadow-violet-500/40"
+        }
+      />
+
+      {/* App Title - immer sichtbar */}
+      <div
+        className="absolute left-0 right-0 text-center transition-all duration-200"
+        style={{ bottom: 0 }}
+      >
+        <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate block max-w-full px-1">
+          {window.title}
+        </span>
+      </div>
+    </motion.button>
+  )
+}

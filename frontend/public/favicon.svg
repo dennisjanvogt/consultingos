@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#1a1a2e"/>
+  <g fill="none" stroke="#f0f0f0" stroke-width="1.2" transform="translate(4, 6)">
+    <!-- Golden spiral simplified -->
+    <path d="M 16 0 A 10 10 0 0 1 26 10"/>
+    <path d="M 26 10 A 6 6 0 0 1 20 16"/>
+    <path d="M 20 16 A 4 4 0 0 1 16 12"/>
+    <path d="M 16 12 A 2.5 2.5 0 0 1 18.5 9.5"/>
+    <path d="M 18.5 9.5 A 1.5 1.5 0 0 1 17 11"/>
+    <!-- Center dot -->
+    <circle cx="17.5" cy="10.5" r="1" fill="#f0f0f0"/>
+  </g>
+</svg>

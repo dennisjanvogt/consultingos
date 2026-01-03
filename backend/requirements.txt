@@ -1,0 +1,6 @@
+django>=5.0
+django-ninja>=1.0
+django-cors-headers>=4.0
+python-dotenv>=1.0
+weasyprint>=60.0
+pillow>=10.0
