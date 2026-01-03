@@ -1,6 +1,6 @@
-const OPENROUTER_API_KEY = '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'
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = 'google/gemini-3-flash-preview'
+const MODEL = import.meta.env.VITE_AI_MODEL || 'google/gemini-2.0-flash-001'
 
 export interface Tool {
   type: 'function'
