@@ -18,7 +18,9 @@ import {
   Film,
   Music,
   Star,
+  StarOff,
   Home,
+  Upload,
 } from 'lucide-react'
 import { useDocumentsStore } from '@/stores/documentsStore'
 import { useWindowStore } from '@/stores/windowStore'
@@ -26,12 +28,8 @@ import { useImageViewerStore } from '@/stores/imageViewerStore'
 import type { Folder as FolderType, Document as DocumentType } from '@/api/types'
 import { type FileCategory, CATEGORY_INFO } from './utils/fileCategories'
 
-// Standard-Ordner die in der Titelleiste sind
-const TITLE_BAR_FOLDERS = ['Bilder', 'Videos', 'Musik', 'Dokumente']
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-type ViewMode = 'grid' | 'list'
 
 // Standard folder icons (same as Sidebar)
 const STANDARD_FOLDER_NAMES = ['Bilder', 'Videos', 'Musik', 'Dokumente']
@@ -40,20 +38,6 @@ const STANDARD_FOLDER_CONFIG: Record<string, { icon: typeof Image; color: string
   'Videos': { icon: Film, color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
   'Musik': { icon: Music, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' },
   'Dokumente': { icon: FileText, color: 'text-violet-600 dark:text-violet-400', bgColor: 'bg-violet-100 dark:bg-violet-900/30' },
-}
-
-// Sort folders: Standard folders first (in order), then others alphabetically
-function sortFolders(folders: FolderType[]): FolderType[] {
-  return [...folders].sort((a, b) => {
-    const aIsStandard = STANDARD_FOLDER_NAMES.includes(a.name)
-    const bIsStandard = STANDARD_FOLDER_NAMES.includes(b.name)
-    if (aIsStandard && !bIsStandard) return -1
-    if (!aIsStandard && bIsStandard) return 1
-    if (aIsStandard && bIsStandard) {
-      return STANDARD_FOLDER_NAMES.indexOf(a.name) - STANDARD_FOLDER_NAMES.indexOf(b.name)
-    }
-    return a.name.localeCompare(b.name)
-  })
 }
 
 export function DocumentsApp() {
@@ -89,6 +73,7 @@ export function DocumentsApp() {
     navigateUp,
     getFilteredDocuments,
     getSidebarFolders,
+    toggleSidebarVisibility,
   } = useDocumentsStore()
 
   // Register file input ref with store
@@ -542,7 +527,7 @@ interface FolderCardProps {
 }
 
 function FolderCard({ folder, onClick, onEdit, onDelete, onDrop, onToggleSidebar }: FolderCardProps) {
-  const { t } = useTranslation()
+  const { t: _t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -668,7 +653,7 @@ interface DocumentCardProps {
 }
 
 function DocumentCard({ document, onDelete, onOpenImage }: DocumentCardProps) {
-  const { t } = useTranslation()
+  const { t: _t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
 
   const handleDragStart = (e: React.DragEvent) => {

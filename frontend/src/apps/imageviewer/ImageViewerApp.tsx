@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ZoomIn, ZoomOut, RotateCw, Download, X } from 'lucide-react'
+import { ZoomIn, ZoomOut, RotateCw, Download } from 'lucide-react'
 import { useImageViewerStore } from '@/stores/imageViewerStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'

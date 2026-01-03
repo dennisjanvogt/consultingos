@@ -64,7 +64,7 @@ export function TimeTrackingProjectsTab() {
       description: formData.description,
       hourly_rate: parseFloat(formData.hourly_rate) || 0,
       color: formData.color,
-      status: formData.status,
+      status: formData.status as 'active' | 'archived',
     }
 
     if (editingProject) {
@@ -75,7 +75,7 @@ export function TimeTrackingProjectsTab() {
 
     setShowForm(false)
     setEditingProject(null)
-    setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' })
+    setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' as 'active' | 'archived' })
   }
 
   const handleEdit = (project: TimeTrackingProject) => {
@@ -96,7 +96,7 @@ export function TimeTrackingProjectsTab() {
       <button
         onClick={() => {
           setEditingProject(null)
-          setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' })
+          setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' as 'active' | 'archived' })
           setShowForm(true)
         }}
         className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
   Plus,
-  Pencil,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   Check,
@@ -10,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import type {
-  TimeTrackingProject,
+  
   TimeEntry,
   ProjectColor,
 } from '@/api/types'

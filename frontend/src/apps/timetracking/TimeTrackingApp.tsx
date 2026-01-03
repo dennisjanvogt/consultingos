@@ -62,7 +62,6 @@ export function TimeTrackingApp() {
     projects,
     entries,
     summary,
-    isLoading,
     activeTab,
     fetchClients,
     fetchProjects,
