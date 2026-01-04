@@ -15,9 +15,9 @@ import type {
 
 const colorOptions: { value: ProjectColor; class: string }[] = [
   { value: 'gray', class: 'bg-gray-500' },
-  { value: 'violet', class: 'bg-violet-500' },
+  { value: 'lavender', class: 'bg-lavender-500' },
   { value: 'green', class: 'bg-green-500' },
-  { value: 'yellow', class: 'bg-yellow-500' },
+  { value: 'gold', class: 'bg-gold-500' },
   { value: 'red', class: 'bg-red-500' },
   { value: 'purple', class: 'bg-purple-500' },
   { value: 'pink', class: 'bg-pink-500' },
@@ -192,7 +192,7 @@ export function TimeEntriesTab() {
       {/* New Entry Button */}
       <button
         onClick={() => handleNewEntry()}
-        className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neuer Eintrag
@@ -272,7 +272,7 @@ export function TimeEntriesTab() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
+              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
               {editingEntry ? 'Speichern' : 'Erstellen'}
@@ -302,7 +302,7 @@ export function TimeEntriesTab() {
             <div
               key={date.toISOString()}
               className={`border rounded-lg p-2 min-h-[150px] ${
-                isToday(date) ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'border-gray-200 dark:border-gray-700'
+                isToday(date) ? 'border-lavender-500 bg-lavender-50 dark:bg-lavender-900/20' : 'border-gray-200 dark:border-gray-700'
               }`}
             >
               <div className="flex items-center justify-between mb-2">

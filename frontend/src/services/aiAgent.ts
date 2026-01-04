@@ -1,6 +1,10 @@
+import { useAIStore } from '@/stores/aiStore'
+
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = import.meta.env.VITE_AI_MODEL || 'google/gemini-3-flash-preview'
+
+// Get the current chat model from the store
+const getChatModel = () => useAIStore.getState().chatModel
 
 export interface Tool {
   type: 'function'
@@ -126,6 +130,12 @@ Prioritäten: low, medium, high
 Farben: gray, violet, green, yellow, red, purple, pink, orange
 Boards: work (Arbeit), private (Privat), archive (Archiv)
 
+### 8. Bilder generieren
+Du kannst KI-generierte Bilder erstellen:
+- Beschreibe das gewünschte Bild detailliert
+- Das Bild wird automatisch im "Bilder" Ordner gespeichert
+- Optional: Dateiname angeben
+
 ## Beispiele
 
 Benutzer: "Öffne die Stammdaten" oder "Öffne Kunden"
@@ -165,7 +175,13 @@ Benutzer: "Neue Aufgabe mit hoher Priorität: Bug fixen"
 → Rufe create_kanban_card mit title und priority="high" auf
 
 Benutzer: "Zeige meine Aufgaben"
-→ Rufe list_kanban_cards auf`
+→ Rufe list_kanban_cards auf
+
+Benutzer: "Erstelle ein Bild von einem Sonnenuntergang am Strand"
+→ Rufe generate_image mit prompt="Ein wunderschöner Sonnenuntergang am Strand mit Palmen" auf
+
+Benutzer: "Generiere ein Logo für meine Firma"
+→ Rufe generate_image mit prompt und optional filename auf`
 }
 
 const tools: Tool[] = [
@@ -507,6 +523,27 @@ const tools: Tool[] = [
         required: ['title']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'generate_image',
+      description: 'Generiert ein KI-Bild basierend auf einer Beschreibung und speichert es im Bilder-Ordner',
+      parameters: {
+        type: 'object',
+        properties: {
+          prompt: {
+            type: 'string',
+            description: 'Detaillierte Beschreibung des zu generierenden Bildes (auf Englisch für beste Ergebnisse)'
+          },
+          filename: {
+            type: 'string',
+            description: 'Optionaler Dateiname (ohne Endung) für das Bild'
+          }
+        },
+        required: ['prompt']
+      }
+    }
   }
 ]
 
@@ -517,6 +554,9 @@ export interface AIResponse {
 }
 
 export async function sendMessage(messages: Message[]): Promise<AIResponse> {
+  const model = getChatModel()
+  console.log('Using AI model:', model)
+
   const response = await fetch(OPENROUTER_URL, {
     method: 'POST',
     headers: {
@@ -526,7 +566,7 @@ export async function sendMessage(messages: Message[]): Promise<AIResponse> {
       'X-Title': 'ConsultingOS'
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages: [
         { role: 'system', content: getSystemPrompt() },
         ...messages

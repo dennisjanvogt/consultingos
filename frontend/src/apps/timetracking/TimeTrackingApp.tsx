@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -8,6 +8,10 @@ import {
   ChevronRight,
   Check,
   X,
+  Play,
+  Pause,
+  Square,
+  RotateCcw,
 } from 'lucide-react'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import type {
@@ -19,9 +23,9 @@ import type {
 
 const colorOptions: { value: ProjectColor; label: string; class: string }[] = [
   { value: 'gray', label: 'Grau', class: 'bg-gray-500' },
-  { value: 'violet', label: 'Lavendel', class: 'bg-violet-500' },
+  { value: 'lavender', label: 'Lavendel', class: 'bg-lavender-500' },
   { value: 'green', label: 'Grün', class: 'bg-green-500' },
-  { value: 'yellow', label: 'Gelb', class: 'bg-yellow-500' },
+  { value: 'gold', label: 'Gold', class: 'bg-gold-500' },
   { value: 'red', label: 'Rot', class: 'bg-red-500' },
   { value: 'purple', label: 'Lila', class: 'bg-purple-500' },
   { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
@@ -56,6 +60,7 @@ function getWeekDates(date: Date): Date[] {
 export function TimeTrackingApp() {
   const { t } = useTranslation()
   const [currentWeek, setCurrentWeek] = useState(new Date())
+  const [elapsedTime, setElapsedTime] = useState(0)
 
   const {
     clients,
@@ -63,6 +68,7 @@ export function TimeTrackingApp() {
     entries,
     summary,
     activeTab,
+    timer,
     fetchClients,
     fetchProjects,
     fetchEntries,
@@ -76,7 +82,16 @@ export function TimeTrackingApp() {
     addEntry,
     updateEntry,
     deleteEntry,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    stopTimer,
+    resetTimer,
+    setTimerProject,
+    setTimerDescription,
   } = useTimeTrackingStore()
+
+  const activeProjects = projects.filter((p) => p.status === 'active')
 
   useEffect(() => {
     fetchClients()
@@ -91,8 +106,156 @@ export function TimeTrackingApp() {
     fetchSummary(dateFrom, dateTo)
   }, [currentWeek, fetchEntries, fetchSummary])
 
+  // Update elapsed time every second when timer is running
+  useEffect(() => {
+    if (!timer.isRunning && !timer.isPaused) {
+      setElapsedTime(0)
+      return
+    }
+
+    const updateElapsed = () => {
+      let totalMs = timer.pausedTime
+      if (timer.startTime && !timer.isPaused) {
+        totalMs += Date.now() - timer.startTime
+      }
+      setElapsedTime(totalMs)
+    }
+
+    updateElapsed()
+    const interval = setInterval(updateElapsed, 100) // Smoother updates
+    return () => clearInterval(interval)
+  }, [timer.isRunning, timer.isPaused, timer.startTime, timer.pausedTime])
+
+  const formatElapsedTime = useCallback((ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }, [])
+
+  const handleStopTimer = async () => {
+    const entry = await stopTimer()
+    if (entry) {
+      // Refresh entries to show the new entry
+      const weekDates = getWeekDates(currentWeek)
+      const dateFrom = weekDates[0].toISOString().split('T')[0]
+      const dateTo = weekDates[6].toISOString().split('T')[0]
+      fetchEntries(dateFrom, dateTo)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      {/* Timer Widget */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className={`p-4 rounded-xl transition-all ${
+          timer.isRunning && !timer.isPaused
+            ? 'bg-gradient-to-r from-gold-50 to-gold-100 dark:from-gold-900/20 dark:to-gold-800/20 border-2 border-gold-200 dark:border-gold-800'
+            : timer.isPaused
+            ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-800'
+            : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+        }`}>
+          <div className="flex items-center gap-6">
+            {/* Timer Display */}
+            <div className="text-center">
+              <div className={`text-4xl font-mono font-bold tracking-wider ${
+                timer.isRunning && !timer.isPaused
+                  ? 'text-gold-600 dark:text-gold-400'
+                  : timer.isPaused
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-gray-400 dark:text-gray-500'
+              }`}>
+                {formatElapsedTime(elapsedTime)}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {timer.isRunning && !timer.isPaused && 'Läuft...'}
+                {timer.isPaused && 'Pausiert'}
+                {!timer.isRunning && !timer.isPaused && 'Bereit'}
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-2">
+              {!timer.isRunning && !timer.isPaused ? (
+                <button
+                  onClick={() => startTimer(timer.projectId || undefined, timer.description)}
+                  className="p-3 bg-gold-500 hover:bg-gold-600 text-white rounded-full transition-colors shadow-lg"
+                  title="Timer starten"
+                >
+                  <Play className="h-6 w-6" />
+                </button>
+              ) : (
+                <>
+                  {timer.isPaused ? (
+                    <button
+                      onClick={resumeTimer}
+                      className="p-3 bg-gold-500 hover:bg-gold-600 text-white rounded-full transition-colors shadow-lg"
+                      title="Fortsetzen"
+                    >
+                      <Play className="h-6 w-6" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={pauseTimer}
+                      className="p-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full transition-colors shadow-lg"
+                      title="Pausieren"
+                    >
+                      <Pause className="h-6 w-6" />
+                    </button>
+                  )}
+                  <button
+                    onClick={handleStopTimer}
+                    className="p-3 bg-rose-500 hover:bg-rose-600 text-white rounded-full transition-colors shadow-lg"
+                    title="Stoppen und speichern"
+                  >
+                    <Square className="h-6 w-6" />
+                  </button>
+                  <button
+                    onClick={resetTimer}
+                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                    title="Zurücksetzen"
+                  >
+                    <RotateCcw className="h-5 w-5 text-gray-500" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Project Selection & Description */}
+            <div className="flex-1 flex gap-3">
+              <select
+                value={timer.projectId || ''}
+                onChange={(e) => setTimerProject(e.target.value ? parseInt(e.target.value) : null)}
+                className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 min-w-[200px]"
+                disabled={timer.isRunning || timer.isPaused}
+              >
+                <option value="">Projekt wählen...</option>
+                {activeProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.client_name})
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={timer.description}
+                onChange={(e) => setTimerDescription(e.target.value)}
+                placeholder="Was machst du gerade?"
+                className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+              />
+            </div>
+          </div>
+
+          {/* Info Text */}
+          {!timer.projectId && (timer.isRunning || timer.isPaused) && (
+            <div className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+              Hinweis: Wähle ein Projekt aus, damit der Eintrag beim Stoppen gespeichert wird.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         {activeTab === 'entries' && (
@@ -264,7 +427,7 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
       {/* New Entry Button */}
       <button
         onClick={() => handleNewEntry()}
-        className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neuer Eintrag
@@ -344,7 +507,7 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
+              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
               {editingEntry ? 'Speichern' : 'Erstellen'}
@@ -374,7 +537,7 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
             <div
               key={date.toISOString()}
               className={`border rounded-lg p-2 min-h-[150px] ${
-                isToday(date) ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'border-gray-200 dark:border-gray-700'
+                isToday(date) ? 'border-lavender-500 bg-lavender-50 dark:bg-lavender-900/20' : 'border-gray-200 dark:border-gray-700'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -485,7 +648,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
           setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neues Projekt
@@ -556,7 +719,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
+              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
               {editingProject ? 'Speichern' : 'Erstellen'}
@@ -678,7 +841,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
           setFormData({ name: '', email: '', phone: '', address: '', notes: '' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neuer Kunde
@@ -737,7 +900,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
+              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
               {editingClient ? 'Speichern' : 'Erstellen'}
@@ -810,9 +973,9 @@ function ReportsTab({ summary }: ReportsTabProps) {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-lg">
-          <div className="text-sm text-violet-600 dark:text-violet-400">Gesamt Stunden</div>
-          <div className="text-2xl font-bold text-violet-700 dark:text-violet-300">
+        <div className="bg-lavender-50 dark:bg-lavender-900/20 p-4 rounded-lg">
+          <div className="text-sm text-lavender-600 dark:text-lavender-400">Gesamt Stunden</div>
+          <div className="text-2xl font-bold text-lavender-700 dark:text-lavender-300">
             {summary.total_hours.toFixed(1)} h
           </div>
         </div>

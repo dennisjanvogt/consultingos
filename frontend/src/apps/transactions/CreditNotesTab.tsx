@@ -48,7 +48,7 @@ export function CreditNotesTab() {
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    issued: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
+    issued: 'bg-gold-50 text-gold-600 dark:bg-gold-900/30 dark:text-gold-400',
     applied: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   }
 

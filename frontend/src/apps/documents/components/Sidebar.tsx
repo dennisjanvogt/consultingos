@@ -25,16 +25,16 @@ const FOLDER_ICONS: Record<string, { icon: typeof Image; color: string }> = {
   'Bilder': { icon: Image, color: 'text-pink-500' },
   'Videos': { icon: Film, color: 'text-purple-500' },
   'Musik': { icon: Music, color: 'text-green-500' },
-  'Dokumente': { icon: FileText, color: 'text-violet-500' },
+  'Dokumente': { icon: FileText, color: 'text-lavender-500' },
 }
 
 function getFolderIcon(folderName: string, isActive: boolean, isDragOver: boolean) {
   const config = FOLDER_ICONS[folderName]
   if (config) {
     const Icon = config.icon
-    return <Icon className={`w-4 h-4 ${isDragOver || isActive ? 'text-violet-500' : config.color}`} />
+    return <Icon className={`w-4 h-4 ${isDragOver || isActive ? 'text-lavender-500' : config.color}`} />
   }
-  return <FolderOpen className={`w-4 h-4 ${isDragOver || isActive ? 'text-violet-500' : 'text-yellow-500'}`} />
+  return <FolderOpen className={`w-4 h-4 ${isDragOver || isActive ? 'text-lavender-500' : 'text-yellow-500'}`} />
 }
 
 function isStandardFolder(name: string): boolean {
@@ -115,14 +115,14 @@ export function Sidebar({
                 onClick={() => onFilterToggle(category)}
                 className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all ${
                   isActive
-                    ? 'bg-violet-500/20 ring-2 ring-violet-500/50'
+                    ? 'bg-lavender-500/20 ring-2 ring-lavender-500/50'
                     : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
                 }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 title={info.label}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-violet-500' : info.color}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-lavender-500' : info.color}`} />
               </motion.button>
             )
           })}
@@ -146,7 +146,7 @@ export function Sidebar({
           onDrop={(e) => handleDrop(e, null)}
           className={`w-full flex items-center justify-center p-2 rounded-lg transition-all mb-1 ${
             dragOverFolderId === 'root'
-              ? 'bg-violet-100 dark:bg-violet-900/30 ring-2 ring-violet-400'
+              ? 'bg-lavender-100 dark:bg-lavender-900/30 ring-2 ring-lavender-400'
               : currentFolderId === null
                 ? 'bg-gray-200/70 dark:bg-gray-700/70'
                 : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
@@ -155,7 +155,7 @@ export function Sidebar({
           whileTap={{ scale: 0.98 }}
           title="Hauptordner"
         >
-          <Home className={`w-4 h-4 ${currentFolderId === null ? 'text-violet-500' : 'text-gray-500'}`} />
+          <Home className={`w-4 h-4 ${currentFolderId === null ? 'text-lavender-500' : 'text-gray-500'}`} />
         </motion.button>
 
         {/* Ordner Liste */}
@@ -177,7 +177,7 @@ export function Sidebar({
                   onDrop={(e) => handleDrop(e, folder.id)}
                   className={`w-full flex flex-col items-center justify-center py-1.5 px-1 rounded-lg transition-all ${
                     isDragOver
-                      ? 'bg-violet-100 dark:bg-violet-900/30 ring-2 ring-violet-400'
+                      ? 'bg-lavender-100 dark:bg-lavender-900/30 ring-2 ring-lavender-400'
                       : isActive
                         ? 'bg-gray-200/70 dark:bg-gray-700/70'
                         : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
@@ -188,7 +188,7 @@ export function Sidebar({
                 >
                   {getFolderIcon(folder.name, isActive, isDragOver)}
                   <span className={`text-[8px] font-semibold mt-0.5 ${
-                    isActive ? 'text-violet-500' : 'text-gray-500 dark:text-gray-400'
+                    isActive ? 'text-lavender-500' : 'text-gray-500 dark:text-gray-400'
                   }`}>
                     {shortLabel}
                   </span>

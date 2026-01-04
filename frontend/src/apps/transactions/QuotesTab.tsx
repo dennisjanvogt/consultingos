@@ -56,7 +56,7 @@ export function QuotesTab() {
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    sent: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
+    sent: 'bg-gold-50 text-gold-600 dark:bg-gold-900/30 dark:text-gold-400',
     accepted: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     declined: 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400',
     expired: 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
@@ -503,7 +503,7 @@ function QuoteDetail({ quote, statusStyles, statusLabels, formatCurrency, format
               </button>
             )}
             {quote.status === 'draft' && (
-              <button className="w-full flex items-center justify-center gap-2 p-3 text-sm text-violet-600 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 rounded-lg transition-colors">
+              <button className="w-full flex items-center justify-center gap-2 p-3 text-sm text-lavender-600 bg-lavender-50 dark:bg-lavender-900/20 hover:bg-lavender-100 dark:hover:bg-lavender-900/30 rounded-lg transition-colors">
                 <Send className="h-4 w-4" />
                 {t('transactions.send')}
               </button>

@@ -67,7 +67,7 @@ export function TimeTrackingClientsTab() {
           setFormData({ name: '', email: '', phone: '', address: '', notes: '' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neuer Kunde
@@ -126,7 +126,7 @@ export function TimeTrackingClientsTab() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
+              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
               {editingClient ? 'Speichern' : 'Erstellen'}

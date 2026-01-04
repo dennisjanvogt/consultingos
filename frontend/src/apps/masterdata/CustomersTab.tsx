@@ -417,7 +417,7 @@ function CustomerDetail({ customer, onClose, onEdit, onDelete, t }: CustomerDeta
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 mb-0.5">{t('customers.email')}</div>
-                  <a href={`mailto:${customer.email}`} className="text-sm text-violet-600 hover:underline">
+                  <a href={`mailto:${customer.email}`} className="text-sm text-lavender-600 hover:underline">
                     {customer.email}
                   </a>
                 </div>

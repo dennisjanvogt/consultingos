@@ -18,13 +18,14 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { useCalendarStore } from '@/stores/calendarStore'
+import { useCustomersStore } from '@/stores/customersStore'
 import type { CalendarEvent } from '@/api/types'
 
 const EVENT_COLORS = [
-  { name: 'violet', bg: 'bg-violet-500', light: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-600 dark:text-violet-400' },
+  { name: 'lavender', bg: 'bg-lavender-500', light: 'bg-lavender-100 dark:bg-lavender-900/30', text: 'text-lavender-600 dark:text-lavender-400' },
   { name: 'green', bg: 'bg-green-500', light: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' },
   { name: 'red', bg: 'bg-red-500', light: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' },
-  { name: 'purple', bg: 'bg-purple-500', light: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' },
+  { name: 'gold', bg: 'bg-gold-500', light: 'bg-gold-100 dark:bg-gold-900/30', text: 'text-gold-600 dark:text-gold-400' },
   { name: 'orange', bg: 'bg-orange-500', light: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400' },
   { name: 'pink', bg: 'bg-pink-500', light: 'bg-pink-100 dark:bg-pink-900/30', text: 'text-pink-600 dark:text-pink-400' },
 ]
@@ -170,11 +171,17 @@ export function CalendarApp() {
     }
   }
 
-  const handleSaveEvent = async (eventData: { title: string; date: string; start_time: string; end_time: string; location?: string; description?: string; color?: string }) => {
+  const handleSaveEvent = async (eventData: { title: string; date: string; start_time: string; end_time: string; location?: string; description?: string; color?: string; is_meeting?: boolean }, inviteEmails?: string[]) => {
     if (editingEvent) {
       await updateEvent(editingEvent.id, eventData)
     } else {
-      await addEvent(eventData)
+      const newEvent = await addEvent(eventData)
+      // Send invitations if emails provided and event is a meeting
+      if (newEvent && inviteEmails && inviteEmails.length > 0 && newEvent.is_meeting) {
+        for (const email of inviteEmails) {
+          await inviteAttendee(newEvent.id, email)
+        }
+      }
     }
     setShowEventForm(false)
     setEditingEvent(null)
@@ -680,7 +687,7 @@ function DayView({ currentDate, events, onViewEvent }: DayViewProps) {
             const hourEvents = getEventsForHour(hour)
             const isCurrent = isCurrentHour(hour)
             return (
-              <div key={hour} className={`flex border-b border-gray-100 dark:border-gray-800 ${isCurrent ? 'bg-violet-50 dark:bg-violet-900/20' : ''}`}>
+              <div key={hour} className={`flex border-b border-gray-100 dark:border-gray-800 ${isCurrent ? 'bg-lavender-50 dark:bg-lavender-900/20' : ''}`}>
                 {/* Time Label */}
                 <div className="w-16 p-2 text-right pr-3 shrink-0">
                   <span className="text-xs text-gray-400">
@@ -790,7 +797,7 @@ function YearView({ currentDate, events, onSelectMonth, locale }: YearViewProps)
                         : isToday(day, month)
                           ? 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 rounded-full'
                           : hasEventOnDay(day, month)
-                            ? 'text-violet-600 dark:text-violet-400 font-semibold'
+                            ? 'text-lavender-600 dark:text-lavender-400 font-semibold'
                             : 'text-gray-600 dark:text-gray-400'
                     }`}
                   >
@@ -810,12 +817,13 @@ function YearView({ currentDate, events, onSelectMonth, locale }: YearViewProps)
 interface EventFormProps {
   event: CalendarEvent | null
   defaultDate: string
-  onSave: (event: { title: string; date: string; start_time: string; end_time: string; location?: string; description?: string; color?: string; is_meeting?: boolean }) => void
+  onSave: (event: { title: string; date: string; start_time: string; end_time: string; location?: string; description?: string; color?: string; is_meeting?: boolean }, inviteEmails?: string[]) => void
   onClose: () => void
 }
 
 function EventForm({ event, defaultDate, onSave, onClose }: EventFormProps) {
   const { t } = useTranslation()
+  const { customers, fetchCustomers } = useCustomersStore()
   const [formData, setFormData] = useState({
     title: event?.title || '',
     date: event?.date || defaultDate,
@@ -827,9 +835,61 @@ function EventForm({ event, defaultDate, onSave, onClose }: EventFormProps) {
     is_meeting: event?.is_meeting || false,
   })
 
+  // Email invitation state
+  const [inviteEmails, setInviteEmails] = useState<string[]>([])
+  const [emailInput, setEmailInput] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const emailInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch customers for suggestions
+  useEffect(() => {
+    fetchCustomers()
+  }, [fetchCustomers])
+
+  // Filter customers based on input - show top 3 matches
+  const filteredCustomers = customers.filter((c) => {
+    if (!c.email) return false
+    if (inviteEmails.includes(c.email.toLowerCase())) return false
+    if (!emailInput.trim()) return true // Show all when empty
+    const searchLower = emailInput.toLowerCase().trim()
+    return (
+      c.email.toLowerCase().includes(searchLower) ||
+      c.name.toLowerCase().includes(searchLower) ||
+      (c.company && c.company.toLowerCase().includes(searchLower))
+    )
+  }).slice(0, 3)
+
+  const addEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase()
+    if (trimmed && !inviteEmails.includes(trimmed) && trimmed.includes('@')) {
+      setInviteEmails([...inviteEmails, trimmed])
+      setEmailInput('')
+      setShowSuggestions(false)
+    }
+  }
+
+  const removeEmail = (email: string) => {
+    setInviteEmails(inviteEmails.filter((e) => e !== email))
+  }
+
+  const handleEmailKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      // If there's a matching customer, use their email
+      if (filteredCustomers.length > 0) {
+        addEmail(filteredCustomers[0].email)
+      } else if (emailInput.includes('@')) {
+        // Otherwise add typed email if it contains @
+        addEmail(emailInput)
+      }
+    } else if (e.key === 'Backspace' && !emailInput && inviteEmails.length > 0) {
+      removeEmail(inviteEmails[inviteEmails.length - 1])
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    onSave(formData, formData.is_meeting ? inviteEmails : undefined)
   }
 
   return (
@@ -844,7 +904,7 @@ function EventForm({ event, defaultDate, onSave, onClose }: EventFormProps) {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[calc(100%-2rem)] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -957,8 +1017,8 @@ function EventForm({ event, defaultDate, onSave, onClose }: EventFormProps) {
           {/* Video Meeting Toggle */}
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                <Video className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <Video className="h-4 w-4 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -973,7 +1033,7 @@ function EventForm({ event, defaultDate, onSave, onClose }: EventFormProps) {
               type="button"
               onClick={() => setFormData({ ...formData, is_meeting: !formData.is_meeting })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
-                formData.is_meeting ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'
+                formData.is_meeting ? 'bg-gray-800 dark:bg-gray-200' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span
@@ -983,6 +1043,104 @@ function EventForm({ event, defaultDate, onSave, onClose }: EventFormProps) {
               />
             </button>
           </div>
+
+          {/* Email Invitations - only show when meeting is enabled */}
+          <AnimatePresence>
+            {formData.is_meeting && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                        Teilnehmer einladen
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        E-Mail-Adressen für Einladungen
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Email chips and input */}
+                  <div className="relative">
+                    <div
+                      className="min-h-[42px] px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-wrap gap-1.5 items-center cursor-text"
+                      onClick={() => emailInputRef.current?.focus()}
+                    >
+                      {inviteEmails.map((email) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs"
+                        >
+                          {email}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeEmail(email)
+                            }}
+                            className="hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full p-0.5 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        ref={emailInputRef}
+                        type="email"
+                        value={emailInput}
+                        onChange={(e) => {
+                          setEmailInput(e.target.value)
+                          setShowSuggestions(true)
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
+                        onKeyDown={handleEmailKeyDown}
+                        placeholder={inviteEmails.length === 0 ? 'E-Mail eingeben...' : ''}
+                        className="flex-1 min-w-[120px] bg-transparent outline-none text-sm placeholder:text-gray-400"
+                      />
+                    </div>
+
+                    {/* Suggestions dropdown */}
+                    <AnimatePresence>
+                      {showSuggestions && filteredCustomers.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden z-10"
+                        >
+                          {filteredCustomers.map((customer) => (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => addEmail(customer.email)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                            >
+                              <Mail className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-800 dark:text-gray-200">{customer.email}</span>
+                              <span className="text-gray-400 text-xs">
+                                ({customer.company || customer.name})
+                              </span>
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -1128,8 +1286,8 @@ function EventDetail({ event, onEdit, onDelete, onClose, locale, onEnableMeeting
             <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
               {/* Meeting Link */}
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-                  <Video className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                <div className="w-8 h-8 rounded-lg bg-lavender-100 dark:bg-lavender-900/30 flex items-center justify-center shrink-0">
+                  <Video className="h-4 w-4 text-lavender-600 dark:text-lavender-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -1155,7 +1313,7 @@ function EventDetail({ event, onEdit, onDelete, onClose, locale, onEnableMeeting
                     href={event.meeting_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg transition-colors"
+                    className="p-2 bg-lavender-500 hover:bg-lavender-600 text-white rounded-lg transition-colors"
                     title={t('calendar.joinMeeting')}
                   >
                     <ExternalLink className="h-4 w-4" />
@@ -1174,7 +1332,7 @@ function EventDetail({ event, onEdit, onDelete, onClose, locale, onEnableMeeting
                   </div>
                   <button
                     onClick={() => setShowInviteForm(!showInviteForm)}
-                    className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                    className="text-xs text-lavender-600 dark:text-lavender-400 hover:underline"
                   >
                     + {t('calendar.invite')}
                   </button>
@@ -1188,14 +1346,14 @@ function EventDetail({ event, onEdit, onDelete, onClose, locale, onEnableMeeting
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder={t('calendar.inviteEmailPlaceholder')}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-1 focus:ring-violet-300"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-1 focus:ring-lavender-300"
                     />
                     <input
                       type="text"
                       value={inviteName}
                       onChange={(e) => setInviteName(e.target.value)}
                       placeholder={t('calendar.inviteNamePlaceholder')}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-1 focus:ring-violet-300"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-1 focus:ring-lavender-300"
                     />
                     <div className="flex gap-2">
                       <button
@@ -1207,7 +1365,7 @@ function EventDetail({ event, onEdit, onDelete, onClose, locale, onEnableMeeting
                       <button
                         onClick={handleInvite}
                         disabled={!inviteEmail || isInviting}
-                        className="flex-1 px-3 py-1.5 text-sm bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors disabled:opacity-50"
+                        className="flex-1 px-3 py-1.5 text-sm bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors disabled:opacity-50"
                       >
                         {isInviting ? '...' : t('calendar.sendInvite')}
                       </button>
@@ -1260,8 +1418,8 @@ function EventDetail({ event, onEdit, onDelete, onClose, locale, onEnableMeeting
               onClick={onEnableMeeting}
               className="flex items-center gap-3 w-full p-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-                <Video className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              <div className="w-8 h-8 rounded-lg bg-lavender-100 dark:bg-lavender-900/30 flex items-center justify-center shrink-0">
+                <Video className="h-4 w-4 text-lavender-600 dark:text-lavender-400" />
               </div>
               <div className="text-left">
                 <p className="text-sm font-medium text-gray-800 dark:text-gray-200">

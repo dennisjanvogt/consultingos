@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Dock } from './Dock'
+import { BottomBar } from './BottomBar'
 import { WindowManager } from './WindowManager'
 import { MenuBar } from './MenuBar'
 import { Spotlight } from './Spotlight'
@@ -12,9 +13,27 @@ export function Desktop() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command/Ctrl key to open Spotlight (only when closed)
-      // When open, the Spotlight component handles Cmd for voice recording
-      if ((e.key === 'Meta' || e.key === 'Control') && !isSpotlightOpen) {
+      // Ignoriere wenn in Input-Feldern
+      const target = e.target as HTMLElement
+      const isInput = target instanceof HTMLInputElement ||
+                      target instanceof HTMLTextAreaElement ||
+                      target instanceof HTMLSelectElement ||
+                      target.isContentEditable
+
+      // ESC - Aktives Fenster schließen (global, unabhängig von Focus)
+      // Spotlight hat eigenen ESC-Handler, der zuerst greift
+      if (e.key === 'Escape' && !isInput) {
+        const state = useWindowStore.getState()
+        if (state.activeWindowId && !isSpotlightOpen) {
+          e.preventDefault()
+          e.stopPropagation()
+          state.closeWindow(state.activeWindowId)
+        }
+      }
+
+      // Option/Alt key to open Spotlight (only when closed)
+      // When open, the Spotlight component handles Option for voice recording
+      if (e.key === 'Alt' && !isSpotlightOpen) {
         e.preventDefault()
         setIsSpotlightOpen(true)
       }
@@ -26,8 +45,8 @@ export function Desktop() {
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)  // Capture phase
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [isSpotlightOpen, tileAllWindows])
 
   return (
@@ -66,10 +85,13 @@ export function Desktop() {
           </svg>
         </div>
         <WindowManager windows={windows} />
+
+        {/* Dock - Overlay */}
+        <Dock />
       </div>
 
-      {/* Dock */}
-      <Dock />
+      {/* Bottom Bar */}
+      <BottomBar />
 
       {/* Spotlight AI Assistant */}
       <Spotlight isOpen={isSpotlightOpen} onClose={() => setIsSpotlightOpen(false)} />

@@ -55,6 +55,8 @@ import { useDocumentsStore } from '@/stores/documentsStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import { useKanbanStore } from '@/stores/kanbanStore'
+import { useAIStore } from '@/stores/aiStore'
+import { useImageViewerStore } from '@/stores/imageViewerStore'
 
 interface SpotlightProps {
   isOpen: boolean
@@ -76,6 +78,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
   const [transcribedText, setTranscribedText] = useState('')
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceResponseEnabled, setVoiceResponseEnabled] = useState(true)
+  const [hasInitialAltPress, setHasInitialAltPress] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
@@ -253,6 +256,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
       setIsRecording(false)
       setRecordingTime(0)
       setTranscribedText('')
+      setHasInitialAltPress(false)
     }
   }, [isOpen])
 
@@ -519,17 +523,69 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
         return 'Fehler beim Erstellen der Aufgabe.'
       }
 
+      case 'generate_image': {
+        try {
+          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+          const imageModel = useAIStore.getState().imageModel
+          const response = await fetch(`${API_BASE_URL}/ai/generate-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              prompt: args.prompt,
+              filename: args.filename || null,
+              model: imageModel
+            })
+          })
+
+          if (!response.ok) {
+            const error = await response.json()
+            return `Fehler bei der Bildgenerierung: ${error.error || 'Unbekannter Fehler'}`
+          }
+
+          const result = await response.json()
+
+          // Bild direkt im Viewer öffnen
+          const { setCurrentImage } = useImageViewerStore.getState()
+          setCurrentImage({
+            id: result.id,
+            name: result.name,
+            folder_id: result.folder_id,
+            file_url: result.file_url,
+            file_type: 'png',
+            file_size: 0,
+            description: '',
+            customer_id: null,
+            invoice_id: null,
+            created_at: new Date().toISOString(),
+          })
+          openWindow('imageviewer')
+          onClose()
+          return `Bild "${result.name}" wurde erstellt und im Ordner "${result.folder_name}" gespeichert.`
+        } catch (error) {
+          console.error('Image generation error:', error)
+          return 'Fehler bei der Bildgenerierung. Bitte versuche es erneut.'
+        }
+      }
+
       default:
         return `Unbekannte Funktion: ${toolCall.function.name}`
     }
   }, [openWindow, onClose, fetchDocuments, createCustomer, createInvoice, fetchCustomers, customers, addEvent, getEventsForDate, getUpcomingEvents, deleteEvent, fetchTimeTrackingClients, fetchTimeTrackingProjects, addTimeEntry, fetchKanbanCards, createKanbanCard])
 
-  // Handle Cmd key for recording toggle
+  // Handle Option/Alt key for recording toggle and ESC to close
   useEffect(() => {
     if (!isOpen) return
 
     const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.repeat) {
+      // ESC to close
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+
+      if (e.key === 'Alt' && !e.repeat) {
         e.preventDefault()
 
         if (isRecording) {
@@ -598,15 +654,19 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
             setIsLoading(false)
           }
         } else if (!isLoading) {
-          // Start recording
-          startRecording()
+          // First Alt press just marks readiness, second press starts recording
+          if (!hasInitialAltPress) {
+            setHasInitialAltPress(true)
+          } else {
+            startRecording()
+          }
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, isRecording, isLoading, conversationHistory, startRecording, stopRecording, executeToolCall, speak, voiceResponseEnabled])
+  }, [isOpen, isRecording, isLoading, conversationHistory, startRecording, stopRecording, executeToolCall, speak, voiceResponseEnabled, onClose, hasInitialAltPress])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -708,7 +768,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
                   <span className="text-sm font-medium text-red-600 dark:text-red-400">
                     Aufnahme... {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
                   </span>
-                  <span className="text-xs text-red-500/70">⌘ zum Senden</span>
+                  <span className="text-xs text-red-500/70">⌥ zum Senden</span>
                 </div>
                 {transcribedText && (
                   <div className="text-sm text-gray-700 dark:text-gray-300 italic text-center">
@@ -732,7 +792,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isRecording ? "Sprich jetzt..." : "Frag mich etwas... (⌘ für Spracheingabe)"}
+                  placeholder={isRecording ? "Sprich jetzt..." : "Frag mich etwas... (⌥ für Spracheingabe)"}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 outline-none"
                   disabled={isLoading || isRecording}
                 />
@@ -807,7 +867,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
 
             {/* Footer */}
             <div className="px-3 py-1.5 border-t border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between text-[10px] text-gray-400">
-              <span>⌘ Spracheingabe</span>
+              <span>⌥ Spracheingabe</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -828,7 +888,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
                   )}
                 </button>
                 {isSpeaking && (
-                  <span className="text-violet-500 animate-pulse">Spricht...</span>
+                  <span className="text-lavender-500 animate-pulse">Spricht...</span>
                 )}
               </div>
             </div>

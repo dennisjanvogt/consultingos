@@ -28,7 +28,8 @@ import { useImageViewerStore } from '@/stores/imageViewerStore'
 import type { Folder as FolderType, Document as DocumentType } from '@/api/types'
 import { type FileCategory, CATEGORY_INFO } from './utils/fileCategories'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const MEDIA_BASE_URL = 'http://localhost:8000' // Ohne /api - für Media Files
 
 
 // Standard folder icons (same as Sidebar)
@@ -37,7 +38,7 @@ const STANDARD_FOLDER_CONFIG: Record<string, { icon: typeof Image; color: string
   'Bilder': { icon: Image, color: 'text-pink-600 dark:text-pink-400', bgColor: 'bg-pink-100 dark:bg-pink-900/30' },
   'Videos': { icon: Film, color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
   'Musik': { icon: Music, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-  'Dokumente': { icon: FileText, color: 'text-violet-600 dark:text-violet-400', bgColor: 'bg-violet-100 dark:bg-violet-900/30' },
+  'Dokumente': { icon: FileText, color: 'text-lavender-600 dark:text-lavender-400', bgColor: 'bg-lavender-100 dark:bg-lavender-900/30' },
 }
 
 export function DocumentsApp() {
@@ -326,12 +327,12 @@ export function DocumentsApp() {
                   onClick={() => toggleFilter(category)}
                   className={`p-1.5 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-violet-100 dark:bg-violet-900/30 ring-1 ring-violet-400'
+                      ? 'bg-lavender-100 dark:bg-lavender-900/30 ring-1 ring-lavender-400'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   title={`${info.label} (${category === 'images' ? '1' : category === 'videos' ? '2' : category === 'music' ? '3' : '4'})`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-violet-500' : info.color}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-lavender-500' : info.color}`} />
                 </button>
               )
             })}
@@ -502,9 +503,9 @@ export function DocumentsApp() {
 
         {/* Drop Zone Overlay */}
         {isDraggingFile && (
-          <div className="absolute inset-0 z-40 bg-violet-500/10 border-2 border-dashed border-violet-500 rounded-lg flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-40 bg-lavender-500/10 border-2 border-dashed border-lavender-500 rounded-lg flex items-center justify-center pointer-events-none">
             <div className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-lg flex items-center gap-3">
-              <Upload className="h-6 w-6 text-violet-500" />
+              <Upload className="h-6 w-6 text-lavender-500" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 {t('documents.dropHere')}
               </span>
@@ -553,7 +554,7 @@ function FolderCard({ folder, onClick, onEdit, onDelete, onDrop, onToggleSidebar
       }}
       className={`relative p-2 rounded-lg border transition-all cursor-pointer group hover:scale-[1.02] active:scale-[0.98] ${
         isDragOver
-          ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-300 dark:border-violet-600'
+          ? 'bg-lavender-50 dark:bg-lavender-900/20 border-lavender-300 dark:border-lavender-600'
           : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
       }`}
     >
@@ -664,7 +665,7 @@ function DocumentCard({ document, onDelete, onOpenImage }: DocumentCardProps) {
   const isImage = IMAGE_EXTENSIONS.includes(document.file_type?.toLowerCase() || '')
   const imageUrl = document.file_url.startsWith('http')
     ? document.file_url
-    : `${API_BASE_URL}${document.file_url}`
+    : `${MEDIA_BASE_URL}${document.file_url}`
 
   const handleDownload = () => {
     window.open(imageUrl, '_blank')
@@ -788,7 +789,7 @@ function FolderRow({ folder, onClick, onEdit, onDelete, onDrop, onToggleSidebar 
       }}
       className={`flex items-center justify-between p-3 rounded-lg transition-colors group border cursor-move ${
         isDragOver
-          ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-300 dark:border-violet-600'
+          ? 'bg-lavender-50 dark:bg-lavender-900/20 border-lavender-300 dark:border-lavender-600'
           : 'hover:bg-gray-50 dark:hover:bg-gray-700/30 border-transparent hover:border-gray-200 dark:hover:border-gray-700'
       }`}
     >
@@ -904,7 +905,7 @@ function DocumentRow({ document, onDelete, onOpenImage }: DocumentRowProps) {
   const isImage = IMAGE_EXTENSIONS.includes(document.file_type?.toLowerCase() || '')
   const imageUrl = document.file_url.startsWith('http')
     ? document.file_url
-    : `${API_BASE_URL}${document.file_url}`
+    : `${MEDIA_BASE_URL}${document.file_url}`
 
   const handleDownload = () => {
     window.open(imageUrl, '_blank')
@@ -1090,7 +1091,7 @@ function FolderForm({ folder, parentId, onClose }: FolderFormProps) {
               type="checkbox"
               checked={showInSidebar}
               onChange={(e) => setShowInSidebar(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-violet-500 focus:ring-violet-500"
+              className="w-4 h-4 rounded border-gray-300 text-lavender-500 focus:ring-lavender-500"
             />
             <span className="text-sm text-gray-700 dark:text-gray-300">
               In Sidebar anzeigen
@@ -1161,7 +1162,7 @@ function QuickAccessSidebar({
         }}
         className={`w-full flex flex-col items-center justify-center py-1.5 px-1 rounded-lg transition-all ${
           isDragOver
-            ? 'bg-violet-100 dark:bg-violet-900/30 ring-2 ring-violet-400'
+            ? 'bg-lavender-100 dark:bg-lavender-900/30 ring-2 ring-lavender-400'
             : isActive
               ? 'bg-gray-200/70 dark:bg-gray-700/70'
               : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
@@ -1172,12 +1173,12 @@ function QuickAccessSidebar({
           const config = STANDARD_FOLDER_CONFIG[folder.name]
           if (config) {
             const IconComponent = config.icon
-            return <IconComponent className={`w-4 h-4 ${isDragOver || isActive ? 'text-violet-500' : config.color}`} />
+            return <IconComponent className={`w-4 h-4 ${isDragOver || isActive ? 'text-lavender-500' : config.color}`} />
           }
-          return <Folder className={`w-4 h-4 ${isDragOver || isActive ? 'text-violet-500' : 'text-yellow-500'}`} />
+          return <Folder className={`w-4 h-4 ${isDragOver || isActive ? 'text-lavender-500' : 'text-yellow-500'}`} />
         })()}
         <span className={`text-[8px] font-semibold mt-0.5 truncate max-w-full ${
-          isActive ? 'text-violet-500' : 'text-gray-500 dark:text-gray-400'
+          isActive ? 'text-lavender-500' : 'text-gray-500 dark:text-gray-400'
         }`}>
           {folder.name.slice(0, 4)}
         </span>
@@ -1203,16 +1204,16 @@ function QuickAccessSidebar({
           }}
           className={`w-full flex flex-col items-center justify-center py-1.5 px-1 rounded-lg transition-all ${
             dragOverFolderId === -1
-              ? 'bg-violet-100 dark:bg-violet-900/30 ring-2 ring-violet-400'
+              ? 'bg-lavender-100 dark:bg-lavender-900/30 ring-2 ring-lavender-400'
               : currentFolderId === null
                 ? 'bg-gray-200/70 dark:bg-gray-700/70'
                 : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
           }`}
           title="Alle Dateien"
         >
-          <Home className={`w-4 h-4 ${dragOverFolderId === -1 || currentFolderId === null ? 'text-violet-500' : 'text-gray-500'}`} />
+          <Home className={`w-4 h-4 ${dragOverFolderId === -1 || currentFolderId === null ? 'text-lavender-500' : 'text-gray-500'}`} />
           <span className={`text-[8px] font-semibold mt-0.5 ${
-            dragOverFolderId === -1 || currentFolderId === null ? 'text-violet-500' : 'text-gray-500 dark:text-gray-400'
+            dragOverFolderId === -1 || currentFolderId === null ? 'text-lavender-500' : 'text-gray-500 dark:text-gray-400'
           }`}>
             Alle
           </span>

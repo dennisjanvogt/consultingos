@@ -14,9 +14,9 @@ const COLUMNS: { id: KanbanColumn; label: string }[] = [
 
 const COLORS: { id: KanbanColor; class: string }[] = [
   { id: 'gray', class: 'bg-gray-400' },
-  { id: 'violet', class: 'bg-violet-500' },
+  { id: 'lavender', class: 'bg-lavender-500' },
   { id: 'green', class: 'bg-green-500' },
-  { id: 'yellow', class: 'bg-yellow-500' },
+  { id: 'gold', class: 'bg-gold-500' },
   { id: 'red', class: 'bg-red-500' },
   { id: 'purple', class: 'bg-purple-500' },
   { id: 'pink', class: 'bg-pink-500' },
@@ -25,7 +25,7 @@ const COLORS: { id: KanbanColor; class: string }[] = [
 
 const PRIORITY_COLORS: Record<KanbanPriority, string> = {
   low: 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  medium: 'bg-gold-100 text-gold-700 dark:bg-gold-900/30 dark:text-gold-400',
   high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
@@ -227,7 +227,7 @@ export function KanbanApp() {
                   type="text"
                   value={editingCard.title}
                   onChange={(e) => setEditingCard({ ...editingCard, title: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 transition-shadow"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-lavender-500 transition-shadow"
                   placeholder="Card title..."
                 />
               </div>
@@ -241,7 +241,7 @@ export function KanbanApp() {
                   value={editingCard.description}
                   onChange={(e) => setEditingCard({ ...editingCard, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 transition-shadow resize-none"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-lavender-500 transition-shadow resize-none"
                   placeholder="Add a description..."
                 />
               </div>
@@ -262,7 +262,7 @@ export function KanbanApp() {
                             ? p === 'high'
                               ? 'bg-red-500 text-white'
                               : p === 'medium'
-                                ? 'bg-yellow-500 text-white'
+                                ? 'bg-gold-500 text-white'
                                 : 'bg-gray-500 text-white'
                             : 'text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-800'
                         }`}
@@ -281,7 +281,7 @@ export function KanbanApp() {
                     type="date"
                     value={editingCard.due_date || ''}
                     onChange={(e) => setEditingCard({ ...editingCard, due_date: e.target.value || null })}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 transition-shadow"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border-0 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-lavender-500 transition-shadow"
                   />
                 </div>
               </div>
@@ -380,7 +380,7 @@ function KanbanColumnComponent({
       data-column={column.id}
       className={`flex-1 min-w-[160px] flex flex-col rounded-xl transition-colors p-2 ${
         isDragOver
-          ? 'bg-violet-100 dark:bg-violet-900/30 ring-2 ring-violet-400 ring-inset'
+          ? 'bg-lavender-100 dark:bg-lavender-900/30 ring-2 ring-lavender-400 ring-inset'
           : 'bg-gray-100 dark:bg-gray-800/50'
       }`}
       onDragOver={(e) => onDragOver(e, column.id)}

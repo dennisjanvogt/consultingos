@@ -22,7 +22,7 @@ export function InvoicesTab() {
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    sent: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
+    sent: 'bg-gold-50 text-gold-600 dark:bg-gold-900/30 dark:text-gold-400',
     paid: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     overdue: 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400',
     cancelled: 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
@@ -493,7 +493,7 @@ function InvoiceDetail({ invoice, statusStyles, formatCurrency, formatDate, onCl
             {invoice.status === 'draft' && (
               <button
                 onClick={onMarkSent}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-lavender-600 hover:bg-lavender-50 dark:hover:bg-lavender-900/20 rounded-lg transition-colors"
               >
                 <Send className="h-4 w-4" />
                 {t('invoices.markAsSent')}

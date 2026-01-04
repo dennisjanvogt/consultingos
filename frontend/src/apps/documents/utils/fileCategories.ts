@@ -14,7 +14,7 @@ export const CATEGORY_INFO: Record<FileCategory, { label: string; icon: typeof I
   images: { label: 'Bilder', icon: Image, color: 'text-pink-500' },
   videos: { label: 'Videos', icon: Film, color: 'text-purple-500' },
   music: { label: 'Musik', icon: Music, color: 'text-green-500' },
-  documents: { label: 'Dokumente', icon: FileText, color: 'text-violet-500' },
+  documents: { label: 'Dokumente', icon: FileText, color: 'text-lavender-500' },
   other: { label: 'Sonstige', icon: File, color: 'text-gray-400' }
 }
 

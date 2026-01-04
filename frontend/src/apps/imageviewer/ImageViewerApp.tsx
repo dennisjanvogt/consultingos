@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ZoomIn, ZoomOut, RotateCw, Download } from 'lucide-react'
 import { useImageViewerStore } from '@/stores/imageViewerStore'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const MEDIA_BASE_URL = 'http://localhost:8000' // Ohne /api - für Media Files
 
 export function ImageViewerApp() {
   const { currentImage } = useImageViewerStore()

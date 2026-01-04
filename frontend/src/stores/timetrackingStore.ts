@@ -17,6 +17,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 export type TimeTrackingTab = 'entries' | 'projects' | 'clients' | 'reports'
 
+export interface TimerState {
+  isRunning: boolean
+  isPaused: boolean
+  startTime: number | null  // Timestamp when started
+  pausedTime: number  // Accumulated time when paused (in ms)
+  projectId: number | null
+  description: string
+}
+
 interface TimeTrackingState {
   clients: TimeTrackingClient[]
   projects: TimeTrackingProject[]
@@ -26,6 +35,18 @@ interface TimeTrackingState {
   error: string | null
   selectedDate: string | null
   activeTab: TimeTrackingTab
+
+  // Timer state
+  timer: TimerState
+
+  // Timer actions
+  startTimer: (projectId?: number, description?: string) => void
+  pauseTimer: () => void
+  resumeTimer: () => void
+  stopTimer: () => Promise<TimeEntry | null>
+  resetTimer: () => void
+  setTimerProject: (projectId: number | null) => void
+  setTimerDescription: (description: string) => void
 
   // Client actions
   fetchClients: () => Promise<void>
@@ -79,6 +100,130 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
   isLoading: false,
   error: null,
   selectedDate: null,
+
+  // Timer state
+  timer: {
+    isRunning: false,
+    isPaused: false,
+    startTime: null,
+    pausedTime: 0,
+    projectId: null,
+    description: '',
+  },
+
+  // ===== Timer Actions =====
+
+  startTimer: (projectId, description) => {
+    set({
+      timer: {
+        isRunning: true,
+        isPaused: false,
+        startTime: Date.now(),
+        pausedTime: 0,
+        projectId: projectId ?? null,
+        description: description ?? '',
+      },
+    })
+  },
+
+  pauseTimer: () => {
+    const { timer } = get()
+    if (!timer.isRunning || timer.isPaused) return
+
+    const elapsed = timer.startTime ? Date.now() - timer.startTime : 0
+    set({
+      timer: {
+        ...timer,
+        isPaused: true,
+        pausedTime: timer.pausedTime + elapsed,
+        startTime: null,
+      },
+    })
+  },
+
+  resumeTimer: () => {
+    const { timer } = get()
+    if (!timer.isPaused) return
+
+    set({
+      timer: {
+        ...timer,
+        isPaused: false,
+        isRunning: true,
+        startTime: Date.now(),
+      },
+    })
+  },
+
+  stopTimer: async () => {
+    const { timer, addEntry } = get()
+    if (!timer.isRunning && !timer.isPaused) return null
+
+    // Calculate total elapsed time
+    let totalMs = timer.pausedTime
+    if (timer.startTime && !timer.isPaused) {
+      totalMs += Date.now() - timer.startTime
+    }
+
+    // Convert to hours and minutes
+    const totalMinutes = Math.round(totalMs / 60000)
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+
+    // Create time entry if we have a project and meaningful duration
+    let entry: TimeEntry | null = null
+    if (timer.projectId && totalMinutes >= 1) {
+      const now = new Date()
+      const startTime = new Date(now.getTime() - totalMs)
+
+      entry = await addEntry({
+        project: timer.projectId,
+        date: now.toISOString().split('T')[0],
+        start_time: startTime.toTimeString().slice(0, 5),
+        end_time: now.toTimeString().slice(0, 5),
+        description: timer.description || `Timer: ${hours}h ${minutes}m`,
+      })
+    }
+
+    // Reset timer
+    set({
+      timer: {
+        isRunning: false,
+        isPaused: false,
+        startTime: null,
+        pausedTime: 0,
+        projectId: null,
+        description: '',
+      },
+    })
+
+    return entry
+  },
+
+  resetTimer: () => {
+    set({
+      timer: {
+        isRunning: false,
+        isPaused: false,
+        startTime: null,
+        pausedTime: 0,
+        projectId: get().timer.projectId,
+        description: get().timer.description,
+      },
+    })
+  },
+
+  setTimerProject: (projectId) => {
+    set((state) => ({
+      timer: { ...state.timer, projectId },
+    }))
+  },
+
+  setTimerDescription: (description) => {
+    set((state) => ({
+      timer: { ...state.timer, description },
+    }))
+  },
 
   // ===== Client Actions =====
 

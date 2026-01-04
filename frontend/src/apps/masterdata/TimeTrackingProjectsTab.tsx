@@ -14,9 +14,9 @@ import type {
 
 const colorOptions: { value: ProjectColor; label: string; class: string }[] = [
   { value: 'gray', label: 'Grau', class: 'bg-gray-500' },
-  { value: 'violet', label: 'Lavendel', class: 'bg-violet-500' },
+  { value: 'lavender', label: 'Lavendel', class: 'bg-lavender-500' },
   { value: 'green', label: 'Grün', class: 'bg-green-500' },
-  { value: 'yellow', label: 'Gelb', class: 'bg-yellow-500' },
+  { value: 'gold', label: 'Gold', class: 'bg-gold-500' },
   { value: 'red', label: 'Rot', class: 'bg-red-500' },
   { value: 'purple', label: 'Lila', class: 'bg-purple-500' },
   { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
@@ -99,7 +99,7 @@ export function TimeTrackingProjectsTab() {
           setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' as 'active' | 'archived' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neues Projekt
@@ -181,7 +181,7 @@ export function TimeTrackingProjectsTab() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
+              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
               {editingProject ? 'Speichern' : 'Erstellen'}

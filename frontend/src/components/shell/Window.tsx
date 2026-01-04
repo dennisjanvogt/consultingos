@@ -5,7 +5,7 @@ import { type Window as WindowType, useWindowStore } from '@/stores/windowStore'
 import { useKanbanStore } from '@/stores/kanbanStore'
 import { useTimeTrackingStore, type TimeTrackingTab } from '@/stores/timetrackingStore'
 import { useDocumentsStore } from '@/stores/documentsStore'
-import { X, Minus, Square, Grid3X3, List, FolderPlus, Upload } from 'lucide-react'
+import { X, Square, Grid3X3, List, FolderPlus, Upload } from 'lucide-react'
 import type { KanbanBoard } from '@/api/types'
 
 // Resize constraints
@@ -236,10 +236,13 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       >
         {/* Mini Title Bar */}
         <div className="h-8 flex items-center px-3 glass-header shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500" />
-            <div className="w-3 h-3 rounded-full bg-green-500" />
+          <div className="flex items-center gap-1">
+            <div className="w-5 h-4 rounded bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+              <X className="w-2.5 h-2.5 text-gray-500 dark:text-gray-400" />
+            </div>
+            <div className="w-5 h-4 rounded bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+              <Square className="w-2 h-2 text-gray-500 dark:text-gray-400" />
+            </div>
           </div>
           <span className="text-sm font-medium absolute left-1/2 -translate-x-1/2">
             {window.title}
@@ -335,6 +338,8 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   // Normales Fenster (draggable) - wird auch im Stage Manager verwendet
   return (
     <motion.div
+      layout
+      layoutId={`window-${window.id}`}
       className={`absolute glass rounded-xl overflow-hidden window-shadow flex flex-col outline-none ${
         isActive ? 'ring-1 ring-white/20' : ''
       }`}
@@ -348,9 +353,15 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       }}
       tabIndex={0}
       onKeyDown={handleWindowKeyDown}
-      initial={{ scale: 0.8, opacity: 0 }}
+      initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: 'spring', bounce: 0.2, duration: 0.36 }}
+      exit={{ scale: 0.9, opacity: 0 }}
+      transition={{
+        type: 'spring',
+        stiffness: 200,
+        damping: 25,
+        layout: { type: 'spring', stiffness: 180, damping: 28, mass: 1 }
+      }}
       onMouseDown={() => focusWindow(window.id)}
       drag={!isResizing}
       dragControls={dragControls}
@@ -426,27 +437,18 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
 
   return (
     <>
-      {/* Traffic lights */}
-      <div className="flex items-center gap-2">
+      {/* Window Controls - Modern Style */}
+      <div className="flex items-center gap-1">
         <button
           onClick={(e) => {
             e.stopPropagation()
             onClose()
           }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center group"
+          className="w-6 h-5 rounded-md bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 hover:from-red-400 hover:to-red-500 border border-gray-300/50 dark:border-gray-500/50 hover:border-red-400/50 transition-all duration-150 flex items-center justify-center group shadow-sm"
+          title="Schließen"
         >
-          <X className="w-2 h-2 opacity-0 group-hover:opacity-100 text-red-900" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onTile()
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-colors flex items-center justify-center group"
-        >
-          <Minus className="w-2 h-2 opacity-0 group-hover:opacity-100 text-yellow-900" />
+          <X className="w-3 h-3 text-gray-500 dark:text-gray-300 group-hover:text-white transition-colors" />
         </button>
         <button
           onClick={(e) => {
@@ -454,9 +456,10 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
             onMaximize()
           }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center group"
+          className="w-6 h-5 rounded-md bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 hover:from-lavender-400 hover:to-lavender-500 border border-gray-300/50 dark:border-gray-500/50 hover:border-lavender-400/50 transition-all duration-150 flex items-center justify-center group shadow-sm"
+          title="Maximieren"
         >
-          <Square className="w-1.5 h-1.5 opacity-0 group-hover:opacity-100 text-green-900" />
+          <Square className="w-2.5 h-2.5 text-gray-500 dark:text-gray-300 group-hover:text-white transition-colors" />
         </button>
       </div>
 

@@ -33,6 +33,14 @@ export function WindowManager({ windows }: WindowManagerProps) {
   }, [stageManagerEnabled, setShowThumbnails])
 
   const visibleWindows = windows.filter((w) => !w.isMinimized)
+
+  // Safety: Im Stage Manager muss immer ein Fenster aktiv sein wenn Fenster existieren
+  useEffect(() => {
+    if (stageManagerEnabled && visibleWindows.length > 0 && !activeWindowId) {
+      // Auto-aktiviere erstes sichtbares Fenster
+      focusWindow(visibleWindows[0].id)
+    }
+  }, [stageManagerEnabled, visibleWindows, activeWindowId, focusWindow])
   const activeWindow = visibleWindows.find((w) => w.id === activeWindowId)
   const inactiveWindows = visibleWindows.filter((w) => w.id !== activeWindowId)
 
@@ -110,13 +118,15 @@ export function WindowManager({ windows }: WindowManagerProps) {
     )
   }
 
-  // Normaler Modus: Alle Fenster frei positioniert
+  // Normaler Modus: Alle Fenster frei positioniert mit Layout-Animationen
   return (
-    <>
-      {visibleWindows.map((window) => (
-        <Window key={window.id} window={window} />
-      ))}
-    </>
+    <LayoutGroup>
+      <AnimatePresence mode="popLayout">
+        {visibleWindows.map((window) => (
+          <Window key={window.id} window={window} />
+        ))}
+      </AnimatePresence>
+    </LayoutGroup>
   )
 }
 
@@ -134,7 +144,7 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
   const scale = thumbnailWidth / window.size.width
 
   return (
-    <motion.button
+    <motion.div
       layoutId={`window-${window.id}`}
       initial={{ scale: 0.8, opacity: 0, y: horizontal ? -30 : 0, x: horizontal ? 0 : -40 }}
       animate={{ scale: 1, opacity: 1, y: 0, x: 0 }}
@@ -148,6 +158,9 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
       whileHover={{ scale: 1.08, y: horizontal ? 8 : 0, x: horizontal ? 0 : 12 }}
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
+      role="button"
+      tabIndex={0}
       className="group relative cursor-pointer"
       style={{ width: thumbnailWidth, height: thumbnailHeight + 24 }}
     >
@@ -182,8 +195,8 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
         whileHover={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
         className={horizontal
-          ? "absolute left-1/2 -translate-x-1/2 -top-2 h-1.5 w-12 rounded-full bg-gradient-to-r from-violet-400 to-violet-600 origin-center shadow-lg shadow-violet-500/40"
-          : "absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-full bg-gradient-to-b from-violet-400 to-violet-600 origin-center shadow-lg shadow-violet-500/40"
+          ? "absolute left-1/2 -translate-x-1/2 -top-2 h-1.5 w-12 rounded-full bg-gradient-to-r from-lavender-400 to-lavender-600 origin-center shadow-lg shadow-lavender-500/40"
+          : "absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-full bg-gradient-to-b from-lavender-400 to-lavender-600 origin-center shadow-lg shadow-lavender-500/40"
         }
       />
 
@@ -196,6 +209,6 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
           {window.title}
         </span>
       </div>
-    </motion.button>
+    </motion.div>
   )
 }

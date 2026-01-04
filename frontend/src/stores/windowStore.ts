@@ -24,6 +24,7 @@ interface WindowStore {
   nextZIndex: number
   stageManagerEnabled: boolean
   showStageThumbnails: boolean
+  showDock: boolean
   openWindow: (appId: AppType) => void
   closeWindow: (id: string) => void
   minimizeWindow: (id: string) => void
@@ -38,6 +39,7 @@ interface WindowStore {
   updateWindowSize: (id: string, size: { width: number; height: number }) => void
   toggleStageManager: () => void
   setShowStageThumbnails: (show: boolean) => void
+  setShowDock: (show: boolean) => void
   centerActiveWindow: () => void
 }
 
@@ -71,6 +73,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
   nextZIndex: 1,
   stageManagerEnabled: true,
   showStageThumbnails: false,
+  showDock: false,
 
   openWindow: (appId) => {
     const { windows, nextZIndex } = get()
@@ -111,13 +114,18 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     const centerY = menuBarHeight + (availableHeight - size.height) / 2
     const offset = windows.length * 30
 
+    // Prüfen ob andere Fenster bereits getiled sind
+    const tiledWindows = windows.filter((w) => w.isTiled && !w.isMinimized)
+    const shouldAutoTile = tiledWindows.length > 0 && tiledWindows.length < 4
+
     const newWindow: Window = {
       id: `${appId}-${Date.now()}`,
       appId,
       title: appTitles[appId],
       isMinimized: false,
       isMaximized: false,
-      isTiled: false,
+      isTiled: shouldAutoTile,
+      tiledAt: shouldAutoTile ? Date.now() : undefined,
       position: {
         x: Math.max(50, centerX + offset),
         y: Math.max(menuBarHeight + 20, centerY + offset),
@@ -131,17 +139,27 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       activeWindowId: newWindow.id,
       nextZIndex: state.nextZIndex + 1,
     }))
+
+    // Wenn auto-getiled, Positionen neu berechnen
+    if (shouldAutoTile) {
+      // Kurze Verzögerung damit das Fenster erst zum State hinzugefügt wird
+      setTimeout(() => get().recalculateTiledPositions(), 0)
+    }
   },
 
   closeWindow: (id) => {
     const wasTiled = get().windows.find((w) => w.id === id)?.isTiled
-    set((state) => ({
-      windows: state.windows.filter((w) => w.id !== id),
-      activeWindowId:
-        state.activeWindowId === id
-          ? state.windows[state.windows.length - 2]?.id || null
-          : state.activeWindowId,
-    }))
+    set((state) => {
+      const remainingWindows = state.windows.filter((w) => w.id !== id)
+      // Wenn geschlossenes Fenster aktiv war, nächstes sichtbares aktivieren
+      const nextActive = state.activeWindowId === id
+        ? remainingWindows.find((w) => !w.isMinimized)?.id || null
+        : state.activeWindowId
+      return {
+        windows: remainingWindows,
+        activeWindowId: nextActive,
+      }
+    })
     // Wenn getiltes Fenster geschlossen wurde, Positionen neu berechnen
     if (wasTiled) {
       get().recalculateTiledPositions()
@@ -149,24 +167,33 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
   },
 
   minimizeWindow: (id) => {
-    set((state) => ({
-      windows: state.windows.map((w) =>
+    set((state) => {
+      // Erst minimieren, dann nächstes Fenster suchen
+      const updatedWindows = state.windows.map((w) =>
         w.id === id ? { ...w, isMinimized: true } : w
-      ),
-      activeWindowId:
-        state.activeWindowId === id
-          ? state.windows.find((w) => w.id !== id && !w.isMinimized)?.id || null
-          : state.activeWindowId,
-    }))
+      )
+      // Suche NACH dem Minimieren im aktualisierten Array
+      const nextActive = state.activeWindowId === id
+        ? updatedWindows.find((w) => !w.isMinimized)?.id || null
+        : state.activeWindowId
+      return {
+        windows: updatedWindows,
+        activeWindowId: nextActive,
+      }
+    })
   },
 
   tileWindow: (id) => {
     const { stageManagerEnabled, windows } = get()
 
     if (stageManagerEnabled) {
-      // Im Stage Manager: Fenster wird "inaktiv" - einfach nächstes Fenster aktivieren
+      // Im Stage Manager: Fenster wird "inaktiv" - nächstes Fenster aktivieren
       const nextWindow = windows.find((w) => w.id !== id && !w.isMinimized)
-      set({ activeWindowId: nextWindow?.id || null })
+      // Nur wechseln wenn es ein anderes Fenster gibt, sonst bleibt aktuelles aktiv
+      if (nextWindow) {
+        set({ activeWindowId: nextWindow.id })
+      }
+      return  // Early return - im Stage Manager wird nicht getiled
     } else {
       // Normaler Modus: Tiling aktivieren
       const targetWindow = windows.find((w) => w.id === id)
@@ -388,6 +415,10 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
 
   setShowStageThumbnails: (show) => {
     set({ showStageThumbnails: show })
+  },
+
+  setShowDock: (show) => {
+    set({ showDock: show })
   },
 
   centerActiveWindow: () => {

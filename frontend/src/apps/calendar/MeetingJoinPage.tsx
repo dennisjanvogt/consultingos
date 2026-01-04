@@ -54,15 +54,15 @@ export function MeetingJoinPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-500 border-t-transparent" />
+      <div className="min-h-screen bg-gradient-to-br from-lavender-50 to-lavender-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-lavender-500 border-t-transparent" />
       </div>
     )
   }
 
   if (error || !meetingInfo) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-lavender-50 to-lavender-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mx-auto mb-4 flex items-center justify-center">
             <AlertCircle className="h-8 w-8 text-red-500" />
@@ -79,10 +79,10 @@ export function MeetingJoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-lavender-50 to-lavender-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden max-w-lg w-full">
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-500 to-purple-600 p-6 text-white">
+        <div className="bg-gradient-to-r from-lavender-500 to-lavender-600 p-6 text-white">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
               <Video className="h-6 w-6" />
@@ -102,8 +102,8 @@ export function MeetingJoinPage() {
         <div className="p-6 space-y-4">
           {/* Date & Time */}
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-              <Calendar className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            <div className="w-10 h-10 rounded-lg bg-lavender-100 dark:bg-lavender-900/30 flex items-center justify-center shrink-0">
+              <Calendar className="h-5 w-5 text-lavender-600 dark:text-lavender-400" />
             </div>
             <div>
               <p className="font-medium text-gray-800 dark:text-gray-200">
@@ -147,7 +147,7 @@ export function MeetingJoinPage() {
             href={meetingInfo.meeting_link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30"
+            className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-lavender-500 to-lavender-600 hover:from-lavender-600 hover:to-lavender-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-lavender-500/25 hover:shadow-xl hover:shadow-lavender-500/30"
           >
             <Video className="h-5 w-5" />
             Meeting beitreten
@@ -161,7 +161,7 @@ export function MeetingJoinPage() {
         {/* Footer */}
         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 text-center">
           <p className="text-xs text-gray-400">
-            Powered by <span className="font-medium text-violet-500">ConsultingOS</span> & Jitsi Meet
+            Powered by <span className="font-medium text-lavender-500">ConsultingOS</span> & Jitsi Meet
           </p>
         </div>
       </div>

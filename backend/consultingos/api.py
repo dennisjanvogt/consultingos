@@ -15,6 +15,7 @@ from apps.documents.api import router as documents_router
 from apps.calendar.api import router as calendar_router
 from apps.kanban.api import router as kanban_router
 from apps.timetracking.api import router as timetracking_router
+from apps.ai.api import router as ai_router
 
 # Register routers
 api.add_router('/auth/', users_router, tags=['Auth'])
@@ -25,3 +26,4 @@ api.add_router('/documents/', documents_router, tags=['Documents'])
 api.add_router('/calendar/', calendar_router, tags=['Calendar'])
 api.add_router('/kanban/', kanban_router, tags=['Kanban'])
 api.add_router('/timetracking/', timetracking_router, tags=['Time Tracking'])
+api.add_router('/ai/', ai_router, tags=['AI'])

@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useWindowStore, type AppType } from '@/stores/windowStore'
 import { useTranslation } from 'react-i18next'
 import {
@@ -57,31 +58,59 @@ const dockItems: DockItem[] = [
 
 export function Dock() {
   const { t } = useTranslation()
-  const { openWindow, windows } = useWindowStore()
+  const { openWindow, windows, showDock, setShowDock } = useWindowStore()
+  const hideTimeoutRef = useRef<number | null>(null)
+
+  const hasVisibleWindows = windows.some((w) => !w.isMinimized)
+  const shouldShow = !hasVisibleWindows || showDock
 
   const isAppOpen = (appId: AppType) => {
     return windows.some((w) => w.appId === appId && !w.isMinimized)
   }
 
+  const handleMouseEnter = () => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current)
+      hideTimeoutRef.current = null
+    }
+    setShowDock(true)
+  }
+
+  const handleMouseLeave = () => {
+    if (hasVisibleWindows) {
+      hideTimeoutRef.current = window.setTimeout(() => {
+        setShowDock(false)
+      }, 1300)
+    }
+  }
+
   return (
-    <div className="flex justify-center pb-2 pt-1">
-      <motion.div
-        className="glass-dock rounded-2xl px-1.5 py-1.5 flex items-end gap-0.5"
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', bounce: 0.3 }}
-      >
-        {dockItems.map((item) => (
-          <DockIcon
-            key={item.id}
-            item={item}
-            label={t(item.labelKey)}
-            isOpen={isAppOpen(item.id)}
-            onClick={() => openWindow(item.id)}
-          />
-        ))}
-      </motion.div>
-    </div>
+    <AnimatePresence>
+      {shouldShow && (
+        <motion.div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50"
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="glass-dock rounded-2xl px-1.5 py-1.5 flex items-end gap-0.5">
+            {/* App Icons */}
+            {dockItems.map((item) => (
+              <DockIcon
+                key={item.id}
+                item={item}
+                label={t(item.labelKey)}
+                isOpen={isAppOpen(item.id)}
+                onClick={() => openWindow(item.id)}
+              />
+            ))}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
