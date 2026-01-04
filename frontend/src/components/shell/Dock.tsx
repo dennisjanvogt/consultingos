@@ -1,71 +1,49 @@
-import { useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useRef, useEffect } from 'react'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { useWindowStore, type AppType } from '@/stores/windowStore'
+import { useAppSettingsStore } from '@/stores/appSettingsStore'
 import { useTranslation } from 'react-i18next'
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  Settings,
-  FolderOpen,
-  Kanban,
-  Clock,
-} from 'lucide-react'
+import { appRegistry } from '@/config/apps'
 
 interface DockItem {
-  id: AppType
+  id: string
   icon: React.ReactNode
   labelKey: string
 }
 
-const dockItems: DockItem[] = [
-  {
-    id: 'dashboard',
-    icon: <LayoutDashboard className="h-6 w-6" />,
-    labelKey: 'apps.dashboard',
-  },
-  {
-    id: 'masterdata',
-    icon: <Users className="h-6 w-6" />,
-    labelKey: 'apps.masterdata',
-  },
-  {
-    id: 'transactions',
-    icon: <FileText className="h-6 w-6" />,
-    labelKey: 'apps.transactions',
-  },
-  {
-    id: 'documents',
-    icon: <FolderOpen className="h-6 w-6" />,
-    labelKey: 'apps.documents',
-  },
-  {
-    id: 'kanban',
-    icon: <Kanban className="h-6 w-6" />,
-    labelKey: 'apps.kanban',
-  },
-  {
-    id: 'timetracking',
-    icon: <Clock className="h-6 w-6" />,
-    labelKey: 'apps.timetracking',
-  },
-  {
-    id: 'settings',
-    icon: <Settings className="h-6 w-6" />,
-    labelKey: 'apps.settings',
-  },
-]
-
 export function Dock() {
   const { t } = useTranslation()
   const { openWindow, windows, showDock, setShowDock } = useWindowStore()
+  const { settings, fetchSettings, isAppEnabled, reorderDock } = useAppSettingsStore()
   const hideTimeoutRef = useRef<number | null>(null)
+
+  // Fetch app settings on mount
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
 
   const hasVisibleWindows = windows.some((w) => !w.isMinimized)
   const shouldShow = !hasVisibleWindows || showDock
 
-  const isAppOpen = (appId: AppType) => {
+  const isAppOpen = (appId: string) => {
     return windows.some((w) => w.appId === appId && !w.isMinimized)
+  }
+
+  // Dock Items aus der Registry basierend auf Settings (Reihenfolge + nur aktivierte Apps)
+  const dockItems: DockItem[] = settings.dock_order
+    .filter(id => appRegistry[id] && isAppEnabled(id))
+    .map(id => ({
+      id,
+      icon: appRegistry[id].icon,
+      labelKey: appRegistry[id].titleKey,
+    }))
+
+  // Handle reorder - update dock_order with new positions
+  const handleReorder = (newItems: DockItem[]) => {
+    const newOrder = newItems.map(item => item.id)
+    // Behalte deaktivierte Apps in der Reihenfolge
+    const disabledApps = settings.dock_order.filter(id => !isAppEnabled(id))
+    reorderDock([...newOrder, ...disabledApps])
   }
 
   const handleMouseEnter = () => {
@@ -96,7 +74,12 @@ export function Dock() {
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <div className="glass-dock rounded-2xl px-1.5 py-1.5 flex items-end gap-0.5">
+          <Reorder.Group
+            axis="x"
+            values={dockItems}
+            onReorder={handleReorder}
+            className="glass-dock rounded-2xl px-1.5 py-1.5 flex items-end gap-0.5"
+          >
             {/* App Icons */}
             {dockItems.map((item) => (
               <DockIcon
@@ -104,10 +87,10 @@ export function Dock() {
                 item={item}
                 label={t(item.labelKey)}
                 isOpen={isAppOpen(item.id)}
-                onClick={() => openWindow(item.id)}
+                onClick={() => openWindow(item.id as AppType)}
               />
             ))}
-          </div>
+          </Reorder.Group>
         </motion.div>
       )}
     </AnimatePresence>
@@ -123,16 +106,24 @@ interface DockIconProps {
 
 function DockIcon({ item, label, isOpen, onClick }: DockIconProps) {
   return (
-    <motion.button
-      className="relative flex flex-col items-center p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors group"
-      onClick={onClick}
+    <Reorder.Item
+      value={item}
+      layout
+      className="relative flex flex-col items-center p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors group cursor-grab active:cursor-grabbing"
+      initial={{ scale: 1, y: 0 }}
+      animate={{ scale: 1, y: 0 }}
       whileHover={{ scale: 1.15, y: -4 }}
       whileTap={{ scale: 0.95 }}
+      whileDrag={{ scale: 1.1, y: 0, zIndex: 50 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
-      {/* Icon */}
-      <div className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm">
+      {/* Clickable Area */}
+      <button
+        onClick={onClick}
+        className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm"
+      >
         {item.icon}
-      </div>
+      </button>
 
       {/* Tooltip */}
       <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -149,6 +140,6 @@ function DockIcon({ item, label, isOpen, onClick }: DockIconProps) {
           animate={{ scale: 1 }}
         />
       )}
-    </motion.button>
+    </Reorder.Item>
   )
 }

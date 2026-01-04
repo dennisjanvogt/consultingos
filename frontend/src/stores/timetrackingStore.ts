@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { ApiError } from '@/api/client'
 import type {
   TimeTrackingClient,
@@ -48,6 +49,10 @@ interface TimeTrackingState {
   setTimerProject: (projectId: number | null) => void
   setTimerDescription: (description: string) => void
 
+  // Timer sync
+  syncTimerToBackend: () => Promise<void>
+  loadTimerFromBackend: () => Promise<void>
+
   // Client actions
   fetchClients: () => Promise<void>
   addClient: (client: TimeTrackingClientCreate) => Promise<TimeTrackingClient | null>
@@ -74,6 +79,11 @@ interface TimeTrackingState {
   getEntriesForDate: (date: string) => TimeEntry[]
   getActiveProjects: () => TimeTrackingProject[]
   setActiveTab: (tab: TimeTrackingTab) => void
+
+  // Form trigger from title bar
+  showNewForm: boolean
+  triggerNewForm: () => void
+  clearNewFormTrigger: () => void
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -91,7 +101,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json()
 }
 
-export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
+export const useTimeTrackingStore = create<TimeTrackingState>()(
+  persist(
+    (set, get) => ({
   clients: [],
   activeTab: 'entries',
   projects: [],
@@ -100,6 +112,7 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
   isLoading: false,
   error: null,
   selectedDate: null,
+  showNewForm: false,
 
   // Timer state
   timer: {
@@ -124,6 +137,8 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
         description: description ?? '',
       },
     })
+    // Sync to backend (fire and forget)
+    get().syncTimerToBackend()
   },
 
   pauseTimer: () => {
@@ -139,6 +154,7 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
         startTime: null,
       },
     })
+    get().syncTimerToBackend()
   },
 
   resumeTimer: () => {
@@ -153,6 +169,7 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
         startTime: Date.now(),
       },
     })
+    get().syncTimerToBackend()
   },
 
   stopTimer: async () => {
@@ -165,23 +182,27 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
       totalMs += Date.now() - timer.startTime
     }
 
-    // Convert to hours and minutes
-    const totalMinutes = Math.round(totalMs / 60000)
+    // Convert to minutes and round UP to next 15 minutes
+    const rawMinutes = Math.round(totalMs / 60000)
+    const totalMinutes = Math.max(15, Math.ceil(rawMinutes / 15) * 15) // Minimum 15 min
     const hours = Math.floor(totalMinutes / 60)
     const minutes = totalMinutes % 60
 
+    // Recalculate totalMs based on rounded minutes for correct end_time
+    const roundedMs = totalMinutes * 60000
+
     // Create time entry if we have a project and meaningful duration
     let entry: TimeEntry | null = null
-    if (timer.projectId && totalMinutes >= 1) {
+    if (timer.projectId && totalMinutes >= 15) {
       const now = new Date()
-      const startTime = new Date(now.getTime() - totalMs)
+      const startTime = new Date(now.getTime() - roundedMs)
 
       entry = await addEntry({
         project: timer.projectId,
         date: now.toISOString().split('T')[0],
         start_time: startTime.toTimeString().slice(0, 5),
         end_time: now.toTimeString().slice(0, 5),
-        description: timer.description || `Timer: ${hours}h ${minutes}m`,
+        description: timer.description || `Timer: ${hours}h ${minutes > 0 ? ` ${minutes}m` : ''}`.trim(),
       })
     }
 
@@ -197,6 +218,16 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
       },
     })
 
+    // Delete timer from backend
+    try {
+      await fetch(`${API_BASE_URL}/timetracking/timer/`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+    } catch (err) {
+      console.error('Failed to delete timer from backend:', err)
+    }
+
     return entry
   },
 
@@ -211,18 +242,73 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
         description: get().timer.description,
       },
     })
+    get().syncTimerToBackend()
   },
 
   setTimerProject: (projectId) => {
     set((state) => ({
       timer: { ...state.timer, projectId },
     }))
+    get().syncTimerToBackend()
   },
 
   setTimerDescription: (description) => {
     set((state) => ({
       timer: { ...state.timer, description },
     }))
+    // Don't sync on every keystroke, only on meaningful changes
+  },
+
+  // ===== Timer Sync =====
+
+  syncTimerToBackend: async () => {
+    const { timer } = get()
+
+    try {
+      await fetch(`${API_BASE_URL}/timetracking/timer/`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          project_id: timer.projectId ?? -1,
+          description: timer.description,
+          start_time: timer.startTime,
+          paused_time: timer.pausedTime,
+          is_running: timer.isRunning,
+          is_paused: timer.isPaused,
+        }),
+      })
+    } catch (err) {
+      console.error('Failed to sync timer to backend:', err)
+    }
+  },
+
+  loadTimerFromBackend: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/timetracking/timer/`, {
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        set({
+          timer: {
+            isRunning: data.is_running,
+            isPaused: data.is_paused,
+            startTime: data.start_time,
+            pausedTime: data.paused_time,
+            projectId: data.project_id,
+            description: data.description || '',
+          },
+        })
+        console.log('Timer loaded from backend:', data)
+      } else if (response.status === 404) {
+        // No active timer in backend, keep localStorage state
+        console.log('No timer in backend, using localStorage')
+      }
+    } catch (err) {
+      console.error('Failed to load timer from backend:', err)
+    }
   },
 
   // ===== Client Actions =====
@@ -438,4 +524,20 @@ export const useTimeTrackingStore = create<TimeTrackingState>((set, get) => ({
   setActiveTab: (tab) => {
     set({ activeTab: tab })
   },
-}))
+
+  triggerNewForm: () => {
+    set({ showNewForm: true })
+  },
+
+  clearNewFormTrigger: () => {
+    set({ showNewForm: false })
+  },
+    }),
+    {
+      name: 'timetracking-timer',
+      storage: createJSONStorage(() => localStorage),
+      // Only persist the timer state, not API data
+      partialize: (state) => ({ timer: state.timer }),
+    }
+  )
+)

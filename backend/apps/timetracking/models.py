@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Client(models.Model):
@@ -104,3 +105,39 @@ class TimeEntry(models.Model):
             end += timedelta(days=1)
         self.duration_minutes = int((end - start).total_seconds() / 60)
         super().save(*args, **kwargs)
+
+
+class ActiveTimer(models.Model):
+    """
+    Aktiver Timer für Zeiterfassung - nur einer pro User.
+    Wird in der Datenbank gespeichert für Persistenz über Page-Refreshes
+    und Cross-Device-Sync.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='active_timer',
+        primary_key=True
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='active_timers'
+    )
+    description = models.CharField(max_length=500, blank=True, default='')
+    start_time = models.BigIntegerField(null=True, blank=True)  # Unix timestamp in ms
+    paused_time = models.BigIntegerField(default=0)  # Accumulated paused time in ms
+    is_running = models.BooleanField(default=False)
+    is_paused = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Active Timer'
+        verbose_name_plural = 'Active Timers'
+
+    def __str__(self):
+        status = 'running' if self.is_running else ('paused' if self.is_paused else 'stopped')
+        return f"Timer for {self.user} ({status})"

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
-  Plus,
   Pencil,
   Trash2,
   Check,
   X,
 } from 'lucide-react'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
+import { useMasterDataStore } from '@/stores/masterdataStore'
 import type {
   TimeTrackingProject,
   ProjectColor,
@@ -14,9 +14,9 @@ import type {
 
 const colorOptions: { value: ProjectColor; label: string; class: string }[] = [
   { value: 'gray', label: 'Grau', class: 'bg-gray-500' },
-  { value: 'lavender', label: 'Lavendel', class: 'bg-lavender-500' },
+  { value: 'violet', label: 'Lavendel', class: 'bg-lavender-500' },
   { value: 'green', label: 'Grün', class: 'bg-green-500' },
-  { value: 'gold', label: 'Gold', class: 'bg-gold-500' },
+  { value: 'yellow', label: 'Gold', class: 'bg-gold-500' },
   { value: 'red', label: 'Rot', class: 'bg-red-500' },
   { value: 'purple', label: 'Lila', class: 'bg-purple-500' },
   { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
@@ -48,6 +48,18 @@ export function TimeTrackingProjectsTab() {
     updateProject,
     deleteProject,
   } = useTimeTrackingStore()
+
+  const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setEditingProject(null)
+      setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' })
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   useEffect(() => {
     fetchClients()
@@ -93,18 +105,6 @@ export function TimeTrackingProjectsTab() {
 
   return (
     <div className="h-full overflow-auto p-4 space-y-4">
-      <button
-        onClick={() => {
-          setEditingProject(null)
-          setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' as 'active' | 'archived' })
-          setShowForm(true)
-        }}
-        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
-      >
-        <Plus className="h-4 w-4" />
-        Neues Projekt
-      </button>
-
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-3">

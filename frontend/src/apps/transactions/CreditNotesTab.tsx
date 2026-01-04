@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
+import { Search, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
+import { useTransactionsStore } from '@/stores/transactionsStore'
 
 interface CreditNote {
   id: number
@@ -45,6 +46,15 @@ export function CreditNotesTab() {
   const [showForm, setShowForm] = useState(false)
   const [editingNote, setEditingNote] = useState<CreditNote | null>(null)
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(initialCreditNotes)
+  const { showNewForm, clearNewFormTrigger } = useTransactionsStore()
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
@@ -95,16 +105,6 @@ export function CreditNotesTab() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => { setEditingNote(null); setShowForm(true); }}
-            className="flex items-center gap-1.5 text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            {t('transactions.addCreditNote')}
-          </button>
-        </div>
-
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input

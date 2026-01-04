@@ -14,9 +14,9 @@ const COLUMNS: { id: KanbanColumn; label: string }[] = [
 
 const COLORS: { id: KanbanColor; class: string }[] = [
   { id: 'gray', class: 'bg-gray-400' },
-  { id: 'lavender', class: 'bg-lavender-500' },
+  { id: 'violet', class: 'bg-lavender-500' },
   { id: 'green', class: 'bg-green-500' },
-  { id: 'gold', class: 'bg-gold-500' },
+  { id: 'yellow', class: 'bg-gold-500' },
   { id: 'red', class: 'bg-red-500' },
   { id: 'purple', class: 'bg-purple-500' },
   { id: 'pink', class: 'bg-pink-500' },

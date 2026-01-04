@@ -53,6 +53,9 @@ def generate_image(request, data: ImageGenerateSchema):
     print(f'Using image model: {image_model}')
 
     try:
+        print(f'Calling OpenRouter API with model: {image_model}')
+        print(f'Prompt: {data.prompt}')
+
         # Call OpenRouter with selected image model
         response = httpx.post(
             OPENROUTER_URL,
@@ -73,6 +76,9 @@ def generate_image(request, data: ImageGenerateSchema):
             timeout=120.0  # Image generation can take time
         )
 
+        print(f'OpenRouter response status: {response.status_code}')
+        print(f'OpenRouter response: {response.text[:1000]}')
+
         if response.status_code != 200:
             error_text = response.text
             return 500, {'error': f'OpenRouter API error: {error_text}'}
@@ -87,6 +93,20 @@ def generate_image(request, data: ImageGenerateSchema):
 
         message = choices[0].get('message', {})
         content = message.get('content', '')
+
+        # Check for images array in message (OpenRouter/Gemini format)
+        images = message.get('images', [])
+        if images:
+            for img in images:
+                if img.get('type') == 'image_url':
+                    image_url = img.get('image_url', {}).get('url', '')
+                    if image_url.startswith('data:image'):
+                        parts = image_url.split(',', 1)
+                        if len(parts) == 2:
+                            mime_part = parts[0]
+                            image_data = parts[1]
+                            mime_type = mime_part.split(':')[1].split(';')[0] if ':' in mime_part else 'image/png'
+                            return save_image(request.user, bilder_folder, image_data, mime_type, data)
 
         # Check if content is a list (multimodal response with image)
         if isinstance(content, list):
@@ -111,11 +131,17 @@ def generate_image(request, data: ImageGenerateSchema):
                     mime_type = mime_part.split(':')[1].split(';')[0] if ':' in mime_part else 'image/png'
                     return save_image(request.user, bilder_folder, image_data, mime_type, data)
 
+        print(f'Could not extract image. Message keys: {message.keys()}')
+        print(f'Content type: {type(content)}, Content preview: {str(content)[:200]}')
         return 500, {'error': 'Could not extract image from response. Model may not support image generation.'}
 
     except httpx.TimeoutException:
+        print('Timeout exception during image generation')
         return 500, {'error': 'Request timeout - image generation took too long'}
     except Exception as e:
+        import traceback
+        print(f'Exception during image generation: {e}')
+        traceback.print_exc()
         return 500, {'error': f'Error generating image: {str(e)}'}
 
 

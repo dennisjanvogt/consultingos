@@ -5,14 +5,23 @@ import { ThemeProvider } from '@/components/shell/ThemeProvider'
 import { LoginScreen } from '@/apps/auth/LoginScreen'
 import { MeetingJoinPage } from '@/apps/calendar/MeetingJoinPage'
 import { useAuthStore } from '@/stores/authStore'
+import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import '@/i18n/config'
 
 function MainApp() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore()
+  const { loadTimerFromBackend } = useTimeTrackingStore()
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
+
+  // Load timer from backend when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadTimerFromBackend()
+    }
+  }, [isAuthenticated, loadTimerFromBackend])
 
   if (isLoading) {
     return (

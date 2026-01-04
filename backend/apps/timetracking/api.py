@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import date, datetime
 from decimal import Decimal
 
-from .models import Client, Project, TimeEntry
+from .models import Client, Project, TimeEntry, ActiveTimer
 
 router = Router()
 
@@ -88,6 +88,10 @@ class TimeEntrySchema(Schema):
     description: str
     billable: bool
     created_at: datetime
+
+    @staticmethod
+    def resolve_project(obj):
+        return obj.project_id
 
     @staticmethod
     def resolve_project_name(obj):
@@ -185,10 +189,15 @@ def update_client(request, client_id: int, data: ClientUpdateSchema):
     return client
 
 
-@router.delete('/clients/{client_id}', response={204: None, 404: ErrorSchema})
+@router.delete('/clients/{client_id}', response={204: None, 400: ErrorSchema, 404: ErrorSchema})
 def delete_client(request, client_id: int):
     """Kunden löschen"""
     client = get_object_or_404(Client, id=client_id, user=request.user)
+
+    # Check if client has projects
+    if client.projects.exists():
+        return 400, {'error': 'Kunde hat noch Projekte. Bitte zuerst alle Projekte löschen.'}
+
     client.delete()
     return 204, None
 
@@ -260,10 +269,15 @@ def update_project(request, project_id: int, data: ProjectUpdateSchema):
     return project
 
 
-@router.delete('/projects/{project_id}', response={204: None, 404: ErrorSchema})
+@router.delete('/projects/{project_id}', response={204: None, 400: ErrorSchema, 404: ErrorSchema})
 def delete_project(request, project_id: int):
     """Projekt löschen"""
     project = get_object_or_404(Project, id=project_id, user=request.user)
+
+    # Check if project has time entries
+    if project.entries.exists():
+        return 400, {'error': 'Projekt hat noch Zeiteinträge. Bitte zuerst alle Einträge löschen.'}
+
     project.delete()
     return 204, None
 
@@ -412,3 +426,80 @@ def get_summary(request, date_from: Optional[date] = None, date_to: Optional[dat
         'by_project': by_project,
         'by_client': by_client
     }
+
+
+# ===== Active Timer Schemas =====
+
+class ActiveTimerSchema(Schema):
+    project_id: Optional[int] = None
+    project_name: Optional[str] = None
+    description: str
+    start_time: Optional[int] = None  # Unix timestamp in ms
+    paused_time: int = 0  # Accumulated paused time in ms
+    is_running: bool
+    is_paused: bool
+
+    @staticmethod
+    def resolve_project_id(obj):
+        return obj.project_id if obj.project else None
+
+    @staticmethod
+    def resolve_project_name(obj):
+        return obj.project.name if obj.project else None
+
+
+class ActiveTimerUpdateSchema(Schema):
+    project_id: Optional[int] = None
+    description: Optional[str] = None
+    start_time: Optional[int] = None
+    paused_time: Optional[int] = None
+    is_running: Optional[bool] = None
+    is_paused: Optional[bool] = None
+
+
+# ===== Active Timer Endpoints =====
+
+@router.get('/timer/', response={200: ActiveTimerSchema, 404: ErrorSchema})
+def get_active_timer(request):
+    """Aktuellen Timer-Status abrufen"""
+    try:
+        timer = ActiveTimer.objects.select_related('project').get(user=request.user)
+        return timer
+    except ActiveTimer.DoesNotExist:
+        return 404, {'error': 'No active timer'}
+
+
+@router.put('/timer/', response=ActiveTimerSchema)
+def update_active_timer(request, data: ActiveTimerUpdateSchema):
+    """Timer-Status aktualisieren (erstellt automatisch wenn nicht vorhanden)"""
+    timer, created = ActiveTimer.objects.get_or_create(user=request.user)
+
+    if data.project_id is not None:
+        if data.project_id == 0 or data.project_id == -1:
+            timer.project = None
+        else:
+            timer.project = get_object_or_404(Project, id=data.project_id, user=request.user)
+
+    if data.description is not None:
+        timer.description = data.description
+    if data.start_time is not None:
+        timer.start_time = data.start_time
+    if data.paused_time is not None:
+        timer.paused_time = data.paused_time
+    if data.is_running is not None:
+        timer.is_running = data.is_running
+    if data.is_paused is not None:
+        timer.is_paused = data.is_paused
+
+    timer.save()
+
+    # Refresh to get project relation
+    timer = ActiveTimer.objects.select_related('project').get(user=request.user)
+    return timer
+
+
+@router.delete('/timer/', response={204: None})
+def delete_active_timer(request):
+    """Timer löschen/zurücksetzen"""
+    ActiveTimer.objects.filter(user=request.user).delete()
+    return 204, None

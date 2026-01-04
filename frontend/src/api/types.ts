@@ -96,6 +96,13 @@ export interface CompanySettings {
   default_currency: string
   invoice_prefix: string
   next_invoice_number: number
+  enabled_apps: string[]
+  dock_order: string[]
+}
+
+export interface AppSettings {
+  enabled_apps: string[]
+  dock_order: string[]
 }
 
 export interface Folder {

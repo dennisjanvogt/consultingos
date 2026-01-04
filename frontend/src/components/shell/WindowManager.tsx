@@ -1,5 +1,6 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useEffect, useRef } from 'react'
+import { X } from 'lucide-react'
 import type { Window as WindowType } from '@/stores/windowStore'
 import { useWindowStore } from '@/stores/windowStore'
 import { Window } from './Window'
@@ -14,6 +15,7 @@ export function WindowManager({ windows }: WindowManagerProps) {
   const showThumbnails = useWindowStore((state) => state.showStageThumbnails)
   const setShowThumbnails = useWindowStore((state) => state.setShowStageThumbnails)
   const focusWindow = useWindowStore((state) => state.focusWindow)
+  const closeWindow = useWindowStore((state) => state.closeWindow)
   const centerActiveWindow = useWindowStore((state) => state.centerActiveWindow)
 
   const hideTimeoutRef = useRef<number | null>(null)
@@ -76,6 +78,7 @@ export function WindowManager({ windows }: WindowManagerProps) {
                   window={window}
                   index={index}
                   onClick={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
                   horizontal
                 />
               ))}
@@ -134,10 +137,11 @@ interface ScaledWindowThumbnailProps {
   window: WindowType
   index: number
   onClick: () => void
+  onClose: () => void
   horizontal?: boolean
 }
 
-function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWindowThumbnailProps) {
+function ScaledWindowThumbnail({ window, index, onClick, onClose, horizontal }: ScaledWindowThumbnailProps) {
   // Kleinere Thumbnails für horizontale Ansicht
   const thumbnailWidth = horizontal ? 140 : 180
   const thumbnailHeight = (window.size.height / window.size.width) * thumbnailWidth
@@ -164,9 +168,9 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
       className="group relative cursor-pointer"
       style={{ width: thumbnailWidth, height: thumbnailHeight + 24 }}
     >
-      {/* Thumbnail Container mit Glaseffekt */}
+      {/* Thumbnail Container */}
       <div
-        className="absolute top-0 left-0 right-0 rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-2xl shadow-xl border border-white/40 dark:border-gray-700/60 overflow-hidden transition-all duration-300 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.35)] group-hover:border-white/60 dark:group-hover:border-gray-500"
+        className="absolute top-0 left-0 right-0 rounded-xl shadow-xl overflow-hidden transition-all duration-300 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.35)]"
         style={{ height: thumbnailHeight }}
       >
         {/* Skalierter Fenster-Inhalt */}
@@ -182,11 +186,6 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
           <Window window={window} isThumbnail />
         </div>
 
-        {/* Hover Glow Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-        {/* Subtle shine effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
       {/* Active Indicator - oben bei horizontal, links bei vertikal */}
@@ -200,12 +199,23 @@ function ScaledWindowThumbnail({ window, index, onClick, horizontal }: ScaledWin
         }
       />
 
-      {/* App Title - immer sichtbar */}
+      {/* Close Button - Mitte oben */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onClose()
+        }}
+        className="absolute left-1/2 -translate-x-1/2 -top-2 z-20 w-5 h-5 rounded-full bg-gold-500 hover:bg-gold-600 flex items-center justify-center shadow-md"
+      >
+        <X className="w-3 h-3 text-white" />
+      </button>
+
+      {/* App Title - mit Textschatten */}
       <div
         className="absolute left-0 right-0 text-center transition-all duration-200"
         style={{ bottom: 0 }}
       >
-        <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate block max-w-full px-1">
+        <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate block max-w-full px-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
           {window.title}
         </span>
       </div>

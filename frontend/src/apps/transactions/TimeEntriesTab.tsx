@@ -7,17 +7,18 @@ import {
   X,
 } from 'lucide-react'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
+import { useTransactionsStore } from '@/stores/transactionsStore'
 import type {
-  
+
   TimeEntry,
   ProjectColor,
 } from '@/api/types'
 
 const colorOptions: { value: ProjectColor; class: string }[] = [
   { value: 'gray', class: 'bg-gray-500' },
-  { value: 'lavender', class: 'bg-lavender-500' },
+  { value: 'violet', class: 'bg-lavender-500' },
   { value: 'green', class: 'bg-green-500' },
-  { value: 'gold', class: 'bg-gold-500' },
+  { value: 'yellow', class: 'bg-gold-500' },
   { value: 'red', class: 'bg-red-500' },
   { value: 'purple', class: 'bg-purple-500' },
   { value: 'pink', class: 'bg-pink-500' },
@@ -72,9 +73,19 @@ export function TimeEntriesTab() {
     deleteEntry,
   } = useTimeTrackingStore()
 
+  const { showNewForm, clearNewFormTrigger } = useTransactionsStore()
+
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   useEffect(() => {
     const weekDates = getWeekDates(currentWeek)
@@ -188,15 +199,6 @@ export function TimeEntriesTab() {
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
-
-      {/* New Entry Button */}
-      <button
-        onClick={() => handleNewEntry()}
-        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
-      >
-        <Plus className="h-4 w-4" />
-        Neuer Eintrag
-      </button>
 
       {/* Entry Form */}
       {showForm && (

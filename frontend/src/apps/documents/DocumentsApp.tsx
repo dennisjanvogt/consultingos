@@ -46,6 +46,7 @@ export function DocumentsApp() {
   const [searchQuery, setSearchQuery] = useState('')
   const [editingFolder, setEditingFolder] = useState<FolderType | null>(null)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'folder' | 'document'; id: number; name: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
 
@@ -132,16 +133,22 @@ export function DocumentsApp() {
     }
   }, [searchQuery, currentFolderId, fetchDocuments])
 
-  const handleDeleteFolder = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
-      await deleteFolder(id)
-    }
+  const handleDeleteFolder = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'folder', id, name })
   }
 
-  const handleDeleteDocument = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
-      await deleteDocument(id)
+  const handleDeleteDocument = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'document', id, name })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return
+    if (deleteConfirm.type === 'folder') {
+      await deleteFolder(deleteConfirm.id)
+    } else {
+      await deleteDocument(deleteConfirm.id)
     }
+    setDeleteConfirm(null)
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,17 +369,23 @@ export function DocumentsApp() {
           </div>
         ) : viewMode === 'grid' ? (
           <div className="space-y-4">
-            {/* Folders */}
+            {/* All Folders in one row - Standard first, then Custom */}
             {(() => {
-              const otherFolders = folders
-              if (otherFolders.length === 0) return null
+              const standardFolders = folders.filter(f => STANDARD_FOLDER_NAMES.includes(f.name))
+                .sort((a, b) => STANDARD_FOLDER_NAMES.indexOf(a.name) - STANDARD_FOLDER_NAMES.indexOf(b.name))
+              const customFolders = folders.filter(f => !STANDARD_FOLDER_NAMES.includes(f.name))
+                .sort((a, b) => a.name.localeCompare(b.name))
+
+              if (standardFolders.length === 0 && customFolders.length === 0) return null
+
               return (
                 <div>
                   <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
                     Ordner
                   </div>
                   <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 90px))' }}>
-                    {otherFolders.sort((a, b) => a.name.localeCompare(b.name)).map((folder) => (
+                    {/* Standard folders first */}
+                    {standardFolders.map((folder) => (
                       <FolderCard
                         key={`folder-${folder.id}`}
                         folder={folder}
@@ -381,7 +394,28 @@ export function DocumentsApp() {
                           setEditingFolder(folder)
                           setShowFolderForm(true)
                         }}
-                        onDelete={() => handleDeleteFolder(folder.id)}
+                        onDelete={() => handleDeleteFolder(folder.id, folder.name)}
+                        onDrop={(e) => handleDropOnFolder(folder.id, e)}
+                        onToggleSidebar={() => toggleSidebarVisibility(folder.id)}
+                      />
+                    ))}
+                    {/* Separator between standard and custom */}
+                    {standardFolders.length > 0 && customFolders.length > 0 && (
+                      <div className="flex items-center justify-center">
+                        <div className="h-12 w-px bg-gray-200 dark:bg-gray-700" />
+                      </div>
+                    )}
+                    {/* Custom folders */}
+                    {customFolders.map((folder) => (
+                      <FolderCard
+                        key={`folder-${folder.id}`}
+                        folder={folder}
+                        onClick={() => handleFolderClick(folder)}
+                        onEdit={() => {
+                          setEditingFolder(folder)
+                          setShowFolderForm(true)
+                        }}
+                        onDelete={() => handleDeleteFolder(folder.id, folder.name)}
                         onDrop={(e) => handleDropOnFolder(folder.id, e)}
                         onToggleSidebar={() => toggleSidebarVisibility(folder.id)}
                       />
@@ -402,7 +436,7 @@ export function DocumentsApp() {
                     <DocumentCard
                       key={`doc-${doc.id}`}
                       document={doc}
-                      onDelete={() => handleDeleteDocument(doc.id)}
+                      onDelete={() => handleDeleteDocument(doc.id, doc.name)}
                       onOpenImage={handleOpenImage}
                     />
                   ))}
@@ -412,17 +446,23 @@ export function DocumentsApp() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Folders */}
+            {/* All Folders - Standard first, then Custom */}
             {(() => {
-              const otherFolders = folders
-              if (otherFolders.length === 0) return null
+              const standardFolders = folders.filter(f => STANDARD_FOLDER_NAMES.includes(f.name))
+                .sort((a, b) => STANDARD_FOLDER_NAMES.indexOf(a.name) - STANDARD_FOLDER_NAMES.indexOf(b.name))
+              const customFolders = folders.filter(f => !STANDARD_FOLDER_NAMES.includes(f.name))
+                .sort((a, b) => a.name.localeCompare(b.name))
+
+              if (standardFolders.length === 0 && customFolders.length === 0) return null
+
               return (
                 <div>
                   <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
                     Ordner
                   </div>
                   <div className="space-y-1">
-                    {otherFolders.sort((a, b) => a.name.localeCompare(b.name)).map((folder) => (
+                    {/* Standard folders */}
+                    {standardFolders.map((folder) => (
                       <FolderRow
                         key={`folder-${folder.id}`}
                         folder={folder}
@@ -432,7 +472,26 @@ export function DocumentsApp() {
                           setEditingFolder(folder)
                           setShowFolderForm(true)
                         }}
-                        onDelete={() => handleDeleteFolder(folder.id)}
+                        onDelete={() => handleDeleteFolder(folder.id, folder.name)}
+                        onDrop={(e) => handleDropOnFolder(folder.id, e)}
+                      />
+                    ))}
+                    {/* Separator */}
+                    {standardFolders.length > 0 && customFolders.length > 0 && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                    )}
+                    {/* Custom folders */}
+                    {customFolders.map((folder) => (
+                      <FolderRow
+                        key={`folder-${folder.id}`}
+                        folder={folder}
+                        onClick={() => handleFolderClick(folder)}
+                        onToggleSidebar={() => toggleSidebarVisibility(folder.id)}
+                        onEdit={() => {
+                          setEditingFolder(folder)
+                          setShowFolderForm(true)
+                        }}
+                        onDelete={() => handleDeleteFolder(folder.id, folder.name)}
                         onDrop={(e) => handleDropOnFolder(folder.id, e)}
                       />
                     ))}
@@ -452,7 +511,7 @@ export function DocumentsApp() {
                     <DocumentRow
                       key={`doc-${doc.id}`}
                       document={doc}
-                      onDelete={() => handleDeleteDocument(doc.id)}
+                      onDelete={() => handleDeleteDocument(doc.id, doc.name)}
                       onOpenImage={handleOpenImage}
                     />
                   ))}
@@ -499,6 +558,35 @@ export function DocumentsApp() {
             parentId={currentFolderId}
             onClose={handleCloseFolderForm}
           />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-sm mx-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                {deleteConfirm.type === 'folder' ? 'Ordner löschen?' : 'Datei löschen?'}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Möchtest du "{deleteConfirm.name}" wirklich löschen?
+                {deleteConfirm.type === 'folder' && ' Alle enthaltenen Dateien werden ebenfalls gelöscht.'}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  Löschen
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Drop Zone Overlay */}

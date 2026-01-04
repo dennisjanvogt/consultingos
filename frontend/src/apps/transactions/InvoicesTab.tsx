@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, X, Check, Send, ArrowLeft, Calendar, Building2, FileText, CreditCard } from 'lucide-react'
+import { Search, Download, MoreHorizontal, Pencil, Trash2, X, Check, Send, ArrowLeft, Calendar, Building2, FileText, CreditCard } from 'lucide-react'
 import { useInvoicesStore } from '@/stores/invoicesStore'
 import { useCustomersStore } from '@/stores/customersStore'
+import { useTransactionsStore } from '@/stores/transactionsStore'
 import type { Invoice, InvoiceCreate, InvoiceItemCreate } from '@/api/types'
 
 export function InvoicesTab() {
@@ -14,11 +15,21 @@ export function InvoicesTab() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const { invoices, isLoading, fetchInvoices, deleteInvoice, markAsPaid, markAsSent } = useInvoicesStore()
   const { customers, fetchCustomers } = useCustomersStore()
+  const { showNewForm, clearNewFormTrigger } = useTransactionsStore()
 
   useEffect(() => {
     fetchInvoices(statusFilter || '', searchQuery)
     fetchCustomers()
   }, [fetchInvoices, fetchCustomers, statusFilter, searchQuery])
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setEditingInvoice(null)
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
@@ -44,16 +55,6 @@ export function InvoicesTab() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => { setEditingInvoice(null); setShowForm(true); }}
-            className="flex items-center gap-1.5 text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            {t('invoices.addInvoice')}
-          </button>
-        </div>
-
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

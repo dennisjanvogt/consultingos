@@ -1,10 +1,15 @@
 import { useAIStore } from '@/stores/aiStore'
+import { getToolDefinitions, getToolStats } from './tools'
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 // Get the current chat model from the store
 const getChatModel = () => useAIStore.getState().chatModel
+
+// Log tool stats on load
+const stats = getToolStats()
+console.log(`AI Agent loaded with ${stats.total} tools:`, stats.byCategory)
 
 export interface Tool {
   type: 'function'
@@ -136,6 +141,22 @@ Du kannst KI-generierte Bilder erstellen:
 - Das Bild wird automatisch im "Bilder" Ordner gespeichert
 - Optional: Dateiname angeben
 
+### 9. Timer-Steuerung
+Du kannst den Zeiterfassungs-Timer steuern:
+- **Timer starten**: start_timer (optional mit Projekt und Beschreibung)
+- **Timer stoppen**: stop_timer (speichert den Zeiteintrag)
+- **Timer pausieren**: pause_timer
+- **Timer fortsetzen**: resume_timer
+
+### 10. Rechnungsstatus ändern
+- **Als versendet markieren**: mark_invoice_sent
+- **Als bezahlt markieren**: mark_invoice_paid
+
+### 11. Kanban-Aufgaben verwalten
+- **Karte verschieben**: move_kanban_card
+- **Karte aktualisieren**: update_kanban_card
+- **Karte löschen**: delete_kanban_card
+
 ## Beispiele
 
 Benutzer: "Öffne die Stammdaten" oder "Öffne Kunden"
@@ -181,371 +202,23 @@ Benutzer: "Erstelle ein Bild von einem Sonnenuntergang am Strand"
 → Rufe generate_image mit prompt="Ein wunderschöner Sonnenuntergang am Strand mit Palmen" auf
 
 Benutzer: "Generiere ein Logo für meine Firma"
-→ Rufe generate_image mit prompt und optional filename auf`
+→ Rufe generate_image mit prompt und optional filename auf
+
+Benutzer: "Starte den Timer für Website-Arbeit"
+→ Rufe start_timer mit description auf
+
+Benutzer: "Stopp den Timer"
+→ Rufe stop_timer auf
+
+Benutzer: "Markiere Rechnung 5 als bezahlt"
+→ Rufe mark_invoice_paid mit invoice_id=5 auf
+
+Benutzer: "Verschiebe die Aufgabe nach Done"
+→ Rufe move_kanban_card mit card_id und column="done" auf`
 }
 
-const tools: Tool[] = [
-  {
-    type: 'function',
-    function: {
-      name: 'open_app',
-      description: 'Öffnet eine App im ConsultingOS Desktop',
-      parameters: {
-        type: 'object',
-        properties: {
-          app: {
-            type: 'string',
-            description: 'Die zu öffnende App',
-            enum: ['dashboard', 'masterdata', 'transactions', 'calendar', 'documents', 'settings', 'timetracking', 'kanban']
-          }
-        },
-        required: ['app']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'search_files',
-      description: 'Sucht nach Dateien und Dokumenten',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'Der Suchbegriff'
-          }
-        },
-        required: ['query']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'create_customer',
-      description: 'Erstellt einen neuen Kunden',
-      parameters: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string',
-            description: 'Name des Kunden (Pflichtfeld)'
-          },
-          company: {
-            type: 'string',
-            description: 'Firmenname'
-          },
-          email: {
-            type: 'string',
-            description: 'E-Mail-Adresse'
-          },
-          phone: {
-            type: 'string',
-            description: 'Telefonnummer'
-          },
-          street: {
-            type: 'string',
-            description: 'Straße und Hausnummer'
-          },
-          zip_code: {
-            type: 'string',
-            description: 'Postleitzahl'
-          },
-          city: {
-            type: 'string',
-            description: 'Stadt'
-          },
-          country: {
-            type: 'string',
-            description: 'Land'
-          },
-          tax_id: {
-            type: 'string',
-            description: 'USt-IdNr.'
-          },
-          notes: {
-            type: 'string',
-            description: 'Notizen'
-          }
-        },
-        required: ['name']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'create_invoice',
-      description: 'Erstellt eine neue Rechnung',
-      parameters: {
-        type: 'object',
-        properties: {
-          customer_id: {
-            type: 'string',
-            description: 'ID des Kunden'
-          },
-          customer_name: {
-            type: 'string',
-            description: 'Name des Kunden (falls ID nicht bekannt)'
-          },
-          items: {
-            type: 'string',
-            description: 'JSON-Array mit Positionen: [{description, quantity, unit_price}]'
-          },
-          currency: {
-            type: 'string',
-            description: 'Währung (EUR, USD, CHF)',
-            enum: ['EUR', 'USD', 'CHF']
-          },
-          notes: {
-            type: 'string',
-            description: 'Notizen zur Rechnung'
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_customers',
-      description: 'Listet alle Kunden auf, um deren IDs zu finden',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'create_calendar_event',
-      description: 'Erstellt einen neuen Kalendertermin',
-      parameters: {
-        type: 'object',
-        properties: {
-          title: {
-            type: 'string',
-            description: 'Titel des Termins (Pflichtfeld)'
-          },
-          date: {
-            type: 'string',
-            description: 'Datum im Format YYYY-MM-DD (z.B. 2025-01-15)'
-          },
-          start_time: {
-            type: 'string',
-            description: 'Startzeit im Format HH:MM (z.B. 14:00)'
-          },
-          end_time: {
-            type: 'string',
-            description: 'Endzeit im Format HH:MM (z.B. 15:30)'
-          },
-          location: {
-            type: 'string',
-            description: 'Ort des Termins'
-          },
-          description: {
-            type: 'string',
-            description: 'Beschreibung des Termins'
-          },
-          color: {
-            type: 'string',
-            description: 'Farbe des Termins',
-            enum: ['violet', 'green', 'red', 'purple', 'orange', 'pink']
-          }
-        },
-        required: ['title']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_calendar_events',
-      description: 'Listet Kalendertermine auf. Kann nach Datum filtern oder die nächsten Termine anzeigen.',
-      parameters: {
-        type: 'object',
-        properties: {
-          date: {
-            type: 'string',
-            description: 'Optionales Datum im Format YYYY-MM-DD um Termine an diesem Tag anzuzeigen'
-          },
-          upcoming_days: {
-            type: 'string',
-            description: 'Anzahl Tage für kommende Termine (Standard: 7)'
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'delete_calendar_event',
-      description: 'Löscht einen Kalendertermin anhand der ID',
-      parameters: {
-        type: 'object',
-        properties: {
-          event_id: {
-            type: 'string',
-            description: 'ID des zu löschenden Termins'
-          }
-        },
-        required: ['event_id']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_timetracking_clients',
-      description: 'Listet alle Zeiterfassungs-Kunden auf',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_timetracking_projects',
-      description: 'Listet alle Zeiterfassungs-Projekte auf mit IDs, Namen, Stundensätzen und zugehörigen Kunden',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'create_time_entry',
-      description: 'Erstellt einen neuen Zeiteintrag für die Zeiterfassung',
-      parameters: {
-        type: 'object',
-        properties: {
-          project_id: {
-            type: 'string',
-            description: 'ID des Projekts (Pflichtfeld) - nutze list_timetracking_projects um IDs zu finden'
-          },
-          date: {
-            type: 'string',
-            description: 'Datum im Format YYYY-MM-DD (z.B. 2026-01-03). Standard: heute'
-          },
-          start_time: {
-            type: 'string',
-            description: 'Startzeit im Format HH:MM (z.B. 09:00)'
-          },
-          end_time: {
-            type: 'string',
-            description: 'Endzeit im Format HH:MM (z.B. 17:00)'
-          },
-          description: {
-            type: 'string',
-            description: 'Beschreibung der Arbeit'
-          },
-          billable: {
-            type: 'string',
-            description: 'Abrechenbar? "true" oder "false". Standard: true',
-            enum: ['true', 'false']
-          }
-        },
-        required: ['project_id', 'start_time', 'end_time']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'list_kanban_cards',
-      description: 'Listet alle Kanban-Karten/Aufgaben auf',
-      parameters: {
-        type: 'object',
-        properties: {
-          board: {
-            type: 'string',
-            description: 'Board filtern: work, private, archive. Standard: work',
-            enum: ['work', 'private', 'archive']
-          }
-        },
-        required: []
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'create_kanban_card',
-      description: 'Erstellt eine neue Kanban-Karte/Aufgabe',
-      parameters: {
-        type: 'object',
-        properties: {
-          title: {
-            type: 'string',
-            description: 'Titel der Aufgabe (Pflichtfeld)'
-          },
-          description: {
-            type: 'string',
-            description: 'Beschreibung der Aufgabe'
-          },
-          column: {
-            type: 'string',
-            description: 'Spalte: backlog, todo, in_progress, in_review, done. Standard: todo',
-            enum: ['backlog', 'todo', 'in_progress', 'in_review', 'done']
-          },
-          priority: {
-            type: 'string',
-            description: 'Priorität: low, medium, high. Standard: medium',
-            enum: ['low', 'medium', 'high']
-          },
-          color: {
-            type: 'string',
-            description: 'Farbe der Karte',
-            enum: ['gray', 'violet', 'green', 'yellow', 'red', 'purple', 'pink', 'orange']
-          },
-          board: {
-            type: 'string',
-            description: 'Board: work, private, archive. Standard: work',
-            enum: ['work', 'private', 'archive']
-          },
-          due_date: {
-            type: 'string',
-            description: 'Fälligkeitsdatum im Format YYYY-MM-DD'
-          }
-        },
-        required: ['title']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'generate_image',
-      description: 'Generiert ein KI-Bild basierend auf einer Beschreibung und speichert es im Bilder-Ordner',
-      parameters: {
-        type: 'object',
-        properties: {
-          prompt: {
-            type: 'string',
-            description: 'Detaillierte Beschreibung des zu generierenden Bildes (auf Englisch für beste Ergebnisse)'
-          },
-          filename: {
-            type: 'string',
-            description: 'Optionaler Dateiname (ohne Endung) für das Bild'
-          }
-        },
-        required: ['prompt']
-      }
-    }
-  }
-]
+// Tools are now loaded dynamically from the tool registry
+// See: frontend/src/services/tools/
 
 export interface AIResponse {
   content: string | null
@@ -571,7 +244,7 @@ export async function sendMessage(messages: Message[]): Promise<AIResponse> {
         { role: 'system', content: getSystemPrompt() },
         ...messages
       ],
-      tools,
+      tools: getToolDefinitions(),
       tool_choice: 'auto'
     })
   })
@@ -594,4 +267,6 @@ export async function sendMessage(messages: Message[]): Promise<AIResponse> {
   }
 }
 
+// Export tools from registry
+const tools = getToolDefinitions()
 export { getSystemPrompt, tools }

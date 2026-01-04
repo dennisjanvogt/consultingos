@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3 } from 'lucide-react'
+import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap } from 'lucide-react'
 import { useWindowStore } from '@/stores/windowStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
@@ -42,6 +42,76 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
 
   const [elapsedTime, setElapsedTime] = useState(0)
   const [timerPopoverOpen, setTimerPopoverOpen] = useState(false)
+
+  // Pomodoro state
+  const [pomodoroActive, setPomodoroActive] = useState(false)
+  const [pomodoroMinutes, setPomodoroMinutes] = useState(25)
+  const [pomodoroEndTime, setPomodoroEndTime] = useState<number | null>(null)
+  const [pomodoroRemaining, setPomodoroRemaining] = useState(0)
+  const [isBreak, setIsBreak] = useState(false)
+  const [pomodoroPopoverOpen, setPomodoroPopoverOpen] = useState(false)
+
+  const pomodoroOptions = [
+    { minutes: 15, label: 'Quick', icon: Zap, breakMinutes: 3 },
+    { minutes: 25, label: 'Classic', icon: Focus, breakMinutes: 5 },
+    { minutes: 50, label: 'Deep Work', icon: Coffee, breakMinutes: 10 },
+  ]
+
+  const startPomodoro = (minutes: number, breakMinutes: number) => {
+    setPomodoroMinutes(minutes)
+    setPomodoroEndTime(Date.now() + minutes * 60 * 1000)
+    setPomodoroActive(true)
+    setIsBreak(false)
+    setPomodoroPopoverOpen(false)
+  }
+
+  const stopPomodoro = () => {
+    setPomodoroActive(false)
+    setPomodoroEndTime(null)
+    setIsBreak(false)
+  }
+
+  // Pomodoro countdown effect
+  useEffect(() => {
+    if (!pomodoroActive || !pomodoroEndTime) return
+
+    const updateRemaining = () => {
+      const remaining = Math.max(0, pomodoroEndTime - Date.now())
+      setPomodoroRemaining(remaining)
+
+      if (remaining === 0) {
+        // Play notification sound or show notification
+        if (Notification.permission === 'granted') {
+          new Notification(isBreak ? 'Pause vorbei!' : 'Pomodoro fertig!', {
+            body: isBreak ? 'Zeit weiterzuarbeiten.' : 'Zeit für eine Pause!',
+            icon: '/favicon.ico'
+          })
+        }
+
+        if (!isBreak) {
+          // Start break
+          const option = pomodoroOptions.find(o => o.minutes === pomodoroMinutes)
+          const breakMinutes = option?.breakMinutes || 5
+          setPomodoroEndTime(Date.now() + breakMinutes * 60 * 1000)
+          setIsBreak(true)
+        } else {
+          // Break is over, stop
+          stopPomodoro()
+        }
+      }
+    }
+
+    updateRemaining()
+    const interval = setInterval(updateRemaining, 1000)
+    return () => clearInterval(interval)
+  }, [pomodoroActive, pomodoroEndTime, isBreak, pomodoroMinutes])
+
+  // Request notification permission
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
 
   const {
     chatModel,
@@ -113,6 +183,13 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }, [])
 
+  const formatPomodoroTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
   const currentTime = new Date().toLocaleTimeString('de-DE', {
     hour: '2-digit',
     minute: '2-digit',
@@ -150,9 +227,6 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
           onMouseEnter={() => setShowStageThumbnails(true)}
         />
       )}
-
-      {/* Center - App name */}
-      <span className="absolute left-1/2 -translate-x-1/2 font-semibold pointer-events-none">ConsultingOS</span>
 
       {/* Left side - AI controls */}
       <div className="flex items-center gap-4">
@@ -470,7 +544,75 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
           <Calendar className="h-3.5 w-3.5 opacity-60" />
           <span className="text-xs opacity-80">{currentDate}</span>
         </button>
-        <span className="font-medium">{currentTime}</span>
+
+        {/* Pomodoro Timer / Clock */}
+        <Popover open={pomodoroPopoverOpen} onOpenChange={setPomodoroPopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className={`font-medium px-2 py-0.5 rounded transition-colors ${
+                pomodoroActive
+                  ? isBreak
+                    ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                    : 'bg-red-500/20 text-red-600 dark:text-red-400'
+                  : 'hover:bg-black/5 dark:hover:bg-white/10'
+              }`}
+            >
+              {pomodoroActive ? (
+                <span className="flex items-center gap-1.5">
+                  {isBreak ? <Coffee className="h-3.5 w-3.5" /> : <Focus className="h-3.5 w-3.5" />}
+                  {formatPomodoroTime(pomodoroRemaining)}
+                </span>
+              ) : (
+                currentTime
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-3" align="end">
+            <div className="space-y-3">
+              {pomodoroActive ? (
+                <>
+                  <div className="text-center">
+                    <div className={`text-3xl font-mono font-bold ${
+                      isBreak ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {formatPomodoroTime(pomodoroRemaining)}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      {isBreak ? 'Pause' : `${pomodoroMinutes} min Fokus`}
+                    </div>
+                  </div>
+                  <button
+                    onClick={stopPomodoro}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <Square className="h-4 w-4" />
+                    Abbrechen
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-medium text-center mb-2">Pomodoro starten</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {pomodoroOptions.map((option) => (
+                      <button
+                        key={option.minutes}
+                        onClick={() => startPomodoro(option.minutes, option.breakMinutes)}
+                        className="flex flex-col items-center gap-1 p-3 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-lavender-100 dark:hover:bg-lavender-900/30 transition-colors"
+                      >
+                        <option.icon className="h-5 w-5 text-lavender-500" />
+                        <span className="text-lg font-bold">{option.minutes}</span>
+                        <span className="text-[10px] text-gray-500">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 text-center">
+                    Nach Fokus-Zeit folgt automatisch Pause
+                  </p>
+                </>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   )

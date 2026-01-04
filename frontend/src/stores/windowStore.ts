@@ -1,6 +1,7 @@
 import { create } from 'zustand'
+import { appRegistry, type AppType } from '@/config/apps'
 
-export type AppType = 'dashboard' | 'masterdata' | 'transactions' | 'settings' | 'documents' | 'calendar' | 'kanban' | 'timetracking' | 'imageviewer'
+export type { AppType } from '@/config/apps'
 
 export interface Window {
   id: string
@@ -43,28 +44,16 @@ interface WindowStore {
   centerActiveWindow: () => void
 }
 
-const appTitles: Record<AppType, string> = {
-  dashboard: 'Dashboard',
-  masterdata: 'Stammdaten',
-  transactions: 'Bewegungsdaten',
-  settings: 'Einstellungen',
-  documents: 'Dateien',
-  calendar: 'Kalender',
-  kanban: 'Kanban',
-  timetracking: 'Zeiterfassung',
-  imageviewer: 'Bildbetrachter',
+// App titles und sizes kommen jetzt aus der zentralen Registry (src/config/apps.tsx)
+const getAppTitle = (appId: AppType): string => {
+  const app = appRegistry[appId]
+  // Fallback auf ID wenn nicht in Registry
+  return app?.titleKey || appId
 }
 
-const defaultSizes: Record<AppType, { width: number; height: number }> = {
-  dashboard: { width: 900, height: 600 },
-  masterdata: { width: 850, height: 600 },
-  transactions: { width: 900, height: 650 },
-  settings: { width: 600, height: 500 },
-  documents: { width: 850, height: 600 },
-  calendar: { width: 950, height: 650 },
-  kanban: { width: 1100, height: 700 },
-  timetracking: { width: 950, height: 700 },
-  imageviewer: { width: 800, height: 600 },
+const getAppDefaultSize = (appId: AppType): { width: number; height: number } => {
+  const app = appRegistry[appId]
+  return app?.defaultSize || { width: 800, height: 600 }
 }
 
 export const useWindowStore = create<WindowStore>((set, get) => ({
@@ -100,7 +89,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     }
 
     // Create new window
-    const size = defaultSizes[appId]
+    const size = getAppDefaultSize(appId)
 
     // Calculate center position
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200
@@ -116,12 +105,12 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
 
     // Prüfen ob andere Fenster bereits getiled sind
     const tiledWindows = windows.filter((w) => w.isTiled && !w.isMinimized)
-    const shouldAutoTile = tiledWindows.length > 0 && tiledWindows.length < 4
+    const shouldAutoTile = tiledWindows.length > 0 && tiledWindows.length < 8
 
     const newWindow: Window = {
       id: `${appId}-${Date.now()}`,
       appId,
-      title: appTitles[appId],
+      title: getAppTitle(appId),
       isMinimized: false,
       isMaximized: false,
       isTiled: shouldAutoTile,
@@ -205,9 +194,9 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
         return
       }
 
-      // Max 4 getilte Fenster - ältestes entfernen wenn nötig
+      // Max 8 getilte Fenster - ältestes entfernen wenn nötig
       const tiledWindows = windows.filter((w) => w.isTiled).sort((a, b) => (a.tiledAt || 0) - (b.tiledAt || 0))
-      if (tiledWindows.length >= 4) {
+      if (tiledWindows.length >= 8) {
         const oldestTiled = tiledWindows[0]
         get().untileWindow(oldestTiled.id)
       }
@@ -252,8 +241,9 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
   tileAllWindows: () => {
     const { windows } = get()
 
-    const visibleWindows = windows.filter((w) => !w.isMinimized && !w.isMaximized)
-    const alreadyAllTiled = visibleWindows.length > 0 && visibleWindows.every((w) => w.isTiled)
+    // Alle nicht-minimierten Fenster (inkl. maximierte)
+    const visibleWindows = windows.filter((w) => !w.isMinimized)
+    const alreadyAllTiled = visibleWindows.length > 0 && visibleWindows.every((w) => w.isTiled && !w.isMaximized)
 
     if (alreadyAllTiled) {
       // Alle bereits getiled → alle untilen
@@ -261,8 +251,22 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       return
     }
 
-    // Alle sichtbaren Fenster tilen (max 4)
-    const toTile = visibleWindows.slice(0, 4)
+    // Maximierte Fenster de-maximieren
+    const hasMaximized = visibleWindows.some((w) => w.isMaximized)
+    if (hasMaximized) {
+      set((state) => ({
+        windows: state.windows.map((w) => {
+          if (!visibleWindows.find((v) => v.id === w.id)) return w
+          if (w.isMaximized) {
+            return { ...w, isMaximized: false }
+          }
+          return w
+        })
+      }))
+    }
+
+    // Alle sichtbaren Fenster tilen (max 8)
+    const toTile = visibleWindows.slice(0, 8)
     set((state) => ({
       windows: state.windows.map((w) => {
         if (!toTile.find((t) => t.id === w.id)) return w
@@ -328,13 +332,79 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       positions.push({ x: startX, y: startY, width: halfWidth, height: availableHeight })
       positions.push({ x: startX + halfWidth + gap, y: startY, width: halfWidth, height: halfHeight })
       positions.push({ x: startX + halfWidth + gap, y: startY + halfHeight + gap, width: halfWidth, height: halfHeight })
-    } else if (tiledWindows.length >= 4) {
+    } else if (tiledWindows.length === 4) {
+      // 2x2 Grid
       const halfWidth = (availableWidth - gap) / 2
       const halfHeight = (availableHeight - gap) / 2
       positions.push({ x: startX, y: startY, width: halfWidth, height: halfHeight })
       positions.push({ x: startX + halfWidth + gap, y: startY, width: halfWidth, height: halfHeight })
       positions.push({ x: startX, y: startY + halfHeight + gap, width: halfWidth, height: halfHeight })
       positions.push({ x: startX + halfWidth + gap, y: startY + halfHeight + gap, width: halfWidth, height: halfHeight })
+    } else if (tiledWindows.length === 5) {
+      // 3 oben, 2 unten zentriert
+      const thirdWidth = (availableWidth - gap * 2) / 3
+      const halfHeight = (availableHeight - gap) / 2
+      const halfWidth = (availableWidth - gap) / 2
+      // Top row: 3 windows
+      positions.push({ x: startX, y: startY, width: thirdWidth, height: halfHeight })
+      positions.push({ x: startX + thirdWidth + gap, y: startY, width: thirdWidth, height: halfHeight })
+      positions.push({ x: startX + thirdWidth * 2 + gap * 2, y: startY, width: thirdWidth, height: halfHeight })
+      // Bottom row: 2 windows zentriert
+      const bottomOffset = (availableWidth - (halfWidth * 2 + gap)) / 2
+      positions.push({ x: startX + bottomOffset, y: startY + halfHeight + gap, width: halfWidth, height: halfHeight })
+      positions.push({ x: startX + bottomOffset + halfWidth + gap, y: startY + halfHeight + gap, width: halfWidth, height: halfHeight })
+    } else if (tiledWindows.length === 6) {
+      // 3x2 Grid
+      const thirdWidth = (availableWidth - gap * 2) / 3
+      const halfHeight = (availableHeight - gap) / 2
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 3; col++) {
+          positions.push({
+            x: startX + col * (thirdWidth + gap),
+            y: startY + row * (halfHeight + gap),
+            width: thirdWidth,
+            height: halfHeight
+          })
+        }
+      }
+    } else if (tiledWindows.length === 7) {
+      // 4 oben, 3 unten zentriert
+      const quarterWidth = (availableWidth - gap * 3) / 4
+      const halfHeight = (availableHeight - gap) / 2
+      const thirdWidth = (availableWidth - gap * 2) / 3
+      // Top row: 4 windows
+      for (let i = 0; i < 4; i++) {
+        positions.push({
+          x: startX + i * (quarterWidth + gap),
+          y: startY,
+          width: quarterWidth,
+          height: halfHeight
+        })
+      }
+      // Bottom row: 3 windows zentriert
+      const bottomOffset = (availableWidth - (thirdWidth * 3 + gap * 2)) / 2
+      for (let i = 0; i < 3; i++) {
+        positions.push({
+          x: startX + bottomOffset + i * (thirdWidth + gap),
+          y: startY + halfHeight + gap,
+          width: thirdWidth,
+          height: halfHeight
+        })
+      }
+    } else if (tiledWindows.length >= 8) {
+      // 4x2 Grid
+      const quarterWidth = (availableWidth - gap * 3) / 4
+      const halfHeight = (availableHeight - gap) / 2
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 4; col++) {
+          positions.push({
+            x: startX + col * (quarterWidth + gap),
+            y: startY + row * (halfHeight + gap),
+            width: quarterWidth,
+            height: halfHeight
+          })
+        }
+      }
     }
 
     // Update Fenster-Positionen

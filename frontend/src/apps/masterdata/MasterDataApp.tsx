@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Users, Package, Percent, ArrowLeft, FolderKanban, Building2 } from 'lucide-react'
@@ -7,8 +6,9 @@ import { ProductsTab } from './ProductsTab'
 import { TaxRatesTab } from './TaxRatesTab'
 import { TimeTrackingProjectsTab } from './TimeTrackingProjectsTab'
 import { TimeTrackingClientsTab } from './TimeTrackingClientsTab'
+import { useMasterDataStore, type MasterDataView } from '@/stores/masterdataStore'
 
-type ViewId = 'home' | 'customers' | 'products' | 'taxrates' | 'ttprojects' | 'ttclients'
+type ViewId = MasterDataView
 
 interface MasterDataItem {
   id: ViewId
@@ -26,27 +26,7 @@ const masterDataItems: MasterDataItem[] = [
 
 export function MasterDataApp() {
   const { t } = useTranslation()
-  const [activeView, setActiveView] = useState<ViewId>('home')
-
-  // Handle ESC key - go back to home before closing window
-  useEffect(() => {
-    if (activeView === 'home') return
-
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        // Don't trigger if typing in an input
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
-          return
-        }
-        e.stopImmediatePropagation()
-        setActiveView('home')
-      }
-    }
-
-    // Use capture phase to handle before Window's handler
-    document.addEventListener('keydown', handleEsc, true)
-    return () => document.removeEventListener('keydown', handleEsc, true)
-  }, [activeView])
+  const { activeView, setActiveView } = useMasterDataStore()
 
   // Determine grid columns: under 10 items = 3 per row, 10+ = 5 per row
   const gridCols = masterDataItems.length >= 10 ? 5 : 3

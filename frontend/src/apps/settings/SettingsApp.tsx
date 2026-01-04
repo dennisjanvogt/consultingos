@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/components/shell/ThemeProvider'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { Building2, CreditCard, Receipt, Palette } from 'lucide-react'
+import { Building2, CreditCard, Receipt, Palette, LayoutGrid } from 'lucide-react'
+import { AppsTab } from './AppsTab'
 
-type SettingsTab = 'company' | 'banking' | 'invoices' | 'appearance'
+type SettingsTab = 'company' | 'banking' | 'invoices' | 'appearance' | 'apps'
 
 export function SettingsApp() {
   const { t, i18n } = useTranslation()
@@ -21,6 +22,7 @@ export function SettingsApp() {
     { id: 'banking' as const, label: t('settings.banking'), icon: CreditCard },
     { id: 'invoices' as const, label: t('settings.invoiceSettings'), icon: Receipt },
     { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
+    { id: 'apps' as const, label: t('settings.apps'), icon: LayoutGrid },
   ]
 
   return (
@@ -59,6 +61,7 @@ export function SettingsApp() {
             }}
           />
         )}
+        {activeTab === 'apps' && <AppsTab />}
       </div>
     </div>
   )

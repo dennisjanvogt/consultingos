@@ -25,7 +25,7 @@ export function ImageViewerApp() {
 
   const imageUrl = currentImage.file_url.startsWith('http')
     ? currentImage.file_url
-    : `${API_BASE_URL}${currentImage.file_url}`
+    : `${MEDIA_BASE_URL}${currentImage.file_url}`
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 5))
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25))

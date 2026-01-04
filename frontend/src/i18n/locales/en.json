@@ -21,9 +21,11 @@
     "masterdata": "Master Data",
     "transactions": "Transactions",
     "documents": "Files",
+    "calendar": "Calendar",
     "kanban": "Kanban",
     "timetracking": "Time Tracking",
-    "settings": "Settings"
+    "settings": "Settings",
+    "imageviewer": "Image Viewer"
   },
   "auth": {
     "login": "Login",
@@ -106,7 +108,14 @@
     "language": "Language",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "apps": "Apps",
+    "appsDescription": "Enable apps and arrange them in the dock",
+    "category": {
+      "core": "Core",
+      "productivity": "Productivity",
+      "tools": "Tools"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

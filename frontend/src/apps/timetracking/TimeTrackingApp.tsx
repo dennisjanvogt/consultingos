@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -8,10 +8,8 @@ import {
   ChevronRight,
   Check,
   X,
-  Play,
-  Pause,
-  Square,
-  RotateCcw,
+  Calendar,
+  List,
 } from 'lucide-react'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import type {
@@ -23,9 +21,9 @@ import type {
 
 const colorOptions: { value: ProjectColor; label: string; class: string }[] = [
   { value: 'gray', label: 'Grau', class: 'bg-gray-500' },
-  { value: 'lavender', label: 'Lavendel', class: 'bg-lavender-500' },
+  { value: 'violet', label: 'Lavendel', class: 'bg-lavender-500' },
   { value: 'green', label: 'Grün', class: 'bg-green-500' },
-  { value: 'gold', label: 'Gold', class: 'bg-gold-500' },
+  { value: 'yellow', label: 'Gold', class: 'bg-gold-500' },
   { value: 'red', label: 'Rot', class: 'bg-red-500' },
   { value: 'purple', label: 'Lila', class: 'bg-purple-500' },
   { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
@@ -59,8 +57,7 @@ function getWeekDates(date: Date): Date[] {
 
 export function TimeTrackingApp() {
   const { t } = useTranslation()
-  const [currentWeek, setCurrentWeek] = useState(new Date())
-  const [elapsedTime, setElapsedTime] = useState(0)
+  const [currentDate, setCurrentDate] = useState(new Date())
 
   const {
     clients,
@@ -68,7 +65,6 @@ export function TimeTrackingApp() {
     entries,
     summary,
     activeTab,
-    timer,
     fetchClients,
     fetchProjects,
     fetchEntries,
@@ -82,16 +78,7 @@ export function TimeTrackingApp() {
     addEntry,
     updateEntry,
     deleteEntry,
-    startTimer,
-    pauseTimer,
-    resumeTimer,
-    stopTimer,
-    resetTimer,
-    setTimerProject,
-    setTimerDescription,
   } = useTimeTrackingStore()
-
-  const activeProjects = projects.filter((p) => p.status === 'active')
 
   useEffect(() => {
     fetchClients()
@@ -99,171 +86,23 @@ export function TimeTrackingApp() {
   }, [fetchClients, fetchProjects])
 
   useEffect(() => {
-    const weekDates = getWeekDates(currentWeek)
+    const weekDates = getWeekDates(currentDate)
     const dateFrom = weekDates[0].toISOString().split('T')[0]
     const dateTo = weekDates[6].toISOString().split('T')[0]
     fetchEntries(dateFrom, dateTo)
     fetchSummary(dateFrom, dateTo)
-  }, [currentWeek, fetchEntries, fetchSummary])
-
-  // Update elapsed time every second when timer is running
-  useEffect(() => {
-    if (!timer.isRunning && !timer.isPaused) {
-      setElapsedTime(0)
-      return
-    }
-
-    const updateElapsed = () => {
-      let totalMs = timer.pausedTime
-      if (timer.startTime && !timer.isPaused) {
-        totalMs += Date.now() - timer.startTime
-      }
-      setElapsedTime(totalMs)
-    }
-
-    updateElapsed()
-    const interval = setInterval(updateElapsed, 100) // Smoother updates
-    return () => clearInterval(interval)
-  }, [timer.isRunning, timer.isPaused, timer.startTime, timer.pausedTime])
-
-  const formatElapsedTime = useCallback((ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000)
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  }, [])
-
-  const handleStopTimer = async () => {
-    const entry = await stopTimer()
-    if (entry) {
-      // Refresh entries to show the new entry
-      const weekDates = getWeekDates(currentWeek)
-      const dateFrom = weekDates[0].toISOString().split('T')[0]
-      const dateTo = weekDates[6].toISOString().split('T')[0]
-      fetchEntries(dateFrom, dateTo)
-    }
-  }
+  }, [currentDate, fetchEntries, fetchSummary])
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-900">
-      {/* Timer Widget */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className={`p-4 rounded-xl transition-all ${
-          timer.isRunning && !timer.isPaused
-            ? 'bg-gradient-to-r from-gold-50 to-gold-100 dark:from-gold-900/20 dark:to-gold-800/20 border-2 border-gold-200 dark:border-gold-800'
-            : timer.isPaused
-            ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-800'
-            : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-        }`}>
-          <div className="flex items-center gap-6">
-            {/* Timer Display */}
-            <div className="text-center">
-              <div className={`text-4xl font-mono font-bold tracking-wider ${
-                timer.isRunning && !timer.isPaused
-                  ? 'text-gold-600 dark:text-gold-400'
-                  : timer.isPaused
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-gray-400 dark:text-gray-500'
-              }`}>
-                {formatElapsedTime(elapsedTime)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {timer.isRunning && !timer.isPaused && 'Läuft...'}
-                {timer.isPaused && 'Pausiert'}
-                {!timer.isRunning && !timer.isPaused && 'Bereit'}
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center gap-2">
-              {!timer.isRunning && !timer.isPaused ? (
-                <button
-                  onClick={() => startTimer(timer.projectId || undefined, timer.description)}
-                  className="p-3 bg-gold-500 hover:bg-gold-600 text-white rounded-full transition-colors shadow-lg"
-                  title="Timer starten"
-                >
-                  <Play className="h-6 w-6" />
-                </button>
-              ) : (
-                <>
-                  {timer.isPaused ? (
-                    <button
-                      onClick={resumeTimer}
-                      className="p-3 bg-gold-500 hover:bg-gold-600 text-white rounded-full transition-colors shadow-lg"
-                      title="Fortsetzen"
-                    >
-                      <Play className="h-6 w-6" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={pauseTimer}
-                      className="p-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full transition-colors shadow-lg"
-                      title="Pausieren"
-                    >
-                      <Pause className="h-6 w-6" />
-                    </button>
-                  )}
-                  <button
-                    onClick={handleStopTimer}
-                    className="p-3 bg-rose-500 hover:bg-rose-600 text-white rounded-full transition-colors shadow-lg"
-                    title="Stoppen und speichern"
-                  >
-                    <Square className="h-6 w-6" />
-                  </button>
-                  <button
-                    onClick={resetTimer}
-                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
-                    title="Zurücksetzen"
-                  >
-                    <RotateCcw className="h-5 w-5 text-gray-500" />
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Project Selection & Description */}
-            <div className="flex-1 flex gap-3">
-              <select
-                value={timer.projectId || ''}
-                onChange={(e) => setTimerProject(e.target.value ? parseInt(e.target.value) : null)}
-                className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 min-w-[200px]"
-                disabled={timer.isRunning || timer.isPaused}
-              >
-                <option value="">Projekt wählen...</option>
-                {activeProjects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.client_name})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={timer.description}
-                onChange={(e) => setTimerDescription(e.target.value)}
-                placeholder="Was machst du gerade?"
-                className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-              />
-            </div>
-          </div>
-
-          {/* Info Text */}
-          {!timer.projectId && (timer.isRunning || timer.isPaused) && (
-            <div className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-              Hinweis: Wähle ein Projekt aus, damit der Eintrag beim Stoppen gespeichert wird.
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         {activeTab === 'entries' && (
           <EntriesTab
             entries={entries}
             projects={projects}
-            currentWeek={currentWeek}
-            setCurrentWeek={setCurrentWeek}
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
             onAdd={addEntry}
             onUpdate={updateEntry}
             onDelete={deleteEntry}
@@ -296,19 +135,23 @@ export function TimeTrackingApp() {
 
 // ===== Entries Tab =====
 
+type ViewMode = 'week' | 'day'
+
 interface EntriesTabProps {
   entries: TimeEntry[]
   projects: TimeTrackingProject[]
-  currentWeek: Date
-  setCurrentWeek: (date: Date) => void
+  currentDate: Date
+  setCurrentDate: (date: Date) => void
   onAdd: (entry: any) => Promise<TimeEntry | null>
   onUpdate: (id: number, entry: any) => Promise<TimeEntry | null>
   onDelete: (id: number) => Promise<boolean>
 }
 
-function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onUpdate, onDelete }: EntriesTabProps) {
+function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onUpdate, onDelete }: EntriesTabProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [showForm, setShowForm] = useState(false)
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null)
+  const [deleteConfirmEntry, setDeleteConfirmEntry] = useState<TimeEntry | null>(null)
   const [formData, setFormData] = useState({
     project: '',
     date: '',
@@ -318,13 +161,28 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
     billable: true,
   })
 
-  const weekDates = getWeekDates(currentWeek)
+  const handleDelete = (entry: TimeEntry) => {
+    setDeleteConfirmEntry(entry)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteConfirmEntry) {
+      await onDelete(deleteConfirmEntry.id)
+      setDeleteConfirmEntry(null)
+    }
+  }
+
+  const weekDates = getWeekDates(currentDate)
   const activeProjects = projects.filter((p) => p.status === 'active')
 
-  const navigateWeek = (direction: number) => {
-    const newDate = new Date(currentWeek)
-    newDate.setDate(newDate.getDate() + direction * 7)
-    setCurrentWeek(newDate)
+  const navigate = (direction: number) => {
+    const newDate = new Date(currentDate)
+    if (viewMode === 'week') {
+      newDate.setDate(newDate.getDate() + direction * 7)
+    } else {
+      newDate.setDate(newDate.getDate() + direction)
+    }
+    setCurrentDate(newDate)
   }
 
   const getEntriesForDate = (date: Date) => {
@@ -382,7 +240,7 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
     setEditingEntry(null)
     setFormData({
       project: '',
-      date: date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      date: date ? date.toISOString().split('T')[0] : currentDate.toISOString().split('T')[0],
       start_time: '',
       end_time: '',
       description: '',
@@ -396,42 +254,89 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
     return date.toDateString() === today.toDateString()
   }
 
+  const dayEntries = getEntriesForDate(currentDate)
+  const dayTotal = getTotalForDate(currentDate)
+
   return (
     <div className="space-y-4">
-      {/* Week Navigation */}
-      <div className="flex items-center justify-between">
+      {/* Toolbar: Button | Navigation | Toggle */}
+      <div className="flex items-center gap-4">
+        {/* New Entry Button - Gold */}
         <button
-          onClick={() => navigateWeek(-1)}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+          onClick={() => handleNewEntry()}
+          className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
+          Neuer Eintrag
         </button>
-        <div className="text-center">
-          <span className="font-medium">
-            {weekDates[0].toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}
-            {' - '}
-            {weekDates[6].toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </span>
-          <div className="text-sm text-gray-500">
-            Gesamt: {formatDuration(getWeekTotal())} h
-          </div>
-        </div>
-        <button
-          onClick={() => navigateWeek(1)}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
 
-      {/* New Entry Button */}
-      <button
-        onClick={() => handleNewEntry()}
-        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
-      >
-        <Plus className="h-4 w-4" />
-        Neuer Eintrag
-      </button>
+        {/* Week/Day Navigation */}
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          <div className="text-center min-w-[200px]">
+            {viewMode === 'week' ? (
+              <>
+                <span className="font-medium">
+                  {weekDates[0].toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}
+                  {' - '}
+                  {weekDates[6].toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+                <div className="text-sm text-gray-500">
+                  Gesamt: {formatDuration(getWeekTotal())} h
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="font-medium">
+                  {currentDate.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+                <div className="text-sm text-gray-500">
+                  Gesamt: {formatDuration(dayTotal)} h
+                </div>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={() => navigate(1)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+              viewMode === 'week'
+                ? 'bg-white dark:bg-gray-700 shadow-sm text-lavender-600 dark:text-lavender-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            Woche
+          </button>
+          <button
+            onClick={() => setViewMode('day')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+              viewMode === 'day'
+                ? 'bg-white dark:bg-gray-700 shadow-sm text-lavender-600 dark:text-lavender-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
+          >
+            <List className="h-4 w-4" />
+            Tag
+          </button>
+        </div>
+      </div>
 
       {/* Entry Form */}
       {showForm && (
@@ -527,56 +432,140 @@ function EntriesTab({ entries, projects, currentWeek, setCurrentWeek, onAdd, onU
         </form>
       )}
 
-      {/* Week Grid */}
-      <div className="grid grid-cols-7 gap-2">
-        {weekDates.map((date) => {
-          const dayEntries = getEntriesForDate(date)
-          const dayTotal = getTotalForDate(date)
-
-          return (
-            <div
-              key={date.toISOString()}
-              className={`border rounded-lg p-2 min-h-[150px] ${
-                isToday(date) ? 'border-lavender-500 bg-lavender-50 dark:bg-lavender-900/20' : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium">
-                  {date.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric' })}
-                </div>
-                <button
-                  onClick={() => handleNewEntry(date)}
-                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="space-y-1">
-                {dayEntries.map((entry) => {
-                  const project = projects.find((p) => p.id === entry.project)
-                  return (
-                    <div
-                      key={entry.id}
-                      className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 ${getColorClass(project?.color || 'gray')} text-white`}
-                      onClick={() => handleEdit(entry)}
-                    >
-                      <div className="font-medium truncate">{entry.project_name}</div>
-                      <div className="opacity-80">
-                        {entry.start_time} - {entry.end_time} ({formatDuration(entry.duration_minutes)})
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              {dayTotal > 0 && (
-                <div className="text-xs text-gray-500 mt-2 pt-1 border-t border-gray-200 dark:border-gray-700">
-                  {formatDuration(dayTotal)} h
-                </div>
-              )}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmEntry && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Eintrag löschen?</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Möchtest du den Eintrag "{deleteConfirmEntry.project_name}" vom {deleteConfirmEntry.date} ({deleteConfirmEntry.start_time} - {deleteConfirmEntry.end_time}) wirklich löschen?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmEntry(null)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Löschen
+              </button>
             </div>
-          )
-        })}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* Week View */}
+      {viewMode === 'week' && (
+        <div className="grid grid-cols-7 gap-2">
+          {weekDates.map((date) => {
+            const dayEntriesForDate = getEntriesForDate(date)
+            const dayTotalForDate = getTotalForDate(date)
+
+            return (
+              <div
+                key={date.toISOString()}
+                className={`border rounded-lg p-2 min-h-[150px] ${
+                  isToday(date) ? 'border-lavender-500 bg-lavender-50 dark:bg-lavender-900/20' : 'border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium">
+                    {date.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric' })}
+                  </div>
+                  <button
+                    onClick={() => handleNewEntry(date)}
+                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {dayEntriesForDate.map((entry) => {
+                    const project = projects.find((p) => p.id === entry.project)
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`group relative text-xs p-1.5 rounded cursor-pointer hover:opacity-90 ${getColorClass(project?.color || 'gray')} text-white`}
+                        onClick={() => handleEdit(entry)}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(entry)
+                          }}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hidden group-hover:flex"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <div className="font-medium truncate">{entry.project_name}</div>
+                        <div className="opacity-80">
+                          {entry.start_time} - {entry.end_time} ({formatDuration(entry.duration_minutes)})
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {dayTotalForDate > 0 && (
+                  <div className="text-xs text-gray-500 mt-2 pt-1 border-t border-gray-200 dark:border-gray-700">
+                    {formatDuration(dayTotalForDate)} h
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Day View */}
+      {viewMode === 'day' && (
+        <div className="space-y-2">
+          {dayEntries.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              Keine Einträge für diesen Tag
+            </div>
+          ) : (
+            dayEntries.map((entry) => {
+              const project = projects.find((p) => p.id === entry.project)
+              return (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                >
+                  <div className={`w-2 h-12 rounded-full ${getColorClass(project?.color || 'gray')}`} />
+                  <div className="flex-1">
+                    <div className="font-medium">{entry.project_name}</div>
+                    <div className="text-sm text-gray-500">{entry.description || 'Keine Beschreibung'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-lg">{formatDuration(entry.duration_minutes)}</div>
+                    <div className="text-sm text-gray-500">
+                      {entry.start_time} - {entry.end_time}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleEdit(entry)}
+                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(entry)}
+                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -594,6 +583,7 @@ interface ProjectsTabProps {
 function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingProject, setEditingProject] = useState<TimeTrackingProject | null>(null)
+  const [deleteConfirmProject, setDeleteConfirmProject] = useState<TimeTrackingProject | null>(null)
   const [formData, setFormData] = useState({
     client: '',
     name: '',
@@ -602,6 +592,17 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
     color: 'violet' as ProjectColor,
     status: 'active',
   })
+
+  const handleDelete = (project: TimeTrackingProject) => {
+    setDeleteConfirmProject(project)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteConfirmProject) {
+      await onDelete(deleteConfirmProject.id)
+      setDeleteConfirmProject(null)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -648,7 +649,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
           setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neues Projekt
@@ -739,6 +740,32 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
         </form>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmProject && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Projekt löschen?</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Möchtest du das Projekt "{deleteConfirmProject.name}" wirklich löschen?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmProject(null)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Projects List */}
       <div className="space-y-2">
         {projects.length === 0 ? (
@@ -771,7 +798,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => onDelete(project.id)}
+                    onClick={() => handleDelete(project)}
                     className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -798,6 +825,7 @@ interface ClientsTabProps {
 function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingClient, setEditingClient] = useState<TimeTrackingClient | null>(null)
+  const [deleteConfirmClient, setDeleteConfirmClient] = useState<TimeTrackingClient | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -805,6 +833,17 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
     address: '',
     notes: '',
   })
+
+  const handleDelete = (client: TimeTrackingClient) => {
+    setDeleteConfirmClient(client)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteConfirmClient) {
+      await onDelete(deleteConfirmClient.id)
+      setDeleteConfirmClient(null)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -841,7 +880,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
           setFormData({ name: '', email: '', phone: '', address: '', notes: '' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neuer Kunde
@@ -920,6 +959,32 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
         </form>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmClient && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Kunde löschen?</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Möchtest du den Kunden "{deleteConfirmClient.name}" wirklich löschen?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmClient(null)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Clients List */}
       <div className="space-y-2">
         {clients.length === 0 ? (
@@ -944,7 +1009,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => onDelete(client.id)}
+                  onClick={() => handleDelete(client)}
                   className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded"
                 >
                   <Trash2 className="h-4 w-4" />

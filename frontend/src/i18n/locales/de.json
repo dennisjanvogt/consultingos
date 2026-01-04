@@ -21,9 +21,11 @@
     "masterdata": "Stammdaten",
     "transactions": "Belege",
     "documents": "Dateien",
+    "calendar": "Kalender",
     "kanban": "Kanban",
     "timetracking": "Zeiterfassung",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "imageviewer": "Bildansicht"
   },
   "auth": {
     "login": "Anmelden",
@@ -106,7 +108,14 @@
     "language": "Sprache",
     "light": "Hell",
     "dark": "Dunkel",
-    "system": "System"
+    "system": "System",
+    "apps": "Apps",
+    "appsDescription": "Aktiviere Apps und ordne sie im Dock an",
+    "category": {
+      "core": "Kern",
+      "productivity": "Produktivität",
+      "tools": "Werkzeuge"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

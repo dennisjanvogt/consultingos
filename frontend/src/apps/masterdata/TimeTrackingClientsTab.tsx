@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
-  Plus,
   Pencil,
   Trash2,
   Check,
   X,
 } from 'lucide-react'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
+import { useMasterDataStore } from '@/stores/masterdataStore'
 import type { TimeTrackingClient } from '@/api/types'
 
 export function TimeTrackingClientsTab() {
@@ -28,9 +28,21 @@ export function TimeTrackingClientsTab() {
     deleteClient,
   } = useTimeTrackingStore()
 
+  const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+
   useEffect(() => {
     fetchClients()
   }, [fetchClients])
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setEditingClient(null)
+      setFormData({ name: '', email: '', phone: '', address: '', notes: '' })
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,18 +73,6 @@ export function TimeTrackingClientsTab() {
 
   return (
     <div className="h-full overflow-auto p-4 space-y-4">
-      <button
-        onClick={() => {
-          setEditingClient(null)
-          setFormData({ name: '', email: '', phone: '', address: '', notes: '' })
-          setShowForm(true)
-        }}
-        className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 transition-colors"
-      >
-        <Plus className="h-4 w-4" />
-        Neuer Kunde
-      </button>
-
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-3">

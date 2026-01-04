@@ -5,23 +5,16 @@ import { type Window as WindowType, useWindowStore } from '@/stores/windowStore'
 import { useKanbanStore } from '@/stores/kanbanStore'
 import { useTimeTrackingStore, type TimeTrackingTab } from '@/stores/timetrackingStore'
 import { useDocumentsStore } from '@/stores/documentsStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload } from 'lucide-react'
+import { useMasterDataStore } from '@/stores/masterdataStore'
+import { useTransactionsStore } from '@/stores/transactionsStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus } from 'lucide-react'
 import type { KanbanBoard } from '@/api/types'
+
+import { appRegistry } from '@/config/apps'
 
 // Resize constraints
 const MIN_WIDTH = 400
 const MIN_HEIGHT = 300
-
-// App Components
-import { DashboardApp } from '@/apps/dashboard/DashboardApp'
-import { MasterDataApp } from '@/apps/masterdata/MasterDataApp'
-import { TransactionsApp } from '@/apps/transactions/TransactionsApp'
-import { SettingsApp } from '@/apps/settings/SettingsApp'
-import { DocumentsApp } from '@/apps/documents/DocumentsApp'
-import { CalendarApp } from '@/apps/calendar/CalendarApp'
-import { KanbanApp } from '@/apps/kanban/KanbanApp'
-import { TimeTrackingApp } from '@/apps/timetracking/TimeTrackingApp'
-import { ImageViewerApp } from '@/apps/imageviewer/ImageViewerApp'
 
 interface WindowProps {
   window: WindowType
@@ -30,16 +23,9 @@ interface WindowProps {
   isStageManaged?: boolean // Position wird vom Parent kontrolliert (für Layout-Animation)
 }
 
-const appComponents = {
-  dashboard: DashboardApp,
-  masterdata: MasterDataApp,
-  transactions: TransactionsApp,
-  settings: SettingsApp,
-  documents: DocumentsApp,
-  calendar: CalendarApp,
-  kanban: KanbanApp,
-  timetracking: TimeTrackingApp,
-  imageviewer: ImageViewerApp,
+// App Components kommen jetzt aus der zentralen Registry
+const getAppComponent = (appId: string): React.ComponentType => {
+  return appRegistry[appId]?.component || (() => <div>App nicht gefunden</div>)
 }
 
 export function Window({ window, isThumbnail = false, isStageCenter = false, isStageManaged = false }: WindowProps) {
@@ -69,9 +55,9 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   } = useWindowStore()
 
   const isActive = activeWindowId === window.id
-  const AppComponent = appComponents[window.appId]
+  const AppComponent = getAppComponent(window.appId)
 
-  // Keyboard handler für Fenster
+  // Keyboard handler für Fenster (Space for maximize)
   const handleWindowKeyDown = (e: React.KeyboardEvent) => {
     // Don't trigger if typing in an input or contenteditable
     const target = e.target as HTMLElement
@@ -84,10 +70,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       return
     }
 
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      closeWindow(window.id)
-    } else if (e.key === ' ' || e.code === 'Space') {
+    if (e.key === ' ' || e.code === 'Space') {
       e.preventDefault()
       e.stopPropagation()
       maximizeWindow(window.id)
@@ -228,7 +211,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   if (isThumbnail) {
     return (
       <div
-        className="glass rounded-xl overflow-hidden window-shadow flex flex-col"
+        className="glass rounded-xl overflow-hidden window-shadow flex flex-col relative group/thumb"
         style={{
           width: window.size.width,
           height: window.size.height,
@@ -515,6 +498,12 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         {window.appId === 'documents' && (
           <DocumentsTitleBarControls />
         )}
+        {window.appId === 'masterdata' && (
+          <MasterDataTitleBarControls />
+        )}
+        {window.appId === 'transactions' && (
+          <TransactionsTitleBarControls />
+        )}
       </div>
     </>
   )
@@ -586,6 +575,73 @@ function DocumentsTitleBarControls() {
         <Upload className="w-3.5 h-3.5" />
       </button>
     </div>
+  )
+}
+
+// MasterData Title Bar Controls
+function MasterDataTitleBarControls() {
+  const { t } = useTranslation()
+  const { activeView, triggerNewForm } = useMasterDataStore()
+
+  // Only show when not on home view
+  if (activeView === 'home') return null
+
+  const getButtonLabel = () => {
+    switch (activeView) {
+      case 'customers': return t('masterdata.newCustomer', 'Neuer Kunde')
+      case 'products': return t('masterdata.newProduct', 'Neues Produkt')
+      case 'taxrates': return t('masterdata.newTaxRate', 'Neuer Steuersatz')
+      case 'ttprojects': return t('masterdata.newProject', 'Neues Projekt')
+      case 'ttclients': return t('masterdata.newClient', 'Neuer Kunde')
+      default: return t('common.new', 'Neu')
+    }
+  }
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        triggerNewForm()
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      {getButtonLabel()}
+    </button>
+  )
+}
+
+// Transactions Title Bar Controls
+function TransactionsTitleBarControls() {
+  const { t } = useTranslation()
+  const { activeView, triggerNewForm } = useTransactionsStore()
+
+  // Only show when not on home view
+  if (activeView === 'home') return null
+
+  const getButtonLabel = () => {
+    switch (activeView) {
+      case 'invoices': return t('transactions.newInvoice', 'Neue Rechnung')
+      case 'quotes': return t('transactions.newQuote', 'Neues Angebot')
+      case 'creditnotes': return t('transactions.newCreditNote', 'Neue Gutschrift')
+      case 'timeentries': return t('transactions.newTimeEntry', 'Neuer Zeiteintrag')
+      default: return t('common.new', 'Neu')
+    }
+  }
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        triggerNewForm()
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      {getButtonLabel()}
+    </button>
   )
 }
 

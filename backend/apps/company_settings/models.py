@@ -54,6 +54,18 @@ class CompanySettings(models.Model):
     invoice_prefix = models.CharField(max_length=10, default='INV-')
     next_invoice_number = models.PositiveIntegerField(default=1)
 
+    # App settings (JSON fields for flexibility)
+    enabled_apps = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of enabled app IDs'
+    )
+    dock_order = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Order of apps in the dock'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, X, ArrowLeft, Euro, Tag } from 'lucide-react'
+import { Search, MoreHorizontal, Pencil, Trash2, X, ArrowLeft, Euro, Tag } from 'lucide-react'
+import { useMasterDataStore } from '@/stores/masterdataStore'
 
 interface Product {
   id: number
@@ -20,6 +21,15 @@ export function ProductsTab() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [products, setProducts] = useState<Product[]>(initialProducts)
+  const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   const filteredProducts = products.filter(
     (p) =>
@@ -57,16 +67,6 @@ export function ProductsTab() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            {t('masterdata.addProduct')}
-          </button>
-        </div>
-
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

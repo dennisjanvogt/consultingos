@@ -5,10 +5,14 @@ import { WindowManager } from './WindowManager'
 import { MenuBar } from './MenuBar'
 import { Spotlight } from './Spotlight'
 import { useWindowStore } from '@/stores/windowStore'
+import { useMasterDataStore } from '@/stores/masterdataStore'
+import { useTransactionsStore } from '@/stores/transactionsStore'
 
 export function Desktop() {
   const windows = useWindowStore((state) => state.windows)
   const tileAllWindows = useWindowStore((state) => state.tileAllWindows)
+  const stageManagerEnabled = useWindowStore((state) => state.stageManagerEnabled)
+  const toggleStageManager = useWindowStore((state) => state.toggleStageManager)
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false)
 
   useEffect(() => {
@@ -23,11 +27,43 @@ export function Desktop() {
       // ESC - Aktives Fenster schließen (global, unabhängig von Focus)
       // Spotlight hat eigenen ESC-Handler, der zuerst greift
       if (e.key === 'Escape' && !isInput) {
-        const state = useWindowStore.getState()
-        if (state.activeWindowId && !isSpotlightOpen) {
+        const windowState = useWindowStore.getState()
+        if (windowState.activeWindowId && !isSpotlightOpen) {
+          const activeWindow = windowState.windows.find(w => w.id === windowState.activeWindowId)
+
+          // For masterdata/transactions: go back to home first, then close
+          if (activeWindow?.appId === 'masterdata') {
+            const masterDataState = useMasterDataStore.getState()
+            if (masterDataState.activeView !== 'home') {
+              e.preventDefault()
+              e.stopPropagation()
+              masterDataState.setActiveView('home')
+              return
+            }
+          }
+          if (activeWindow?.appId === 'transactions') {
+            const transactionsState = useTransactionsStore.getState()
+            if (transactionsState.activeView !== 'home') {
+              e.preventDefault()
+              e.stopPropagation()
+              transactionsState.setActiveView('home')
+              return
+            }
+          }
+
           e.preventDefault()
           e.stopPropagation()
-          state.closeWindow(state.activeWindowId)
+          windowState.closeWindow(windowState.activeWindowId)
+        }
+      }
+
+      // Space - Maximize active window (global, unabhängig von Focus)
+      if ((e.key === ' ' || e.code === 'Space') && !isInput) {
+        const windowState = useWindowStore.getState()
+        if (windowState.activeWindowId && !isSpotlightOpen) {
+          e.preventDefault()
+          e.stopPropagation()
+          windowState.maximizeWindow(windowState.activeWindowId)
         }
       }
 
@@ -38,16 +74,21 @@ export function Desktop() {
         setIsSpotlightOpen(true)
       }
 
-      // Arrow Right - Alle Fenster tilen/untilen (nur ohne Stage Manager)
+      // Arrow Right - Stage Manager aus + Alle Fenster tilen/untilen
       if (e.key === 'ArrowRight' && !isSpotlightOpen) {
         e.preventDefault()
+        const windowState = useWindowStore.getState()
+        // Stage Manager deaktivieren falls aktiv
+        if (windowState.stageManagerEnabled) {
+          windowState.toggleStageManager()
+        }
         tileAllWindows()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown, true)  // Capture phase
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [isSpotlightOpen, tileAllWindows])
+  }, [isSpotlightOpen, tileAllWindows, stageManagerEnabled, toggleStageManager])
 
   return (
     <div className="desktop-bg h-screen w-screen flex flex-col overflow-hidden">

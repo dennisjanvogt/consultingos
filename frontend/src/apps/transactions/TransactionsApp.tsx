@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { FileText, FileCheck, FileMinus, ArrowLeft, Clock } from 'lucide-react'
@@ -6,8 +5,9 @@ import { InvoicesTab } from './InvoicesTab'
 import { QuotesTab } from './QuotesTab'
 import { CreditNotesTab } from './CreditNotesTab'
 import { TimeEntriesTab } from './TimeEntriesTab'
+import { useTransactionsStore, type TransactionsView } from '@/stores/transactionsStore'
 
-type ViewId = 'home' | 'invoices' | 'quotes' | 'creditnotes' | 'timeentries'
+type ViewId = TransactionsView
 
 interface TransactionItem {
   id: ViewId
@@ -24,25 +24,7 @@ const transactionItems: TransactionItem[] = [
 
 export function TransactionsApp() {
   const { t } = useTranslation()
-  const [activeView, setActiveView] = useState<ViewId>('home')
-
-  // Handle ESC key - go back to home before closing window
-  useEffect(() => {
-    if (activeView === 'home') return
-
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
-          return
-        }
-        e.stopImmediatePropagation()
-        setActiveView('home')
-      }
-    }
-
-    document.addEventListener('keydown', handleEsc, true)
-    return () => document.removeEventListener('keydown', handleEsc, true)
-  }, [activeView])
+  const { activeView, setActiveView } = useTransactionsStore()
 
   // Determine grid columns: under 10 items = 3 per row, 10+ = 5 per row
   const gridCols = transactionItems.length >= 10 ? 5 : 3

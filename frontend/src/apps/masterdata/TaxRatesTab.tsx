@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
+import { useMasterDataStore } from '@/stores/masterdataStore'
 
 interface TaxRate {
   id: number
@@ -20,6 +21,15 @@ export function TaxRatesTab() {
   const [showForm, setShowForm] = useState(false)
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null)
   const [taxRates, setTaxRates] = useState<TaxRate[]>(initialTaxRates)
+  const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+
+  // Listen for title bar "Neu" button
+  useEffect(() => {
+    if (showNewForm) {
+      setShowForm(true)
+      clearNewFormTrigger()
+    }
+  }, [showNewForm, clearNewFormTrigger])
 
   const handleEdit = (rate: TaxRate) => {
     setEditingRate(rate)
@@ -53,21 +63,9 @@ export function TaxRatesTab() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            {t('masterdata.addTaxRate')}
-          </button>
-        </div>
-      </div>
 
       {/* Tax Rates List */}
-      <div className="flex-1 overflow-auto p-4 pt-0">
+      <div className="flex-1 overflow-auto p-4">
         {taxRates.length === 0 ? (
           <div className="text-center py-12 text-gray-500 text-sm">
             {t('masterdata.noTaxRates')}
