@@ -21,12 +21,13 @@ import {
   StarOff,
   Home,
   Upload,
+  Wand2,
 } from 'lucide-react'
 import { useDocumentsStore } from '@/stores/documentsStore'
 import { useWindowStore } from '@/stores/windowStore'
 import { useImageViewerStore } from '@/stores/imageViewerStore'
 import type { Folder as FolderType, Document as DocumentType } from '@/api/types'
-import { type FileCategory, CATEGORY_INFO } from './utils/fileCategories'
+import { type FileCategory, CATEGORY_INFO, getCategoryFromFileType } from './utils/fileCategories'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const MEDIA_BASE_URL = 'http://localhost:8000' // Ohne /api - für Media Files
@@ -47,6 +48,8 @@ export function DocumentsApp() {
   const [editingFolder, setEditingFolder] = useState<FolderType | null>(null)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'folder' | 'document'; id: number; name: string } | null>(null)
+  const [showAutoSortModal, setShowAutoSortModal] = useState(false)
+  const [isAutoSorting, setIsAutoSorting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
 
@@ -266,6 +269,70 @@ export function DocumentsApp() {
   // Aktive Filter für Header
   const activeFilterLabels = activeFilters.map(f => CATEGORY_INFO[f].label).join(', ')
 
+  // Auto-sort: Mapping category to folder name
+  const CATEGORY_TO_FOLDER: Record<string, string> = {
+    images: 'Bilder',
+    videos: 'Videos',
+    music: 'Musik',
+    documents: 'Dokumente',
+  }
+
+  // Get files that can be auto-sorted (only from root folder)
+  const getAutoSortableFiles = useMemo(() => {
+    // Only consider files in root folder
+    if (currentFolderId !== null) return { total: 0, byCategory: {} as Record<string, DocumentType[]> }
+
+    const byCategory: Record<string, DocumentType[]> = {
+      images: [],
+      videos: [],
+      music: [],
+      documents: [],
+    }
+
+    for (const doc of documents) {
+      const category = getCategoryFromFileType(doc.file_type)
+      if (category !== 'other' && category !== 'all' && byCategory[category]) {
+        byCategory[category].push(doc)
+      }
+    }
+
+    const total = Object.values(byCategory).reduce((sum, arr) => sum + arr.length, 0)
+    return { total, byCategory }
+  }, [documents, currentFolderId])
+
+  // Execute auto-sort
+  const handleAutoSort = async () => {
+    setIsAutoSorting(true)
+
+    try {
+      const { byCategory } = getAutoSortableFiles
+
+      for (const [category, docs] of Object.entries(byCategory)) {
+        if (docs.length === 0) continue
+
+        const folderName = CATEGORY_TO_FOLDER[category]
+        const targetFolder = allFolders.find(f => f.name === folderName && f.parent_id === null)
+
+        if (!targetFolder) {
+          console.warn(`Target folder not found: ${folderName}`)
+          continue
+        }
+
+        for (const doc of docs) {
+          await moveDocument(doc.id, targetFolder.id)
+        }
+      }
+
+      // Refresh documents after sorting
+      await fetchDocuments(currentFolderId)
+    } catch (error) {
+      console.error('Auto-sort failed:', error)
+    } finally {
+      setIsAutoSorting(false)
+      setShowAutoSortModal(false)
+    }
+  }
+
   return (
     <div className="h-full flex relative">
       {/* Folders Sidebar */}
@@ -344,6 +411,18 @@ export function DocumentsApp() {
               )
             })}
           </div>
+
+          {/* Auto-Sort Button - only show in root folder with sortable files */}
+          {currentFolderId === null && getAutoSortableFiles.total > 0 && (
+            <button
+              onClick={() => setShowAutoSortModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-lavender-100 dark:bg-lavender-900/30 text-lavender-700 dark:text-lavender-300 rounded-lg hover:bg-lavender-200 dark:hover:bg-lavender-900/50 transition-colors"
+              title="Dateien automatisch sortieren"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Sortieren
+            </button>
+          )}
 
           {/* Hidden file input for upload */}
           <input
@@ -583,6 +662,70 @@ export function DocumentsApp() {
                   className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
                 >
                   Löschen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Auto-Sort Confirmation Modal */}
+        {showAutoSortModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-md mx-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-lavender-100 dark:bg-lavender-900/30 flex items-center justify-center">
+                  <Wand2 className="h-5 w-5 text-lavender-600 dark:text-lavender-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                  Dateien sortieren?
+                </h3>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {getAutoSortableFiles.total} Dateien werden automatisch in die passenden Ordner verschoben:
+              </p>
+
+              <div className="space-y-2 mb-6">
+                {Object.entries(getAutoSortableFiles.byCategory).map(([category, docs]) => {
+                  if (!Array.isArray(docs) || docs.length === 0) return null
+                  const folderName = CATEGORY_TO_FOLDER[category]
+                  const info = CATEGORY_INFO[category as FileCategory]
+                  const Icon = info?.icon || File
+                  return (
+                    <div key={category} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                      <Icon className={`h-4 w-4 ${info?.color || 'text-gray-500'}`} />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                        {docs.length} {docs.length === 1 ? 'Datei' : 'Dateien'} → <span className="font-medium">{folderName}</span>
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowAutoSortModal(false)}
+                  disabled={isAutoSorting}
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleAutoSort}
+                  disabled={isAutoSorting}
+                  className="px-4 py-2 text-sm bg-lavender-500 text-white rounded-lg hover:bg-lavender-600 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isAutoSorting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Sortiere...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4" />
+                      Sortieren
+                    </>
+                  )}
                 </button>
               </div>
             </div>

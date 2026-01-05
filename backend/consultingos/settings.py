@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third party
     'corsheaders',
+    'channels',
     # Local apps
     'apps.users',
     'apps.customers',
@@ -35,6 +36,8 @@ INSTALLED_APPS = [
     'apps.calendar',
     'apps.kanban',
     'apps.timetracking',
+    'apps.ai',
+    'apps.chess',
 ]
 
 MIDDLEWARE = [
@@ -130,3 +133,15 @@ JITSI_DOMAIN = os.getenv('JITSI_DOMAIN', 'meet.jit.si')
 
 # Production URL
 PRODUCTION_URL = os.getenv('PRODUCTION_URL', 'http://localhost:5173')
+
+# GitHub OAuth
+GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', '')
+GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
+
+# Django Channels (WebSocket)
+ASGI_APPLICATION = 'consultingos.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}

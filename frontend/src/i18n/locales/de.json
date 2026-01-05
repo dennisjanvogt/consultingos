@@ -25,7 +25,10 @@
     "kanban": "Kanban",
     "timetracking": "Zeiterfassung",
     "settings": "Einstellungen",
-    "imageviewer": "Bildansicht"
+    "imageviewer": "Bildansicht",
+    "chat": "Chat",
+    "chess": "Schach",
+    "admin": "Admin"
   },
   "auth": {
     "login": "Anmelden",
@@ -40,7 +43,11 @@
     "createAccount": "Konto erstellen",
     "signIn": "Anmelden",
     "hasAccount": "Bereits ein Konto?",
-    "noAccount": "Noch kein Konto?"
+    "noAccount": "Noch kein Konto?",
+    "orContinueWith": "oder weiter mit",
+    "continueWithGitHub": "Mit GitHub anmelden",
+    "approvalRequired": "Neue Accounts erfordern Admin-Freigabe",
+    "pendingApproval": "Dein Account wartet auf Freigabe durch einen Admin."
   },
   "customers": {
     "title": "Kunden",
@@ -114,7 +121,8 @@
     "category": {
       "core": "Kern",
       "productivity": "Produktivität",
-      "tools": "Werkzeuge"
+      "tools": "Werkzeuge",
+      "admin": "Administration"
     }
   },
   "dashboard": {

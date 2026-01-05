@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { api } from '@/api/client'
+import type { AIConversation, AIConversationDetail, AIMessage, AIMessageCreate, AIHelper, AIHelperCreate, AIHelperUpdate } from '@/api/types'
 
 export interface AIModel {
   id: string
@@ -15,6 +17,7 @@ export interface AIModel {
 }
 
 interface AIState {
+  // Model selection
   chatModel: string
   imageModel: string
   chatModels: AIModel[]
@@ -25,6 +28,32 @@ interface AIState {
   getChatModelInfo: () => AIModel | undefined
   getImageModelInfo: () => AIModel | undefined
   fetchModels: () => Promise<void>
+
+  // Helper management
+  helpers: AIHelper[]
+  currentHelperId: number | null
+  isLoadingHelpers: boolean
+  showHelperDialog: boolean
+  setShowHelperDialog: (show: boolean) => void
+  fetchHelpers: () => Promise<void>
+  createHelper: (data: AIHelperCreate) => Promise<AIHelper>
+  updateHelper: (id: number, data: AIHelperUpdate) => Promise<AIHelper>
+  deleteHelper: (id: number) => Promise<void>
+  setCurrentHelper: (id: number | null) => void
+  getCurrentHelper: () => AIHelper | undefined
+  generatePrompt: (description: string) => Promise<string>
+
+  // Conversation management
+  conversations: AIConversation[]
+  currentConversationId: number | null
+  currentMessages: AIMessage[]
+  isLoadingConversations: boolean
+  fetchConversations: () => Promise<void>
+  createConversation: (title?: string) => Promise<number>
+  loadConversation: (id: number) => Promise<void>
+  deleteConversation: (id: number) => Promise<void>
+  addMessage: (data: AIMessageCreate) => Promise<AIMessage | null>
+  clearCurrentConversation: () => void
 }
 
 // OpenRouter models API response type
@@ -112,8 +141,9 @@ const convertModel = (model: OpenRouterModel): AIModel => {
 export const useAIStore = create<AIState>()(
   persist(
     (set, get) => ({
-      chatModel: 'google/gemini-2.5-flash-preview',
-      imageModel: 'google/gemini-2.5-flash-preview:image-generation',
+      // Model selection state
+      chatModel: 'google/gemini-2.0-flash-001',
+      imageModel: 'google/gemini-2.0-flash-001:image-generation',
       chatModels: [],
       imageModels: [],
       isLoadingModels: false,
@@ -161,12 +191,175 @@ export const useAIStore = create<AIState>()(
           set({ isLoadingModels: false })
         }
       },
+
+      // Helper management state
+      helpers: [],
+      currentHelperId: null,
+      isLoadingHelpers: false,
+      showHelperDialog: false,
+      setShowHelperDialog: (show: boolean) => set({ showHelperDialog: show }),
+
+      fetchHelpers: async () => {
+        set({ isLoadingHelpers: true })
+        try {
+          const helpers = await api.get<AIHelper[]>('/ai/helpers')
+          set({ helpers, isLoadingHelpers: false })
+
+          // Set default helper if none selected
+          if (!get().currentHelperId && helpers.length > 0) {
+            const defaultHelper = helpers.find(h => h.is_default) || helpers[0]
+            set({ currentHelperId: defaultHelper.id })
+          }
+        } catch (error) {
+          console.error('Failed to fetch helpers:', error)
+          set({ isLoadingHelpers: false })
+        }
+      },
+
+      createHelper: async (data: AIHelperCreate) => {
+        const helper = await api.post<AIHelper>('/ai/helpers', data)
+        set((state) => ({ helpers: [...state.helpers, helper] }))
+        return helper
+      },
+
+      updateHelper: async (id: number, data: AIHelperUpdate) => {
+        const helper = await api.put<AIHelper>(`/ai/helpers/${id}`, data)
+        set((state) => ({
+          helpers: state.helpers.map((h) => (h.id === id ? helper : h)),
+        }))
+        return helper
+      },
+
+      deleteHelper: async (id: number) => {
+        await api.delete(`/ai/helpers/${id}`)
+        set((state) => ({
+          helpers: state.helpers.filter((h) => h.id !== id),
+          currentHelperId: state.currentHelperId === id ? null : state.currentHelperId,
+        }))
+      },
+
+      setCurrentHelper: (id: number | null) => {
+        set({ currentHelperId: id })
+      },
+
+      getCurrentHelper: () => {
+        const { helpers, currentHelperId } = get()
+        return helpers.find((h) => h.id === currentHelperId)
+      },
+
+      generatePrompt: async (description: string) => {
+        const { chatModel } = get()
+        const response = await api.post<{ prompt: string }>('/ai/helpers/generate-prompt', { description, model: chatModel })
+        return response.prompt
+      },
+
+      // Conversation management state
+      conversations: [],
+      currentConversationId: null,
+      currentMessages: [],
+      isLoadingConversations: false,
+
+      fetchConversations: async () => {
+        set({ isLoadingConversations: true })
+        try {
+          const conversations = await api.get<AIConversation[]>('/ai/conversations')
+          set({ conversations, isLoadingConversations: false })
+        } catch (error) {
+          console.error('Failed to fetch conversations:', error)
+          set({ isLoadingConversations: false })
+        }
+      },
+
+      createConversation: async (title?: string) => {
+        try {
+          const conv = await api.post<AIConversation>('/ai/conversations', { title })
+          set((state) => ({
+            conversations: [conv, ...state.conversations],
+            currentConversationId: conv.id,
+            currentMessages: [],
+          }))
+          return conv.id
+        } catch (error) {
+          console.error('Failed to create conversation:', error)
+          throw error
+        }
+      },
+
+      loadConversation: async (id: number) => {
+        try {
+          const conv = await api.get<AIConversationDetail>(`/ai/conversations/${id}`)
+          set({
+            currentConversationId: conv.id,
+            currentMessages: conv.messages,
+          })
+        } catch (error) {
+          console.error('Failed to load conversation:', error)
+        }
+      },
+
+      deleteConversation: async (id: number) => {
+        try {
+          await api.delete(`/ai/conversations/${id}`)
+          set((state) => ({
+            conversations: state.conversations.filter((c) => c.id !== id),
+            currentConversationId: state.currentConversationId === id ? null : state.currentConversationId,
+            currentMessages: state.currentConversationId === id ? [] : state.currentMessages,
+          }))
+        } catch (error) {
+          console.error('Failed to delete conversation:', error)
+        }
+      },
+
+      addMessage: async (data: AIMessageCreate) => {
+        const { currentConversationId, createConversation } = get()
+
+        // Create conversation if none exists
+        let convId = currentConversationId
+        if (!convId) {
+          convId = await createConversation()
+        }
+
+        try {
+          const msg = await api.post<AIMessage>(`/ai/conversations/${convId}/messages`, data)
+
+          set((state) => {
+            // Update conversation title if this is the first user message
+            const updatedConversations = state.conversations.map((c) => {
+              if (c.id === convId && c.title === 'Neues Gespräch' && data.role === 'user') {
+                return { ...c, title: data.content.slice(0, 100), updated_at: new Date().toISOString() }
+              }
+              if (c.id === convId) {
+                return { ...c, updated_at: new Date().toISOString() }
+              }
+              return c
+            })
+
+            return {
+              currentMessages: [...state.currentMessages, msg],
+              conversations: updatedConversations,
+            }
+          })
+
+          return msg
+        } catch (error) {
+          console.error('Failed to add message:', error)
+          return null
+        }
+      },
+
+      clearCurrentConversation: () => {
+        set({
+          currentConversationId: null,
+          currentMessages: [],
+        })
+      },
     }),
     {
       name: 'ai-settings',
       partialize: (state) => ({
         chatModel: state.chatModel,
         imageModel: state.imageModel,
+        currentHelperId: state.currentHelperId,
       }),
     }
   )

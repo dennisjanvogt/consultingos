@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { appRegistry, type AppType } from '@/config/apps'
 
 export type { AppType } from '@/config/apps'
@@ -56,7 +57,21 @@ const getAppDefaultSize = (appId: AppType): { width: number; height: number } =>
   return app?.defaultSize || { width: 800, height: 600 }
 }
 
-export const useWindowStore = create<WindowStore>((set, get) => ({
+// Typ für persistierte Window-Daten (ohne Runtime-Felder)
+interface PersistedWindow {
+  appId: AppType
+  isMinimized: boolean
+  isMaximized: boolean
+  isTiled: boolean
+  position: { x: number; y: number }
+  size: { width: number; height: number }
+  previousPosition?: { x: number; y: number }
+  previousSize?: { width: number; height: number }
+}
+
+export const useWindowStore = create<WindowStore>()(
+  persist(
+    (set, get) => ({
   windows: [],
   activeWindowId: null,
   nextZIndex: 1,
@@ -514,4 +529,49 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       ),
     }))
   },
-}))
+    }),
+    {
+      name: 'consultingos-windows',
+      partialize: (state) => ({
+        // Nur relevante Felder speichern
+        windows: state.windows.map((w): PersistedWindow => ({
+          appId: w.appId,
+          isMinimized: w.isMinimized,
+          isMaximized: w.isMaximized,
+          isTiled: w.isTiled,
+          position: w.position,
+          size: w.size,
+          previousPosition: w.previousPosition,
+          previousSize: w.previousSize,
+        })),
+        stageManagerEnabled: state.stageManagerEnabled,
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as { windows?: PersistedWindow[]; stageManagerEnabled?: boolean } | undefined
+        if (!persisted?.windows?.length) {
+          return currentState
+        }
+
+        // IDs und zIndex neu generieren
+        let zIndex = 1
+        const restoredWindows: Window[] = persisted.windows
+          .filter((w: PersistedWindow) => appRegistry[w.appId]) // Nur existierende Apps
+          .map((w: PersistedWindow) => ({
+            ...w,
+            id: `${w.appId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            title: getAppTitle(w.appId),
+            zIndex: zIndex++,
+            tiledAt: w.isTiled ? Date.now() : undefined,
+          }))
+
+        return {
+          ...currentState,
+          windows: restoredWindows,
+          nextZIndex: zIndex,
+          activeWindowId: restoredWindows.find((w) => !w.isMinimized)?.id || null,
+          stageManagerEnabled: persisted.stageManagerEnabled ?? currentState.stageManagerEnabled,
+        }
+      },
+    }
+  )
+)

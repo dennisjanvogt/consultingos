@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Sparkles, X, Mic, Volume2, VolumeX } from 'lucide-react'
-import { sendMessage, type Message, type ToolCall } from '@/services/aiAgent'
+import { Loader2, Sparkles, X, Mic, Volume2, VolumeX, ChevronLeft, Trash2, MessageSquare } from 'lucide-react'
+import { sendMessage, sendMessageStream, type Message, type ToolCall, type AIResponse } from '@/services/aiAgent'
 import { executeTool } from '@/services/tools'
+import { useAIStore } from '@/stores/aiStore'
+import type { AIMessage } from '@/api/types'
 
 // TypeScript declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -51,6 +53,23 @@ declare global {
 }
 import { useWindowStore } from '@/stores/windowStore'
 
+// Helper function to format relative time
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'gerade eben'
+  if (diffMins < 60) return `vor ${diffMins} Min.`
+  if (diffHours < 24) return `vor ${diffHours} Std.`
+  if (diffDays === 1) return 'gestern'
+  if (diffDays < 7) return `vor ${diffDays} Tagen`
+  return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+}
+
 interface SpotlightProps {
   isOpen: boolean
   onClose: () => void
@@ -59,6 +78,7 @@ interface SpotlightProps {
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  image_url?: string | null
 }
 
 export function Spotlight({ isOpen, onClose }: SpotlightProps) {
@@ -78,6 +98,19 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const { openWindow } = useWindowStore()
+
+  // AI Store for conversation persistence
+  const {
+    conversations,
+    currentConversationId,
+    currentMessages,
+    isLoadingConversations,
+    fetchConversations,
+    loadConversation,
+    deleteConversation,
+    addMessage: addMessageToStore,
+    clearCurrentConversation,
+  } = useAIStore()
 
   // Start speech recognition
   const startRecording = useCallback(() => {
@@ -237,15 +270,46 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus()
-      setMessages([])
-      setConversationHistory([])
+      fetchConversations()
       setInput('')
       setIsRecording(false)
       setRecordingTime(0)
       setTranscribedText('')
       setHasInitialAltPress(false)
+
+      // Sync messages from store if we have a current conversation
+      if (currentConversationId && currentMessages.length > 0) {
+        setMessages(currentMessages.map(m => ({
+          role: m.role,
+          content: m.content,
+          image_url: m.image_url,
+        })))
+        // Rebuild conversation history for AI
+        setConversationHistory(currentMessages.map(m => ({
+          role: m.role,
+          content: m.content,
+        })))
+      } else {
+        setMessages([])
+        setConversationHistory([])
+      }
     }
-  }, [isOpen])
+  }, [isOpen, fetchConversations])
+
+  // Sync messages when currentMessages changes (e.g., when loading a conversation)
+  useEffect(() => {
+    if (currentConversationId && currentMessages.length > 0) {
+      setMessages(currentMessages.map(m => ({
+        role: m.role,
+        content: m.content,
+        image_url: m.image_url,
+      })))
+      setConversationHistory(currentMessages.map(m => ({
+        role: m.role,
+        content: m.content,
+      })))
+    }
+  }, [currentConversationId, currentMessages])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -262,10 +326,17 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
     if (!isOpen) return
 
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // ESC to close
+      // ESC to go back or close
       if (e.key === 'Escape') {
         e.preventDefault()
-        onClose()
+        // If viewing a conversation, go back to history first
+        if (currentConversationId && messages.length > 0) {
+          clearCurrentConversation()
+          setMessages([])
+          setConversationHistory([])
+        } else {
+          onClose()
+        }
         return
       }
 
@@ -287,6 +358,9 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
           setMessages(prev => [...prev, { role: 'user', content: spokenText }])
           setIsLoading(true)
 
+          // Persist user message to store
+          await addMessageToStore({ role: 'user', content: spokenText })
+
           try {
             const newHistory: Message[] = [...conversationHistory, {
               role: 'user',
@@ -295,6 +369,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
 
             let response = await sendMessage(newHistory)
             let currentHistory = [...newHistory]
+            let lastImageUrl: string | null = null
 
             // Handle tool calls
             while (response.toolCalls.length > 0) {
@@ -307,6 +382,19 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
               const toolResults: Message[] = []
               for (const toolCall of response.toolCalls) {
                 const result = await executeToolCall(toolCall)
+
+                // Check if this was an image generation
+                if (toolCall.function.name === 'generate_image') {
+                  try {
+                    const resultData = JSON.parse(result)
+                    if (resultData.file_url) {
+                      lastImageUrl = resultData.file_url
+                    }
+                  } catch {
+                    // Not JSON, ignore
+                  }
+                }
+
                 toolResults.push({
                   role: 'tool',
                   content: result,
@@ -321,7 +409,15 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
             setConversationHistory([...currentHistory, { role: 'assistant', content: response.content || '' }])
 
             if (response.content) {
-              setMessages(prev => [...prev, { role: 'assistant', content: response.content! }])
+              setMessages(prev => [...prev, { role: 'assistant', content: response.content!, image_url: lastImageUrl }])
+
+              // Persist assistant message to store
+              await addMessageToStore({
+                role: 'assistant',
+                content: response.content,
+                image_url: lastImageUrl,
+              })
+
               // Speak the response for voice interactions (if enabled)
               if (voiceResponseEnabled) {
                 speak(response.content)
@@ -331,11 +427,13 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
             console.error('AI Error:', error)
             const errorMsg = 'Entschuldigung, es gab einen Fehler bei der Verarbeitung.'
             setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }])
+            await addMessageToStore({ role: 'assistant', content: errorMsg })
             if (voiceResponseEnabled) {
               speak(errorMsg)
             }
           } finally {
             setIsLoading(false)
+            inputRef.current?.focus()
           }
         } else if (!isLoading) {
           // First Alt press just marks readiness, second press starts recording
@@ -350,7 +448,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, isRecording, isLoading, conversationHistory, startRecording, stopRecording, executeToolCall, speak, voiceResponseEnabled, onClose, hasInitialAltPress])
+  }, [isOpen, isRecording, isLoading, conversationHistory, startRecording, stopRecording, executeToolCall, speak, voiceResponseEnabled, onClose, hasInitialAltPress, currentConversationId, messages, clearCurrentConversation])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -361,62 +459,145 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setIsLoading(true)
 
+    // Persist user message to store
+    await addMessageToStore({ role: 'user', content: userMessage })
+
+    // Add empty assistant message for streaming
+    const streamingMsgIndex = messages.length + 1 // +1 because we just added user message
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+
     try {
       // Add user message to conversation history
       const newHistory: Message[] = [...conversationHistory, { role: 'user', content: userMessage }]
-
-      // Get AI response
-      let response = await sendMessage(newHistory)
       let currentHistory = [...newHistory]
+      let lastImageUrl: string | null = null
+      let streamedContent = ''
 
-      // Handle tool calls
-      while (response.toolCalls.length > 0) {
-        // Add assistant message with tool calls to history
-        currentHistory.push({
-          role: 'assistant',
-          content: response.content,
-          tool_calls: response.toolCalls
-        })
+      // Stream the first response
+      await new Promise<AIResponse>((resolve, reject) => {
+        sendMessageStream(
+          currentHistory,
+          {
+            onChunk: (chunk) => {
+              streamedContent += chunk
+              setMessages(prev => {
+                const updated = [...prev]
+                updated[streamingMsgIndex] = {
+                  role: 'assistant',
+                  content: streamedContent
+                }
+                return updated
+              })
+            },
+            onComplete: resolve,
+            onError: reject
+          }
+        )
+      }).then(async (response) => {
+        // Handle tool calls
+        while (response.toolCalls.length > 0) {
+          currentHistory.push({
+            role: 'assistant',
+            content: response.content,
+            tool_calls: response.toolCalls
+          })
 
-        // Execute each tool call and collect results
-        const toolResults: Message[] = []
-        for (const toolCall of response.toolCalls) {
-          const result = await executeToolCall(toolCall)
-          toolResults.push({
-            role: 'tool',
-            content: result,
-            tool_call_id: toolCall.id
+          const toolResults: Message[] = []
+          for (const toolCall of response.toolCalls) {
+            const result = await executeToolCall(toolCall)
+
+            if (toolCall.function.name === 'generate_image') {
+              try {
+                const resultData = JSON.parse(result)
+                if (resultData.file_url) {
+                  lastImageUrl = resultData.file_url
+                }
+              } catch {
+                // Not JSON, ignore
+              }
+            }
+
+            toolResults.push({
+              role: 'tool',
+              content: result,
+              tool_call_id: toolCall.id
+            })
+          }
+
+          currentHistory = [...currentHistory, ...toolResults]
+
+          // Stream the follow-up response after tool calls
+          streamedContent = ''
+          response = await new Promise<AIResponse>((resolve, reject) => {
+            sendMessageStream(
+              currentHistory,
+              {
+                onChunk: (chunk) => {
+                  streamedContent += chunk
+                  setMessages(prev => {
+                    const updated = [...prev]
+                    updated[streamingMsgIndex] = {
+                      role: 'assistant',
+                      content: streamedContent,
+                      image_url: lastImageUrl
+                    }
+                    return updated
+                  })
+                },
+                onComplete: resolve,
+                onError: reject
+              }
+            )
           })
         }
 
-        // Add tool results to history
-        currentHistory = [...currentHistory, ...toolResults]
+        // Update final message with image if any
+        if (lastImageUrl) {
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[streamingMsgIndex] = {
+              role: 'assistant',
+              content: response.content || streamedContent,
+              image_url: lastImageUrl
+            }
+            return updated
+          })
+        }
 
-        // Get next response
-        response = await sendMessage(currentHistory)
-      }
+        setConversationHistory([...currentHistory, { role: 'assistant', content: response.content || streamedContent }])
 
-      // Update conversation history
-      setConversationHistory([...currentHistory, { role: 'assistant', content: response.content || '' }])
-
-      // Show final response
-      if (response.content) {
-        setMessages(prev => [...prev, { role: 'assistant', content: response.content! }])
-      }
+        // Persist final message
+        await addMessageToStore({
+          role: 'assistant',
+          content: response.content || streamedContent,
+          image_url: lastImageUrl,
+        })
+      })
     } catch (error) {
       console.error('AI Error:', error)
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Entschuldigung, es gab einen Fehler bei der Verarbeitung deiner Anfrage.'
-      }])
+      const errorMsg = 'Entschuldigung, es gab einen Fehler bei der Verarbeitung deiner Anfrage.'
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[streamingMsgIndex] = { role: 'assistant', content: errorMsg }
+        return updated
+      })
+      await addMessageToStore({ role: 'assistant', content: errorMsg })
     } finally {
       setIsLoading(false)
+      inputRef.current?.focus()
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
-      onClose()
+      // If viewing a conversation, go back to history first
+      if (currentConversationId && messages.length > 0) {
+        clearCurrentConversation()
+        setMessages([])
+        setConversationHistory([])
+      } else {
+        onClose()
+      }
     }
   }
 
@@ -494,6 +675,23 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
               </div>
             </form>
 
+            {/* Back to History Button */}
+            {currentConversationId && messages.length > 0 && (
+              <div className="px-3 py-2 border-b border-gray-200/50 dark:border-gray-700/50">
+                <button
+                  onClick={() => {
+                    clearCurrentConversation()
+                    setMessages([])
+                    setConversationHistory([])
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Zurück zur Historie
+                </button>
+              </div>
+            )}
+
             {/* Messages Area */}
             {messages.length > 0 && (
               <div className="max-h-64 overflow-y-auto p-3 space-y-2 bg-white/30 dark:bg-black/20">
@@ -503,13 +701,22 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] px-3 py-1.5 rounded-lg text-sm whitespace-pre-wrap ${
+                      className={`max-w-[85%] px-3 py-1.5 rounded-lg text-sm ${
                         msg.role === 'user'
                           ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
                       }`}
                     >
-                      {msg.content}
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                      {/* Inline Image */}
+                      {msg.image_url && (
+                        <img
+                          src={msg.image_url.startsWith('http') ? msg.image_url : `http://localhost:8000${msg.image_url}`}
+                          alt="Generiertes Bild"
+                          className="mt-2 max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(msg.image_url!.startsWith('http') ? msg.image_url! : `http://localhost:8000${msg.image_url}`, '_blank')}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -524,28 +731,50 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
               </div>
             )}
 
-            {/* Quick Actions */}
-            {messages.length === 0 && !isLoading && (
-              <div className="p-2 bg-white/30 dark:bg-black/20">
-                <div className="space-y-0.5">
-                  {[
-                    { label: 'Dashboard öffnen', action: 'Öffne das Dashboard' },
-                    { label: 'Neuer Kunde anlegen', action: 'Erstelle einen neuen Kunden' },
-                    { label: 'Neue Rechnung erstellen', action: 'Erstelle eine neue Rechnung' },
-                    { label: 'Dateien durchsuchen', action: 'Suche nach Dateien' },
-                  ].map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setInput(item.action)
-                        inputRef.current?.focus()
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
+            {/* Conversation History */}
+            {messages.length === 0 && !isLoading && !currentConversationId && (
+              <div className="p-3 bg-white/30 dark:bg-black/20 max-h-64 overflow-y-auto">
+                {isLoadingConversations ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="text-center py-6 text-sm text-gray-500">
+                    <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                    <p>Noch keine Gespräche</p>
+                    <p className="text-xs mt-1">Starte ein neues Gespräch mit deiner Frage</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 px-1 mb-2">Letzte Gespräche</div>
+                    {conversations.slice(0, 10).map((conv) => (
+                      <div
+                        key={conv.id}
+                        className="group flex items-center gap-2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                        onClick={() => loadConversation(conv.id)}
+                      >
+                        <MessageSquare className="w-4 h-4 text-gray-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {conv.title}
+                          </div>
+                          <div className="text-[10px] text-gray-400">
+                            {formatRelativeTime(conv.updated_at)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteConversation(conv.id)
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

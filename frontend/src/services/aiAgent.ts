@@ -1,5 +1,6 @@
 import { useAIStore } from '@/stores/aiStore'
-import { getToolDefinitions, getToolStats } from './tools'
+import { getToolDefinitions, getToolStats, getFilteredToolDefinitions } from './tools'
+import type { AIHelper } from '@/api/types'
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
@@ -226,9 +227,140 @@ export interface AIResponse {
   isComplete: boolean
 }
 
-export async function sendMessage(messages: Message[]): Promise<AIResponse> {
+export interface SendMessageOptions {
+  helper?: AIHelper | null
+}
+
+export interface StreamCallbacks {
+  onChunk: (chunk: string) => void
+  onToolCall?: (toolCall: ToolCall) => void
+  onComplete: (response: AIResponse) => void
+  onError: (error: Error) => void
+}
+
+// Streaming version of sendMessage
+export async function sendMessageStream(
+  messages: Message[],
+  callbacks: StreamCallbacks,
+  options?: SendMessageOptions
+): Promise<void> {
   const model = getChatModel()
-  console.log('Using AI model:', model)
+  const helper = options?.helper
+
+  const systemPrompt = helper?.system_prompt || getSystemPrompt()
+  const tools = helper?.enabled_tools && helper.enabled_tools.length > 0
+    ? getFilteredToolDefinitions(helper.enabled_tools)
+    : getToolDefinitions()
+
+  try {
+    const response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'ConsultingOS'
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages
+        ],
+        tools: tools.length > 0 ? tools : undefined,
+        tool_choice: tools.length > 0 ? 'auto' : undefined,
+        stream: true
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`OpenRouter API error: ${error}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('No response body')
+    }
+
+    const decoder = new TextDecoder()
+    let content = ''
+    let toolCalls: ToolCall[] = []
+    let toolCallsInProgress: Record<number, { id: string; type: string; function: { name: string; arguments: string } }> = {}
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+      const lines = chunk.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            const delta = parsed.choices?.[0]?.delta
+
+            if (delta?.content) {
+              content += delta.content
+              callbacks.onChunk(delta.content)
+            }
+
+            // Handle tool calls in streaming
+            if (delta?.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                const index = tc.index
+                if (!toolCallsInProgress[index]) {
+                  toolCallsInProgress[index] = {
+                    id: tc.id || '',
+                    type: 'function',
+                    function: { name: tc.function?.name || '', arguments: '' }
+                  }
+                }
+                if (tc.id) toolCallsInProgress[index].id = tc.id
+                if (tc.function?.name) toolCallsInProgress[index].function.name = tc.function.name
+                if (tc.function?.arguments) toolCallsInProgress[index].function.arguments += tc.function.arguments
+              }
+            }
+
+            // Check for finish reason
+            if (parsed.choices?.[0]?.finish_reason) {
+              // Convert toolCallsInProgress to array
+              toolCalls = Object.values(toolCallsInProgress) as ToolCall[]
+            }
+          } catch {
+            // Ignore parse errors for incomplete chunks
+          }
+        }
+      }
+    }
+
+    callbacks.onComplete({
+      content: content || null,
+      toolCalls,
+      isComplete: true
+    })
+  } catch (error) {
+    callbacks.onError(error instanceof Error ? error : new Error(String(error)))
+  }
+}
+
+// Non-streaming version (kept for compatibility)
+export async function sendMessage(messages: Message[], options?: SendMessageOptions): Promise<AIResponse> {
+  const model = getChatModel()
+  const helper = options?.helper
+  console.log('Using AI model:', model, helper ? `with helper: ${helper.name}` : 'with default prompt')
+
+  // Use helper's system prompt if provided, otherwise use default
+  const systemPrompt = helper?.system_prompt || getSystemPrompt()
+
+  // Use helper's enabled tools if provided, otherwise use all tools
+  const tools = helper?.enabled_tools && helper.enabled_tools.length > 0
+    ? getFilteredToolDefinitions(helper.enabled_tools)
+    : getToolDefinitions()
 
   const response = await fetch(OPENROUTER_URL, {
     method: 'POST',
@@ -241,11 +373,11 @@ export async function sendMessage(messages: Message[]): Promise<AIResponse> {
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: getSystemPrompt() },
+        { role: 'system', content: systemPrompt },
         ...messages
       ],
-      tools: getToolDefinitions(),
-      tool_choice: 'auto'
+      tools: tools.length > 0 ? tools : undefined,
+      tool_choice: tools.length > 0 ? 'auto' : undefined
     })
   })
 

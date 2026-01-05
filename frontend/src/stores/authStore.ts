@@ -1,50 +1,32 @@
 import { create } from 'zustand'
 import { api, ApiError } from '@/api/client'
-import type { User, LoginCredentials, RegisterData } from '@/api/types'
+import type { User } from '@/api/types'
+
+interface GitHubCallbackResponse {
+  user: User | null
+  pending: boolean
+  message: string | null
+}
 
 interface AuthState {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  isPending: boolean
   error: string | null
-  login: (credentials: LoginCredentials) => Promise<boolean>
-  register: (data: RegisterData) => Promise<boolean>
   logout: () => Promise<void>
   checkAuth: () => Promise<void>
   clearError: () => void
+  getGitHubAuthUrl: () => Promise<string | null>
+  handleGitHubCallback: (code: string, state: string) => Promise<{ success: boolean; pending: boolean }>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  isPending: false,
   error: null,
-
-  login: async (credentials) => {
-    set({ isLoading: true, error: null })
-    try {
-      const user = await api.post<User>('/auth/login', credentials)
-      set({ user, isAuthenticated: true, isLoading: false })
-      return true
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Login failed'
-      set({ error: message, isLoading: false })
-      return false
-    }
-  },
-
-  register: async (data) => {
-    set({ isLoading: true, error: null })
-    try {
-      const user = await api.post<User>('/auth/register', data)
-      set({ user, isAuthenticated: true, isLoading: false })
-      return true
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Registration failed'
-      set({ error: message, isLoading: false })
-      return false
-    }
-  },
 
   logout: async () => {
     try {
@@ -52,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // Ignore logout errors
     }
-    set({ user: null, isAuthenticated: false })
+    set({ user: null, isAuthenticated: false, isPending: false })
   },
 
   checkAuth: async () => {
@@ -66,4 +48,50 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  getGitHubAuthUrl: async () => {
+    try {
+      const response = await api.get<{ url: string }>('/auth/github/auth-url')
+      return response.url
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to get GitHub auth URL'
+      set({ error: message })
+      return null
+    }
+  },
+
+  handleGitHubCallback: async (code: string, state: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      const response = await api.post<GitHubCallbackResponse>('/auth/github/callback', { code, state })
+
+      if (response.pending) {
+        set({
+          user: null,
+          isAuthenticated: false,
+          isPending: true,
+          error: response.message,
+          isLoading: false
+        })
+        return { success: false, pending: true }
+      }
+
+      if (response.user) {
+        set({
+          user: response.user,
+          isAuthenticated: true,
+          isPending: false,
+          isLoading: false
+        })
+        return { success: true, pending: false }
+      }
+
+      set({ isLoading: false })
+      return { success: false, pending: false }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'GitHub login failed'
+      set({ error: message, isLoading: false })
+      return { success: false, pending: false }
+    }
+  },
 }))

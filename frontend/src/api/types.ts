@@ -4,6 +4,8 @@ export interface User {
   email: string
   first_name: string
   last_name: string
+  is_approved: boolean
+  is_staff: boolean
 }
 
 export interface Customer {
@@ -351,4 +353,119 @@ export interface TimeTrackingSummary {
     client_name: string
     hours: number
   }>
+}
+
+// AI Conversation types
+export interface AIMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  image_url?: string | null
+  created_at: string
+}
+
+export interface AIConversation {
+  id: number
+  title: string
+  created_at: string
+  updated_at: string
+}
+
+export interface AIConversationDetail extends AIConversation {
+  messages: AIMessage[]
+}
+
+export interface AIConversationCreate {
+  title?: string
+}
+
+export interface AIMessageCreate {
+  role: 'user' | 'assistant'
+  content: string
+  image_url?: string | null
+}
+
+// AI Helper types
+export interface AIHelper {
+  id: number
+  name: string
+  icon: string
+  description: string
+  system_prompt: string
+  enabled_tools: string[]
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AIHelperCreate {
+  name: string
+  icon?: string
+  description?: string
+  system_prompt: string
+  enabled_tools: string[]
+}
+
+export interface AIHelperUpdate {
+  name?: string
+  icon?: string
+  description?: string
+  system_prompt?: string
+  enabled_tools?: string[]
+}
+
+// Chess types
+export type ChessGameStatus = 'waiting' | 'active' | 'checkmate' | 'stalemate' | 'draw' | 'resigned' | 'timeout'
+
+export interface ChessMove {
+  from: string
+  to: string
+  san: string
+  fen: string
+  timestamp?: string
+}
+
+export interface ChessGame {
+  id: number
+  white_player: User | null
+  black_player: User | null
+  is_ai_game: boolean
+  ai_difficulty: number
+  player_color: string
+  fen: string
+  pgn: string
+  moves: ChessMove[]
+  status: ChessGameStatus
+  winner: User | null
+  current_turn: string
+  time_control: number | null
+  white_time_remaining: number | null
+  black_time_remaining: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ChessGameCreate {
+  is_ai_game?: boolean
+  ai_difficulty?: number
+  player_color?: 'white' | 'black'
+  time_control?: number | null
+}
+
+export interface ChessInvitation {
+  id: number
+  from_user: User
+  to_user: User
+  game: ChessGame
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+}
+
+export interface ChessStats {
+  total_games: number
+  wins: number
+  losses: number
+  draws: number
+  ai_games: number
+  multiplayer_games: number
 }

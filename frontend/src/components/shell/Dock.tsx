@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { useWindowStore, type AppType } from '@/stores/windowStore'
 import { useAppSettingsStore } from '@/stores/appSettingsStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useTranslation } from 'react-i18next'
 import { appRegistry } from '@/config/apps'
 
@@ -15,6 +16,7 @@ export function Dock() {
   const { t } = useTranslation()
   const { openWindow, windows, showDock, setShowDock } = useWindowStore()
   const { settings, fetchSettings, isAppEnabled, reorderDock } = useAppSettingsStore()
+  const { user } = useAuthStore()
   const hideTimeoutRef = useRef<number | null>(null)
 
   // Fetch app settings on mount
@@ -30,8 +32,14 @@ export function Dock() {
   }
 
   // Dock Items aus der Registry basierend auf Settings (Reihenfolge + nur aktivierte Apps)
+  // Admin-only Apps nur für Staff-User anzeigen
   const dockItems: DockItem[] = settings.dock_order
-    .filter(id => appRegistry[id] && isAppEnabled(id))
+    .filter(id => {
+      const app = appRegistry[id]
+      if (!app || !isAppEnabled(id)) return false
+      if (app.adminOnly && !user?.is_staff) return false
+      return true
+    })
     .map(id => ({
       id,
       icon: appRegistry[id].icon,

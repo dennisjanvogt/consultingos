@@ -1,5 +1,6 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { Window as WindowType } from '@/stores/windowStore'
 import { useWindowStore } from '@/stores/windowStore'
@@ -142,6 +143,7 @@ interface ScaledWindowThumbnailProps {
 }
 
 function ScaledWindowThumbnail({ window, index, onClick, onClose, horizontal }: ScaledWindowThumbnailProps) {
+  const { t } = useTranslation()
   // Kleinere Thumbnails für horizontale Ansicht
   const thumbnailWidth = horizontal ? 140 : 180
   const thumbnailHeight = (window.size.height / window.size.width) * thumbnailWidth
@@ -216,7 +218,7 @@ function ScaledWindowThumbnail({ window, index, onClick, onClose, horizontal }: 
         style={{ bottom: 0 }}
       >
         <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate block max-w-full px-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
-          {window.title}
+          {t(window.title)}
         </span>
       </div>
     </motion.div>

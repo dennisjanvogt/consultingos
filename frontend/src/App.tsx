@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Desktop } from '@/components/shell/Desktop'
 import { ThemeProvider } from '@/components/shell/ThemeProvider'
 import { LoginScreen } from '@/apps/auth/LoginScreen'
+import { GitHubCallback } from '@/apps/auth/GitHubCallback'
 import { MeetingJoinPage } from '@/apps/calendar/MeetingJoinPage'
 import { useAuthStore } from '@/stores/authStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
@@ -40,6 +41,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/join/:token" element={<MeetingJoinPage />} />
+          <Route path="/auth/github/callback" element={<GitHubCallback />} />
           <Route path="*" element={<MainApp />} />
         </Routes>
       </BrowserRouter>

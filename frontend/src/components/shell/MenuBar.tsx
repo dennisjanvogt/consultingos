@@ -6,6 +6,7 @@ import { useWindowStore } from '@/stores/windowStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import { useAIStore, groupModelsByProvider, type AIModel } from '@/stores/aiStore'
+import { usePomodoroStore } from '@/stores/pomodoroStore'
 import {
   Popover,
   PopoverContent,
@@ -43,12 +44,17 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
   const [elapsedTime, setElapsedTime] = useState(0)
   const [timerPopoverOpen, setTimerPopoverOpen] = useState(false)
 
-  // Pomodoro state
-  const [pomodoroActive, setPomodoroActive] = useState(false)
-  const [pomodoroMinutes, setPomodoroMinutes] = useState(25)
-  const [pomodoroEndTime, setPomodoroEndTime] = useState<number | null>(null)
+  // Pomodoro state from store (persisted)
+  const {
+    isActive: pomodoroActive,
+    minutes: pomodoroMinutes,
+    endTime: pomodoroEndTime,
+    isBreak,
+    startPomodoro: startPomodoroStore,
+    stopPomodoro: stopPomodoroStore,
+    setBreak,
+  } = usePomodoroStore()
   const [pomodoroRemaining, setPomodoroRemaining] = useState(0)
-  const [isBreak, setIsBreak] = useState(false)
   const [pomodoroPopoverOpen, setPomodoroPopoverOpen] = useState(false)
 
   const pomodoroOptions = [
@@ -58,17 +64,12 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
   ]
 
   const startPomodoro = (minutes: number, breakMinutes: number) => {
-    setPomodoroMinutes(minutes)
-    setPomodoroEndTime(Date.now() + minutes * 60 * 1000)
-    setPomodoroActive(true)
-    setIsBreak(false)
+    startPomodoroStore(minutes, breakMinutes)
     setPomodoroPopoverOpen(false)
   }
 
   const stopPomodoro = () => {
-    setPomodoroActive(false)
-    setPomodoroEndTime(null)
-    setIsBreak(false)
+    stopPomodoroStore()
   }
 
   // Pomodoro countdown effect
@@ -92,8 +93,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
           // Start break
           const option = pomodoroOptions.find(o => o.minutes === pomodoroMinutes)
           const breakMinutes = option?.breakMinutes || 5
-          setPomodoroEndTime(Date.now() + breakMinutes * 60 * 1000)
-          setIsBreak(true)
+          setBreak(true, breakMinutes)
         } else {
           // Break is over, stop
           stopPomodoro()
@@ -104,7 +104,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
     updateRemaining()
     const interval = setInterval(updateRemaining, 1000)
     return () => clearInterval(interval)
-  }, [pomodoroActive, pomodoroEndTime, isBreak, pomodoroMinutes])
+  }, [pomodoroActive, pomodoroEndTime, isBreak, pomodoroMinutes, setBreak, stopPomodoro])
 
   // Request notification permission
   useEffect(() => {

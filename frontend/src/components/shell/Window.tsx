@@ -7,7 +7,9 @@ import { useTimeTrackingStore, type TimeTrackingTab } from '@/stores/timetrackin
 import { useDocumentsStore } from '@/stores/documentsStore'
 import { useMasterDataStore } from '@/stores/masterdataStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus } from 'lucide-react'
+import { useAIStore } from '@/stores/aiStore'
+import { useChessStore } from '@/stores/chessStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2 } from 'lucide-react'
 import type { KanbanBoard } from '@/api/types'
 
 import { appRegistry } from '@/config/apps'
@@ -227,9 +229,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
               <Square className="w-2 h-2 text-gray-500 dark:text-gray-400" />
             </div>
           </div>
-          <span className="text-sm font-medium absolute left-1/2 -translate-x-1/2">
-            {window.title}
-          </span>
+          <ThumbnailTitle title={window.title} />
         </div>
         {/* Content */}
         <div className="flex-1 overflow-hidden bg-white/50 dark:bg-black/30">
@@ -243,6 +243,8 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   if (window.isMaximized) {
     return (
       <motion.div
+        layout
+        layoutId={`window-${window.id}`}
         className={`absolute glass rounded-none overflow-hidden window-shadow flex flex-col outline-none ${
           isActive ? 'ring-1 ring-white/20' : ''
         }`}
@@ -255,9 +257,14 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         }}
         tabIndex={0}
         onKeyDown={handleWindowKeyDown}
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', bounce: 0.15, duration: 0.36 }}
+        initial={false}
+        animate={{ opacity: 1 }}
+        transition={{
+          type: 'spring',
+          stiffness: 200,
+          damping: 25,
+          layout: { type: 'spring', stiffness: 180, damping: 28, mass: 1 }
+        }}
         onMouseDown={() => focusWindow(window.id)}
       >
         <TitleBar
@@ -413,6 +420,25 @@ const TIMETRACKING_TABS: { id: TimeTrackingTab; labelKey: string; label: string 
   { id: 'reports', labelKey: 'timetracking.reports', label: 'Auswertung' },
 ]
 
+// Chess Title Bar Controls
+function ChessTitleBarControls() {
+  const { setShowNewGameModal } = useChessStore()
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        setShowNewGameModal(true)
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      Neues Spiel
+    </button>
+  )
+}
+
 function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps) {
   const { t } = useTranslation()
   const { activeBoard, setActiveBoard } = useKanbanStore()
@@ -448,7 +474,7 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
 
       {/* Title */}
       <span className="text-sm font-medium absolute left-1/2 -translate-x-1/2 pointer-events-none">
-        {window.title}
+        {t(window.title)}
       </span>
 
       {/* Right side - App-specific controls */}
@@ -503,6 +529,12 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'transactions' && (
           <TransactionsTitleBarControls />
+        )}
+        {window.appId === 'chat' && (
+          <ChatTitleBarControls />
+        )}
+        {window.appId === 'chess' && (
+          <ChessTitleBarControls />
         )}
       </div>
     </>
@@ -642,6 +674,49 @@ function TransactionsTitleBarControls() {
       <Plus className="w-3 h-3" />
       {getButtonLabel()}
     </button>
+  )
+}
+
+// Chat Title Bar Controls
+function ChatTitleBarControls() {
+  const { clearCurrentConversation, setShowHelperDialog } = useAIStore()
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          clearCurrentConversation()
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+      >
+        <Plus className="w-3 h-3" />
+        Neues Gespräch
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setShowHelperDialog(true)
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+      >
+        <Settings2 className="w-3 h-3" />
+        Helfer
+      </button>
+    </div>
+  )
+}
+
+
+// Thumbnail Title with translation
+function ThumbnailTitle({ title }: { title: string }) {
+  const { t } = useTranslation()
+  return (
+    <span className="text-sm font-medium absolute left-1/2 -translate-x-1/2">
+      {t(title)}
+    </span>
   )
 }
 

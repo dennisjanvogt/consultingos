@@ -8,6 +8,9 @@ import {
   Clock,
   Calendar,
   Image,
+  MessageSquare,
+  Crown,
+  Shield,
 } from 'lucide-react'
 
 // App Components
@@ -20,8 +23,11 @@ import { CalendarApp } from '@/apps/calendar/CalendarApp'
 import { KanbanApp } from '@/apps/kanban/KanbanApp'
 import { TimeTrackingApp } from '@/apps/timetracking/TimeTrackingApp'
 import { ImageViewerApp } from '@/apps/imageviewer/ImageViewerApp'
+import { ChatApp } from '@/apps/chat/ChatApp'
+import { ChessApp } from '@/apps/chess/ChessApp'
+import { AdminApp } from '@/apps/admin/AdminApp'
 
-export type AppCategory = 'core' | 'productivity' | 'tools'
+export type AppCategory = 'core' | 'productivity' | 'tools' | 'admin'
 
 export interface AppDefinition {
   id: string
@@ -31,6 +37,7 @@ export interface AppDefinition {
   defaultSize: { width: number; height: number }
   category: AppCategory
   canDisable: boolean
+  adminOnly?: boolean
 }
 
 export const appRegistry: Record<string, AppDefinition> = {
@@ -88,6 +95,15 @@ export const appRegistry: Record<string, AppDefinition> = {
     category: 'productivity',
     canDisable: true,
   },
+  chat: {
+    id: 'chat',
+    component: ChatApp,
+    icon: <MessageSquare className="h-6 w-6" />,
+    titleKey: 'apps.chat',
+    defaultSize: { width: 900, height: 650 },
+    category: 'productivity',
+    canDisable: true,
+  },
   timetracking: {
     id: 'timetracking',
     component: TimeTrackingApp,
@@ -106,6 +122,15 @@ export const appRegistry: Record<string, AppDefinition> = {
     category: 'tools',
     canDisable: true,
   },
+  chess: {
+    id: 'chess',
+    component: ChessApp,
+    icon: <Crown className="h-6 w-6" />,
+    titleKey: 'apps.chess',
+    defaultSize: { width: 900, height: 700 },
+    category: 'tools',
+    canDisable: true,
+  },
   settings: {
     id: 'settings',
     component: SettingsApp,
@@ -114,6 +139,16 @@ export const appRegistry: Record<string, AppDefinition> = {
     defaultSize: { width: 600, height: 500 },
     category: 'core',
     canDisable: false, // Settings kann nicht deaktiviert werden
+  },
+  admin: {
+    id: 'admin',
+    component: AdminApp,
+    icon: <Shield className="h-6 w-6" />,
+    titleKey: 'apps.admin',
+    defaultSize: { width: 700, height: 550 },
+    category: 'admin',
+    canDisable: false,
+    adminOnly: true,
   },
 }
 
@@ -136,8 +171,11 @@ export const defaultDockOrder = [
   'documents',
   'calendar',
   'kanban',
+  'chat',
   'timetracking',
+  'chess',
   'settings',
+  'admin',
 ]
 
 // Default enabled Apps (alle außer imageviewer - wird nur bei Bedarf geöffnet)
@@ -148,8 +186,11 @@ export const defaultEnabledApps = [
   'documents',
   'calendar',
   'kanban',
+  'chat',
   'timetracking',
+  'chess',
   'settings',
+  'admin',
 ]
 
 // AppType als Union für TypeScript Kompatibilität

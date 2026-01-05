@@ -37,6 +37,21 @@ export const getToolDefinitions = (): OpenRouterToolDefinition[] =>
   }))
 
 /**
+ * Get filtered tool definitions based on enabled tool names
+ */
+export const getFilteredToolDefinitions = (enabledTools: string[]): OpenRouterToolDefinition[] =>
+  toolRegistry
+    .filter(tool => enabledTools.includes(tool.name))
+    .map(tool => ({
+      type: 'function' as const,
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters
+      }
+    }))
+
+/**
  * Execute a tool by name
  * @param name - The tool name from the function call
  * @param args - Arguments passed from the AI
@@ -84,6 +99,20 @@ export const getToolStats = () => ({
     timetracking: timetrackingTools.length,
     ai: aiTools.length,
   }
+})
+
+/**
+ * Get all tools grouped by category for UI
+ */
+export const getToolsByCategory = (): Record<string, { name: string; description: string }[]> => ({
+  'Apps': windowTools.map(t => ({ name: t.name, description: t.description })),
+  'Kalender': calendarTools.map(t => ({ name: t.name, description: t.description })),
+  'Kunden': customerTools.map(t => ({ name: t.name, description: t.description })),
+  'Dokumente': documentTools.map(t => ({ name: t.name, description: t.description })),
+  'Rechnungen': invoiceTools.map(t => ({ name: t.name, description: t.description })),
+  'Kanban': kanbanTools.map(t => ({ name: t.name, description: t.description })),
+  'Zeiterfassung': timetrackingTools.map(t => ({ name: t.name, description: t.description })),
+  'Bilder': aiTools.map(t => ({ name: t.name, description: t.description })),
 })
 
 // Re-export types
