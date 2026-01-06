@@ -20,6 +20,7 @@ export function WindowManager({ windows }: WindowManagerProps) {
   const centerActiveWindow = useWindowStore((state) => state.centerActiveWindow)
 
   const hideTimeoutRef = useRef<number | null>(null)
+  const lastCenteredWindowRef = useRef<string | null>(null)
 
   // Memoize derived state to prevent unnecessary recalculations
   const visibleWindows = useMemo(
@@ -45,10 +46,14 @@ export function WindowManager({ windows }: WindowManagerProps) {
   }, [stageManagerEnabled, setShowThumbnails])
 
   // Effect 2: Center active window when it changes (Stage Manager only)
-  // Separate effect to avoid loop: centerActiveWindow changes windows → visibleWindows recalc → effect retrigger
+  // Use ref to prevent centering the same window multiple times
   useEffect(() => {
-    if (stageManagerEnabled && activeWindowId) {
-      centerActiveWindow()
+    if (stageManagerEnabled && activeWindowId && lastCenteredWindowRef.current !== activeWindowId) {
+      lastCenteredWindowRef.current = activeWindowId
+      // Use requestAnimationFrame to batch with other updates
+      requestAnimationFrame(() => {
+        centerActiveWindow()
+      })
     }
   }, [stageManagerEnabled, activeWindowId, centerActiveWindow])
 
@@ -57,20 +62,20 @@ export function WindowManager({ windows }: WindowManagerProps) {
     if (stageManagerEnabled && visibleWindows.length > 0 && !activeWindowId) {
       focusWindow(visibleWindows[0].id)
     }
-  }, [stageManagerEnabled, visibleWindows, activeWindowId, focusWindow])
+  }, [stageManagerEnabled, visibleWindows.length, activeWindowId, focusWindow])
 
   // Stage Manager Modus
   if (stageManagerEnabled && visibleWindows.length > 0) {
     return (
       <LayoutGroup>
         {/* Thumbnail-Leiste oben für inaktive Fenster - nur bei Hover am oberen Rand */}
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="sync">
           {inactiveWindows.length > 0 && showThumbnails && (
             <motion.div
-              initial={{ y: -100, opacity: 0 }}
+              initial={{ y: -80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -100, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              exit={{ y: -80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 35, mass: 0.8 }}
               className="absolute left-1/2 -translate-x-1/2 top-4 z-[9999] flex flex-row gap-4"
               onMouseEnter={() => {
                 if (hideTimeoutRef.current) {
@@ -100,26 +105,27 @@ export function WindowManager({ windows }: WindowManagerProps) {
         </AnimatePresence>
 
         {/* Aktives Fenster mit Layout-Animation */}
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="sync">
           {activeWindow && !activeWindow.isMaximized && (
             <motion.div
               key={activeWindow.id}
-              layoutId={`window-${activeWindow.id}`}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0, x: -100 }}
+              layoutId={`stage-window-${activeWindow.id}`}
+              initial={false}
+              animate={{
+                x: activeWindow.position.x,
+                y: activeWindow.position.y,
+                scale: 1,
+                opacity: 1,
+              }}
+              exit={{ scale: 0.85, opacity: 0 }}
               transition={{
                 type: 'spring',
-                stiffness: 280,
-                damping: 28,
-                layout: { type: 'spring', stiffness: 240, damping: 28 }
+                stiffness: 350,
+                damping: 30,
+                mass: 0.8,
               }}
-              className="absolute"
-              style={{
-                left: activeWindow.position.x,
-                top: activeWindow.position.y,
-                zIndex: activeWindow.zIndex,
-              }}
+              className="absolute left-0 top-0"
+              style={{ zIndex: activeWindow.zIndex }}
             >
               <Window window={activeWindow} isStageManaged />
             </motion.div>
@@ -137,7 +143,7 @@ export function WindowManager({ windows }: WindowManagerProps) {
   // Normaler Modus: Alle Fenster frei positioniert mit Layout-Animationen
   return (
     <LayoutGroup>
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="sync">
         {visibleWindows.map((window) => (
           <Window key={window.id} window={window} />
         ))}
@@ -183,18 +189,19 @@ const ScaledWindowThumbnail = memo(function ScaledWindowThumbnail({
 
   return (
     <motion.div
-      layoutId={`window-${window.id}`}
-      initial={{ scale: 0.8, opacity: 0, y: horizontal ? -30 : 0, x: horizontal ? 0 : -40 }}
-      animate={{ scale: 1, opacity: 1, y: 0, x: 0 }}
-      exit={{ scale: 0.8, opacity: 0, y: horizontal ? -30 : 0, x: horizontal ? 0 : -40 }}
+      layoutId={`stage-window-${window.id}`}
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.9, opacity: 0 }}
       transition={{
         type: 'spring',
-        stiffness: 280,
-        damping: 26,
-        delay: index * 0.05,
+        stiffness: 400,
+        damping: 30,
+        mass: 0.8,
+        delay: index * 0.03,
       }}
-      whileHover={{ scale: 1.08, y: horizontal ? 8 : 0, x: horizontal ? 0 : 12 }}
-      whileTap={{ scale: 0.96 }}
+      whileHover={{ scale: 1.06, y: horizontal ? 6 : 0, x: horizontal ? 0 : 10 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
       role="button"
