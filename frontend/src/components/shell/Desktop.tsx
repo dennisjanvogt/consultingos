@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Dock } from './Dock'
 import { BottomBar } from './BottomBar'
 import { WindowManager } from './WindowManager'
@@ -8,12 +8,15 @@ import { AIOrb } from './AIOrb'
 import { useWindowStore } from '@/stores/windowStore'
 import { useMasterDataStore } from '@/stores/masterdataStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
+import { Keyboard } from 'lucide-react'
 
 export function Desktop() {
   const windows = useWindowStore((state) => state.windows)
   const tileAllWindows = useWindowStore((state) => state.tileAllWindows)
   const isSpotlightOpen = useWindowStore((state) => state.isSpotlightOpen)
   const setSpotlightOpen = useWindowStore((state) => state.setSpotlightOpen)
+
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   // Stabile Callbacks für MenuBar und Spotlight
   const openSpotlight = useCallback(() => setSpotlightOpen(true), [setSpotlightOpen])
@@ -157,6 +160,41 @@ export function Desktop() {
 
         {/* Dock - Overlay */}
         <Dock />
+
+        {/* Keyboard Shortcuts Help - Bottom Left */}
+        <div
+          className="absolute bottom-2 left-4 z-10"
+          onMouseEnter={() => setShowShortcuts(true)}
+          onMouseLeave={() => setShowShortcuts(false)}
+        >
+          {showShortcuts ? (
+            <div className="glass rounded-lg p-3 text-xs space-y-1.5 min-w-[160px] animate-in fade-in duration-200">
+              <div className="flex items-center justify-between gap-4">
+                <span className="opacity-60">AI Orb (halten)</span>
+                <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">⌥</kbd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="opacity-60">Max/Minimieren</span>
+                <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">Space</kbd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="opacity-60">Schließen</span>
+                <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">ESC</kbd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="opacity-60">Tiling</span>
+                <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">→</kbd>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors opacity-30 hover:opacity-60"
+              title="Keyboard Shortcuts"
+            >
+              <Keyboard className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Bottom Bar */}

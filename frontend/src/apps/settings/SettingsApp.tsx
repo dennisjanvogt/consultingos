@@ -3,50 +3,94 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/components/shell/ThemeProvider'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useAuthStore } from '@/stores/authStore'
-import { Building2, CreditCard, Receipt, Palette, LayoutGrid, User as UserIcon, ShieldCheck } from 'lucide-react'
+import { Building2, CreditCard, Receipt, Palette, LayoutGrid, User as UserIcon, ShieldCheck, Key, Eye, EyeOff, Trash2, Check } from 'lucide-react'
 import { AppsTab } from './AppsTab'
 import type { User } from '@/api/types'
 
-type SettingsTab = 'profile' | 'company' | 'banking' | 'invoices' | 'appearance' | 'apps'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+type SettingsTab = 'profile' | 'company' | 'banking' | 'invoices' | 'appearance' | 'apps' | 'api'
+
+const SETTINGS_TAB_KEY = 'settings-active-tab'
 
 export function SettingsApp() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const saved = localStorage.getItem(SETTINGS_TAB_KEY)
+    return (saved as SettingsTab) || 'profile'
+  })
   const { settings, fetchSettings } = useSettingsStore()
   const { user } = useAuthStore()
+
+  // Persist active tab
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab)
+    localStorage.setItem(SETTINGS_TAB_KEY, tab)
+  }
 
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
 
-  const tabs = [
+  const personalTabs = [
     { id: 'profile' as const, label: t('settings.profile', 'Profil'), icon: UserIcon },
+    { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
+    { id: 'apps' as const, label: t('settings.apps'), icon: LayoutGrid },
+    { id: 'api' as const, label: t('settings.apiKeys', 'API Keys'), icon: Key },
+  ]
+
+  const businessTabs = [
     { id: 'company' as const, label: t('settings.company'), icon: Building2 },
     { id: 'banking' as const, label: t('settings.banking'), icon: CreditCard },
     { id: 'invoices' as const, label: t('settings.invoiceSettings'), icon: Receipt },
-    { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
-    { id: 'apps' as const, label: t('settings.apps'), icon: LayoutGrid },
   ]
 
   return (
     <div className="h-full flex">
       {/* Sidebar */}
-      <div className="w-44 border-r border-gray-200 dark:border-gray-700 p-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              activeTab === tab.id
-                ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
+      <div className="w-44 border-r border-gray-200 dark:border-gray-700 p-2 flex flex-col">
+        {/* Personal Section */}
+        <div className="mb-4">
+          <p className="px-3 py-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            {t('settings.sectionPersonal', 'Persönlich')}
+          </p>
+          {personalTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Business Section */}
+        <div>
+          <p className="px-3 py-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            {t('settings.sectionBusiness', 'Geschäftlich')}
+          </p>
+          {businessTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -67,6 +111,7 @@ export function SettingsApp() {
           />
         )}
         {activeTab === 'apps' && <AppsTab />}
+        {activeTab === 'api' && <APIKeysSettings />}
       </div>
     </div>
   )
@@ -551,6 +596,237 @@ function InputField({ label, value, onChange, placeholder, type = 'text' }: Inpu
         placeholder={placeholder}
         className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 outline-none transition-colors"
       />
+    </div>
+  )
+}
+
+
+function APIKeysSettings() {
+  const { t } = useTranslation()
+  const [hasKey, setHasKey] = useState(false)
+  const [keyPreview, setKeyPreview] = useState<string | null>(null)
+  const [hasServerFallback, setHasServerFallback] = useState(false)
+  const [newKey, setNewKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  // Fetch current API key status
+  useEffect(() => {
+    fetchKeyStatus()
+  }, [])
+
+  const fetchKeyStatus = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/api-keys`, {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setHasKey(data.has_openrouter_key)
+        setKeyPreview(data.key_preview)
+        setHasServerFallback(data.has_server_fallback)
+      }
+    } catch (err) {
+      console.error('Failed to fetch API key status:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSaveKey = async () => {
+    if (!newKey.trim()) {
+      setError(t('settings.apiKeyRequired', 'API Key is required'))
+      return
+    }
+
+    setIsSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/api-keys`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ openrouter_key: newKey }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSuccess(t('settings.apiKeySaved', 'API Key saved successfully'))
+        setNewKey('')
+        setShowKey(false)
+        fetchKeyStatus()
+        setTimeout(() => setSuccess(null), 3000)
+      } else {
+        setError(data.error || t('settings.apiKeyError', 'Failed to save API key'))
+      }
+    } catch (err) {
+      setError(t('settings.apiKeyError', 'Failed to save API key'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteKey = async () => {
+    if (!confirm(t('settings.confirmDeleteApiKey', 'Are you sure you want to delete your API key?'))) {
+      return
+    }
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/api-keys`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        setSuccess(t('settings.apiKeyDeleted', 'API Key deleted'))
+        fetchKeyStatus()
+        setTimeout(() => setSuccess(null), 3000)
+      } else {
+        const data = await response.json()
+        setError(data.error || t('settings.apiKeyDeleteError', 'Failed to delete API key'))
+      }
+    } catch (err) {
+      setError(t('settings.apiKeyDeleteError', 'Failed to delete API key'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-lg">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6">
+          {t('settings.apiKeys', 'API Keys')}
+        </h2>
+        <div className="animate-pulse h-32 bg-gray-100 dark:bg-gray-800 rounded-lg" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-lg">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+        {t('settings.apiKeys', 'API Keys')}
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        {t('settings.apiKeysDescription', 'Configure your API keys for AI features. Your keys are encrypted and stored securely.')}
+      </p>
+
+      {/* OpenRouter API Key */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <Key className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">OpenRouter API Key</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('settings.openrouterDescription', 'Required for AI chat and image generation')}
+            </p>
+          </div>
+        </div>
+
+        {/* Current Status */}
+        {hasKey ? (
+          <div className="mb-4 flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm text-green-700 dark:text-green-300">
+                {t('settings.apiKeyConfigured', 'API Key configured')}
+              </span>
+              {keyPreview && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                  ({keyPreview})
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleDeleteKey}
+              disabled={isSaving}
+              className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              title={t('settings.deleteApiKey', 'Delete API Key')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ) : hasServerFallback ? (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                {t('settings.serverKeyActive', 'Server-Key aktiv')}
+              </span>
+            </div>
+            <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">
+              {t('settings.serverKeyHint', 'KI-Funktionen nutzen den Server-Key. Optional kannst du deinen eigenen Key hinterlegen.')}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Input for new key */}
+        <div className="space-y-3">
+          <div className="relative">
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={newKey}
+              onChange={(e) => setNewKey(e.target.value)}
+              placeholder={hasKey ? t('settings.enterNewApiKey', 'Enter new API key to replace...') : 'sk-or-v1-...'}
+              className="w-full px-3 py-2 pr-10 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-violet-500 dark:focus:ring-violet-400 outline-none transition-colors font-mono"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+
+          {success && (
+            <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSaveKey}
+              disabled={isSaving || !newKey.trim()}
+              className="text-sm bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg transition-colors hover:bg-gray-700 dark:hover:bg-gray-200 disabled:opacity-50"
+            >
+              {isSaving ? '...' : hasKey ? t('settings.updateApiKey', 'Update Key') : t('settings.saveApiKey', 'Save Key')}
+            </button>
+          </div>
+        </div>
+
+        {/* Help text */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t('settings.openrouterHelp', 'Get your API key from')}{' '}
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-600 dark:text-violet-400 hover:underline"
+            >
+              openrouter.ai/keys
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

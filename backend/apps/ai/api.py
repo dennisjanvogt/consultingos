@@ -15,10 +15,18 @@ from .models import Conversation, Message, Helper
 
 router = Router()
 
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
+# Fallback API key from environment (used if user has no personal key)
+OPENROUTER_API_KEY_FALLBACK = os.getenv('OPENROUTER_API_KEY', '')
 OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 DEFAULT_CHAT_MODEL = 'google/gemini-2.0-flash-001'
 DEFAULT_IMAGE_MODEL = 'google/gemini-2.5-flash-preview-image-generation'
+
+
+def get_openrouter_key(user) -> str:
+    """Get OpenRouter API key - user's key if available, otherwise fallback to env"""
+    if user and hasattr(user, 'has_openrouter_key') and user.has_openrouter_key():
+        return user.get_openrouter_key()
+    return OPENROUTER_API_KEY_FALLBACK
 
 
 class ImageGenerateSchema(Schema):
@@ -43,8 +51,9 @@ class ErrorSchema(Schema):
 def generate_image(request, data: ImageGenerateSchema):
     """Generate an image using Gemini and save it to the Bilder folder"""
 
-    if not OPENROUTER_API_KEY:
-        return 500, {'error': 'OpenRouter API key not configured'}
+    api_key = get_openrouter_key(request.user)
+    if not api_key:
+        return 500, {'error': 'OpenRouter API key not configured. Please add your API key in Settings.'}
 
     # Get or create Bilder folder for user
     bilder_folder, _ = Folder.objects.get_or_create(
@@ -66,7 +75,7 @@ def generate_image(request, data: ImageGenerateSchema):
             OPENROUTER_URL,
             headers={
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                'Authorization': f'Bearer {api_key}',
             },
             json={
                 'model': image_model,
@@ -377,8 +386,9 @@ def create_helper(request, data: HelperCreateSchema):
 @router.post('/helpers/generate-prompt', response={200: PromptResponseSchema, 500: ErrorSchema})
 def generate_prompt(request, data: PromptGenerateSchema):
     """Generate a system prompt using AI based on description"""
-    if not OPENROUTER_API_KEY:
-        return 500, {'error': 'OpenRouter API key not configured'}
+    api_key = get_openrouter_key(request.user)
+    if not api_key:
+        return 500, {'error': 'OpenRouter API key not configured. Please add your API key in Settings.'}
 
     # Use provided model or fall back to default
     chat_model = data.model or DEFAULT_CHAT_MODEL
@@ -388,7 +398,7 @@ def generate_prompt(request, data: PromptGenerateSchema):
             OPENROUTER_URL,
             headers={
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                'Authorization': f'Bearer {api_key}',
             },
             json={
                 'model': chat_model,

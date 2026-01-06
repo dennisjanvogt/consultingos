@@ -31,7 +31,7 @@ import { GoApp } from '@/apps/go/GoApp'
 import { AdminApp } from '@/apps/admin/AdminApp'
 import { AIDashboardApp } from '@/apps/aidashboard/AIDashboardApp'
 
-export type AppCategory = 'core' | 'productivity' | 'tools' | 'admin'
+export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
 export interface AppDefinition {
   id: string
@@ -143,7 +143,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     titleKey: 'apps.chess',
     description: 'Schach spielen gegen Stockfish AI',
     defaultSize: { width: 900, height: 700 },
-    category: 'tools',
+    category: 'games',
     canDisable: true,
   },
   go: {
@@ -153,7 +153,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     titleKey: 'apps.go',
     description: 'Go (Weiqi/Baduk) spielen gegen KI',
     defaultSize: { width: 850, height: 700 },
-    category: 'tools',
+    category: 'games',
     canDisable: true,
   },
   aidashboard: {
@@ -173,7 +173,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     titleKey: 'apps.settings',
     description: 'Einstellungen: Firmendaten, Bankverbindung, Stundensätze',
     defaultSize: { width: 600, height: 500 },
-    category: 'core',
+    category: 'admin',
     canDisable: true, // Kann deaktiviert werden - Settings sind auch über BottomBar erreichbar
   },
   admin: {

@@ -27,8 +27,15 @@ export function BottomBar() {
       className="glass h-7 flex items-center justify-between px-4 text-sm relative"
       onMouseEnter={() => setShowDock(true)}
     >
-      {/* Center - App name */}
-      <span className="absolute left-1/2 -translate-x-1/2 font-semibold pointer-events-none text-gold-500">ConsultingOS</span>
+      {/* Center - App name (eingestanzt) */}
+      <span
+        className="absolute left-1/2 -translate-x-1/2 font-semibold pointer-events-none text-gold-600/80"
+        style={{
+          textShadow: '0 1px 1px rgba(255,255,255,0.3), 0 -1px 1px rgba(0,0,0,0.4)',
+        }}
+      >
+        ConsultingOS
+      </span>
 
       {/* Left spacer for balance */}
       <div />

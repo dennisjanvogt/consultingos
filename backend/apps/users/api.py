@@ -402,3 +402,75 @@ def delete_user(request: HttpRequest, data: ToggleUserSchema):
         return 200, {'message': f'User {username} deleted'}
     except User.DoesNotExist:
         return 404, {'error': 'User not found'}
+
+
+# ==================== API Key Management ====================
+
+class APIKeyStatusSchema(Schema):
+    has_openrouter_key: bool
+    key_preview: str | None = None  # Shows last 4 chars if set
+    has_server_fallback: bool = False  # True if server has a default key
+
+
+class SetAPIKeySchema(Schema):
+    openrouter_key: str
+
+
+@router.get('/api-keys', response={200: APIKeyStatusSchema, 401: ErrorSchema})
+def get_api_key_status(request: HttpRequest):
+    """Check if user has API keys configured"""
+    import os
+
+    if not request.user.is_authenticated:
+        return 401, {'error': 'Not authenticated'}
+
+    has_key = request.user.has_openrouter_key()
+    preview = None
+    has_server_fallback = bool(os.getenv('OPENROUTER_API_KEY', ''))
+
+    if has_key:
+        # Show masked preview (last 4 characters)
+        key = request.user.get_openrouter_key()
+        if key and len(key) > 4:
+            preview = f"...{key[-4:]}"
+
+    return 200, {
+        'has_openrouter_key': has_key,
+        'key_preview': preview,
+        'has_server_fallback': has_server_fallback
+    }
+
+
+@router.post('/api-keys', response={200: MessageSchema, 400: ErrorSchema, 401: ErrorSchema})
+def set_api_key(request: HttpRequest, data: SetAPIKeySchema):
+    """Set or update the OpenRouter API key"""
+    if not request.user.is_authenticated:
+        return 401, {'error': 'Not authenticated'}
+
+    key = data.openrouter_key.strip()
+
+    # Basic validation
+    if not key:
+        return 400, {'error': 'API key cannot be empty'}
+
+    if not key.startswith('sk-or-'):
+        return 400, {'error': 'Invalid OpenRouter API key format (should start with sk-or-)'}
+
+    if len(key) < 20:
+        return 400, {'error': 'API key seems too short'}
+
+    # Encrypt and store
+    request.user.set_openrouter_key(key)
+
+    return 200, {'message': 'API key saved successfully'}
+
+
+@router.delete('/api-keys', response={200: MessageSchema, 401: ErrorSchema})
+def delete_api_key(request: HttpRequest):
+    """Remove the stored OpenRouter API key"""
+    if not request.user.is_authenticated:
+        return 401, {'error': 'Not authenticated'}
+
+    request.user.clear_openrouter_key()
+
+    return 200, {'message': 'API key removed'}

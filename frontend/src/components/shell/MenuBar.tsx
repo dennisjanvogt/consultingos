@@ -50,8 +50,16 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
   const [filterEstablished, setFilterEstablished] = useState(false)
   const [filterNewest, setFilterNewest] = useState(false)
 
+  // Image model filters (multi-select)
+  const [imgFilterNewest, setImgFilterNewest] = useState(false)
+  const [imgFilterCheap, setImgFilterCheap] = useState(false)
+  const [imgFilterEstablished, setImgFilterEstablished] = useState(false)
+
   // Established providers (major/well-known AI companies)
   const establishedProviders = ['Google', 'Anthropic', 'OpenAI', 'xAI', 'Meta', 'Zhipu', 'Z.ai']
+
+  // Established image providers
+  const establishedImageProviders = ['Google', 'OpenAI', 'FLUX', 'Stability', 'Ideogram', 'Recraft']
 
   // Get newest model per provider (first model in each provider's list is typically newest)
   const getNewestModelsPerProvider = (models: AIModel[]): Set<string> => {
@@ -169,9 +177,25 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
     return true
   })
 
+  // Filter image models based on selected filters (multi-select)
+  const newestImageModelIds = imgFilterNewest ? getNewestModelsPerProvider(imageModels) : null
+  const hasActiveImageFilter = imgFilterNewest || imgFilterCheap || imgFilterEstablished
+
+  const filteredImageModels = imageModels.filter((model) => {
+    // If no filters active, show all
+    if (!hasActiveImageFilter) return true
+
+    // Check each filter - model must pass ALL active filters
+    if (imgFilterCheap && model.inputPrice > 0.05) return false // Cheap = unter $0.05 pro Bild
+    if (imgFilterEstablished && !establishedImageProviders.includes(model.provider)) return false
+    if (imgFilterNewest && newestImageModelIds && !newestImageModelIds.has(model.id)) return false
+
+    return true
+  })
+
   // Group models by provider
   const groupedChatModels = groupModelsByProvider(filteredChatModels)
-  const groupedImageModels = groupModelsByProvider(imageModels)
+  const groupedImageModels = groupModelsByProvider(filteredImageModels)
 
   // Format price for display
   const formatPrice = (model: AIModel, isImage = false) => {
@@ -408,14 +432,80 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
             <button className="flex items-center gap-1.5 text-xs hover:bg-black/5 dark:hover:bg-white/10 px-2 py-0.5 rounded transition-colors">
               <Image className="h-3.5 w-3.5 opacity-60" />
               <span className="max-w-[80px] truncate">{currentImageModel?.name || 'Bild'}</span>
+              {hasActiveImageFilter && (
+                <Filter className="h-3 w-3 text-lavender-500" />
+              )}
               <ChevronDown className="h-3 w-3 opacity-50" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 max-h-[400px] overflow-y-auto glass">
+          <DropdownMenuContent className="w-72 max-h-[400px] overflow-y-auto glass">
+            {/* Filter Buttons - Multi-select toggles */}
+            <div className="p-2 border-b border-black/10 dark:border-white/10">
+              <div className="flex gap-1 flex-wrap">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setImgFilterNewest(!imgFilterNewest)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    imgFilterNewest
+                      ? 'bg-lavender-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Neueste
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setImgFilterCheap(!imgFilterCheap)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    imgFilterCheap
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Günstig
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setImgFilterEstablished(!imgFilterEstablished)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    imgFilterEstablished
+                      ? 'bg-gold-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Etabliert
+                </button>
+              </div>
+              {hasActiveImageFilter && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setImgFilterNewest(false)
+                    setImgFilterCheap(false)
+                    setImgFilterEstablished(false)
+                  }}
+                  className="w-full mt-1 px-2 py-0.5 text-[10px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                >
+                  Filter zurücksetzen
+                </button>
+              )}
+            </div>
             {isLoadingModels ? (
               <div className="p-4 text-center text-sm text-gray-500">Lade Modelle...</div>
-            ) : imageModels.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-500">Keine Modelle verfügbar</div>
+            ) : filteredImageModels.length === 0 ? (
+              <div className="p-4 text-center text-sm text-gray-500">
+                {hasActiveImageFilter ? 'Keine Modelle mit diesen Filtern' : 'Keine Modelle verfügbar'}
+              </div>
             ) : (
               Object.entries(groupedImageModels).map(([provider, models]) => (
                 <div key={provider}>

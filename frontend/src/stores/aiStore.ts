@@ -28,7 +28,7 @@ interface AIState {
   setImageModel: (model: string) => void
   getChatModelInfo: () => AIModel | undefined
   getImageModelInfo: () => AIModel | undefined
-  fetchModels: () => Promise<void>
+  fetchModels: (forceRefresh?: boolean) => Promise<void>
 
   // Analysis Mode (for inline visualizations in chat)
   analysisMode: boolean
@@ -120,6 +120,7 @@ const convertModel = (model: OpenRouterModel): AIModel => {
                     model.architecture?.modality?.includes('multimodal') ||
                     model.name.toLowerCase().includes('vision')
 
+  // Detect image generation models - check API response first, then fallback to model ID patterns
   const isImageGen = model.architecture?.output_modalities?.includes('image') ||
                      model.id.includes('image-generation') ||
                      model.id.includes('dall-e') ||
@@ -129,7 +130,16 @@ const convertModel = (model: OpenRouterModel): AIModel => {
                      model.id.includes('recraft') ||
                      model.id.includes('nova-canvas') ||
                      model.id.includes('mystic') ||
-                     model.id.includes('playground-v')
+                     model.id.includes('playground-v') ||
+                     model.id.includes('imagen') ||
+                     model.id.includes('midjourney') ||
+                     model.id.includes('sdxl') ||
+                     model.id.includes('kandinsky') ||
+                     model.id.includes('dreamshaper') ||
+                     model.id.includes('leonardo') ||
+                     model.id.includes('pixart') ||
+                     model.id.includes('freepik') ||
+                     model.name.toLowerCase().includes('image generation')
 
   return {
     id: model.id,
@@ -166,8 +176,8 @@ export const useAIStore = create<AIState>()(
       getChatModelInfo: () => get().chatModels.find((m) => m.id === get().chatModel),
       getImageModelInfo: () => get().imageModels.find((m) => m.id === get().imageModel),
 
-      fetchModels: async () => {
-        if (get().chatModels.length > 0) return // Already loaded
+      fetchModels: async (forceRefresh = false) => {
+        if (get().chatModels.length > 0 && !forceRefresh) return // Already loaded
 
         set({ isLoadingModels: true })
 
