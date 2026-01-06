@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dock } from './Dock'
 import { BottomBar } from './BottomBar'
 import { WindowManager } from './WindowManager'
@@ -11,6 +12,7 @@ import { useTransactionsStore } from '@/stores/transactionsStore'
 import { Keyboard } from 'lucide-react'
 
 export function Desktop() {
+  const { t } = useTranslation()
   const windows = useWindowStore((state) => state.windows)
   const tileAllWindows = useWindowStore((state) => state.tileAllWindows)
   const isSpotlightOpen = useWindowStore((state) => state.isSpotlightOpen)
@@ -170,29 +172,29 @@ export function Desktop() {
           {showShortcuts ? (
             <div className="glass rounded-lg p-3 text-xs space-y-1.5 min-w-[180px] animate-in fade-in duration-200">
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">AI Orb (halten)</span>
+                <span className="opacity-60">{t('shortcuts.aiOrb', 'AI Orb (halten)')}</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">⌥</kbd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">Max/Minimieren</span>
+                <span className="opacity-60">{t('shortcuts.maximize', 'Max/Minimieren')}</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">Space</kbd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">Schließen</span>
+                <span className="opacity-60">{t('shortcuts.close', 'Schließen')}</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">ESC</kbd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">Tiling</span>
+                <span className="opacity-60">{t('shortcuts.tiling', 'Tiling')}</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">→</kbd>
               </div>
               <div className="border-t border-black/10 dark:border-white/10 my-1.5" />
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">Stage Manager</span>
-                <span className="text-[10px] opacity-50">Hover oben</span>
+                <span className="opacity-60">{t('shortcuts.stageManager', 'Stage Manager')}</span>
+                <span className="text-[10px] opacity-50">{t('shortcuts.hoverTop', 'Hover oben')}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">Dock</span>
-                <span className="text-[10px] opacity-50">Hover unten</span>
+                <span className="opacity-60">{t('shortcuts.dock', 'Dock')}</span>
+                <span className="text-[10px] opacity-50">{t('shortcuts.hoverBottom', 'Hover unten')}</span>
               </div>
             </div>
           ) : (

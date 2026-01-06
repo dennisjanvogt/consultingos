@@ -360,6 +360,16 @@
     "attachedImage": "Eklenen resim",
     "analysisMode": "Analiz Modu"
   },
+  "shortcuts": {
+    "aiOrb": "AI Orb (basili tut)",
+    "maximize": "Buyut/Kucult",
+    "close": "Kapat",
+    "tiling": "Dosemeleme",
+    "stageManager": "Stage Manager",
+    "dock": "Dock",
+    "hoverTop": "Ustte bekle",
+    "hoverBottom": "Altta bekle"
+  },
   "colors": {
     "gray": "Gri",
     "violet": "Mor",

@@ -390,6 +390,16 @@
     "noApiKeyDescription": "To use AI features, add your API key in settings.",
     "goToSettings": "Go to settings →"
   },
+  "shortcuts": {
+    "aiOrb": "AI Orb (hold)",
+    "maximize": "Max/Minimize",
+    "close": "Close",
+    "tiling": "Tiling",
+    "stageManager": "Stage Manager",
+    "dock": "Dock",
+    "hoverTop": "Hover top",
+    "hoverBottom": "Hover bottom"
+  },
   "colors": {
     "gray": "Gray",
     "violet": "Violet",
