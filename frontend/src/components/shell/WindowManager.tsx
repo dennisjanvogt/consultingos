@@ -248,12 +248,12 @@ const ScaledWindowThumbnail = memo(function ScaledWindowThumbnail({
         <X className="w-3 h-3 text-white" />
       </button>
 
-      {/* App Title - mit Textschatten */}
+      {/* App Title - mit Blur-Hintergrund */}
       <div
-        className="absolute left-0 right-0 text-center transition-all duration-200"
-        style={{ bottom: 0 }}
+        className="absolute left-1/2 -translate-x-1/2 text-center"
+        style={{ bottom: 2 }}
       >
-        <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate block max-w-full px-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] dark:drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+        <span className="inline-block text-[11px] font-medium text-gray-800 dark:text-gray-100 truncate max-w-full px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/50 backdrop-blur-md shadow-sm">
           {t(window.title)}
         </span>
       </div>
