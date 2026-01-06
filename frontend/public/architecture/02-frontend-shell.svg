@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="violetGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    <filter id="shadow2" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-size="22" font-weight="600" fill="#1f2937">Frontend Shell Components</text>
+  <text x="400" y="55" text-anchor="middle" font-size="12" fill="#6b7280">Component Hierarchy &amp; Responsibilities</text>
+
+  <!-- Desktop (Root) -->
+  <rect x="300" y="80" width="200" height="60" rx="10" fill="url(#violetGrad2)" filter="url(#shadow2)"/>
+  <text x="400" y="108" text-anchor="middle" font-size="14" font-weight="600" fill="white">Desktop</text>
+  <text x="400" y="125" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)">Root Container</text>
+
+  <!-- Lines from Desktop to children -->
+  <path d="M400 140 L400 160 L150 160 L150 180" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+  <path d="M400 140 L400 180" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+  <path d="M400 140 L400 160 L650 160 L650 180" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+
+  <!-- Level 1: MenuBar, WindowManager, Dock -->
+  <rect x="70" y="180" width="160" height="70" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="150" y="208" text-anchor="middle" font-size="13" font-weight="600" fill="#7c3aed">MenuBar</text>
+  <text x="150" y="225" text-anchor="middle" font-size="9" fill="#6b7280">Timer, Calendar, Models</text>
+  <text x="150" y="238" text-anchor="middle" font-size="9" fill="#6b7280">Pomodoro, Window Controls</text>
+
+  <rect x="320" y="180" width="160" height="70" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="400" y="208" text-anchor="middle" font-size="13" font-weight="600" fill="#7c3aed">WindowManager</text>
+  <text x="400" y="225" text-anchor="middle" font-size="9" fill="#6b7280">Orchestrates Windows</text>
+  <text x="400" y="238" text-anchor="middle" font-size="9" fill="#6b7280">Stage Manager Mode</text>
+
+  <rect x="570" y="180" width="160" height="70" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="650" y="208" text-anchor="middle" font-size="13" font-weight="600" fill="#7c3aed">Dock</text>
+  <text x="650" y="225" text-anchor="middle" font-size="9" fill="#6b7280">App Launcher</text>
+  <text x="650" y="238" text-anchor="middle" font-size="9" fill="#6b7280">Reorderable Icons</text>
+
+  <!-- Lines from WindowManager -->
+  <path d="M400 250 L400 270 L280 270 L280 300" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+  <path d="M400 250 L400 300" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+  <path d="M400 250 L400 270 L520 270 L520 300" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+
+  <!-- Level 2: Window, Stage Manager, Spotlight -->
+  <rect x="200" y="300" width="160" height="70" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="280" y="328" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e">Window</text>
+  <text x="280" y="345" text-anchor="middle" font-size="9" fill="#6b7280">Drag/Resize/Tiling</text>
+  <text x="280" y="358" text-anchor="middle" font-size="9" fill="#6b7280">TitleBar + App Content</text>
+
+  <rect x="320" y="300" width="160" height="70" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="400" y="328" text-anchor="middle" font-size="13" font-weight="600" fill="#059669">Stage Manager</text>
+  <text x="400" y="345" text-anchor="middle" font-size="9" fill="#6b7280">Thumbnail Strip</text>
+  <text x="400" y="358" text-anchor="middle" font-size="9" fill="#6b7280">Window Switching</text>
+
+  <rect x="440" y="300" width="160" height="70" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="520" y="328" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e">Spotlight</text>
+  <text x="520" y="345" text-anchor="middle" font-size="9" fill="#6b7280">AI Chat Interface</text>
+  <text x="520" y="358" text-anchor="middle" font-size="9" fill="#6b7280">Tool Execution</text>
+
+  <!-- AIOrb (separate) -->
+  <rect x="620" y="300" width="130" height="70" rx="8" fill="#fce7f3" stroke="#ec4899" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="685" y="328" text-anchor="middle" font-size="13" font-weight="600" fill="#be185d">AIOrb</text>
+  <text x="685" y="345" text-anchor="middle" font-size="9" fill="#6b7280">Voice Assistant</text>
+  <text x="685" y="358" text-anchor="middle" font-size="9" fill="#6b7280">Push-to-Talk (Alt)</text>
+  <path d="M650 250 L650 270 L685 270 L685 300" stroke="#fda4af" stroke-width="2" fill="none"/>
+
+  <!-- Line from Window to App Registry -->
+  <path d="M280 370 L280 410" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+
+  <!-- App Registry -->
+  <rect x="120" y="410" width="320" height="90" rx="10" fill="url(#violetGrad2)" filter="url(#shadow2)"/>
+  <text x="280" y="440" text-anchor="middle" font-size="14" font-weight="600" fill="white">App Registry (config/apps.tsx)</text>
+  <text x="280" y="460" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.9)">13 App Definitions with Icons, Sizes, Categories</text>
+  <text x="280" y="478" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.7)">dashboard | masterdata | transactions | calendar | kanban | chat | ...</text>
+
+  <!-- Line from Registry to Apps -->
+  <path d="M280 500 L280 530" stroke="#c4b5fd" stroke-width="2" fill="none"/>
+
+  <!-- App Modules Grid -->
+  <rect x="80" y="530" width="400" height="100" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="280" y="555" text-anchor="middle" font-size="12" font-weight="500" fill="#4b5563">App Components (src/apps/*)</text>
+
+  <!-- App boxes -->
+  <rect x="95" y="570" width="70" height="45" rx="4" fill="white" stroke="#d1d5db"/>
+  <text x="130" y="598" text-anchor="middle" font-size="9" fill="#6b7280">Dashboard</text>
+
+  <rect x="175" y="570" width="70" height="45" rx="4" fill="white" stroke="#d1d5db"/>
+  <text x="210" y="598" text-anchor="middle" font-size="9" fill="#6b7280">Calendar</text>
+
+  <rect x="255" y="570" width="70" height="45" rx="4" fill="white" stroke="#d1d5db"/>
+  <text x="290" y="598" text-anchor="middle" font-size="9" fill="#6b7280">Kanban</text>
+
+  <rect x="335" y="570" width="70" height="45" rx="4" fill="white" stroke="#d1d5db"/>
+  <text x="370" y="598" text-anchor="middle" font-size="9" fill="#6b7280">Chat</text>
+
+  <text x="430" y="598" text-anchor="middle" font-size="12" fill="#9ca3af">...</text>
+
+  <!-- Stores Connection -->
+  <rect x="500" y="430" width="230" height="200" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2" filter="url(#shadow2)"/>
+  <text x="615" y="458" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Zustand Stores</text>
+  <text x="615" y="478" text-anchor="middle" font-size="10" fill="#6b7280">Shared State Layer</text>
+
+  <rect x="520" y="495" width="90" height="28" rx="4" fill="white" stroke="#86efac"/>
+  <text x="565" y="514" text-anchor="middle" font-size="9" fill="#166534">windowStore</text>
+
+  <rect x="620" y="495" width="90" height="28" rx="4" fill="white" stroke="#86efac"/>
+  <text x="665" y="514" text-anchor="middle" font-size="9" fill="#166534">authStore</text>
+
+  <rect x="520" y="530" width="90" height="28" rx="4" fill="white" stroke="#86efac"/>
+  <text x="565" y="549" text-anchor="middle" font-size="9" fill="#166534">aiStore</text>
+
+  <rect x="620" y="530" width="90" height="28" rx="4" fill="white" stroke="#86efac"/>
+  <text x="665" y="549" text-anchor="middle" font-size="9" fill="#166534">calendarStore</text>
+
+  <rect x="520" y="565" width="90" height="28" rx="4" fill="white" stroke="#86efac"/>
+  <text x="565" y="584" text-anchor="middle" font-size="9" fill="#166534">kanbanStore</text>
+
+  <rect x="620" y="565" width="90" height="28" rx="4" fill="white" stroke="#86efac"/>
+  <text x="665" y="584" text-anchor="middle" font-size="9" fill="#166534">+ 10 more</text>
+
+  <!-- Connection lines to Stores -->
+  <path d="M480 390 Q490 390 500 430" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+  <path d="M480 465 L500 465" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+</svg>

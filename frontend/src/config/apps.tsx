@@ -13,6 +13,7 @@ import {
   Shield,
   Sparkles,
   Circle,
+  Blocks,
 } from 'lucide-react'
 
 // App Components
@@ -30,6 +31,7 @@ import { ChessApp } from '@/apps/chess/ChessApp'
 import { GoApp } from '@/apps/go/GoApp'
 import { AdminApp } from '@/apps/admin/AdminApp'
 import { AIDashboardApp } from '@/apps/aidashboard/AIDashboardApp'
+import { ArchitectureApp } from '@/apps/architecture/ArchitectureApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
@@ -183,6 +185,17 @@ export const appRegistry: Record<string, AppDefinition> = {
     titleKey: 'apps.admin',
     description: 'Admin-Bereich: Benutzerverwaltung und Systemeinstellungen',
     defaultSize: { width: 700, height: 550 },
+    category: 'admin',
+    canDisable: true,
+    adminOnly: true,
+  },
+  architecture: {
+    id: 'architecture',
+    component: ArchitectureApp,
+    icon: <Blocks className="h-6 w-6" />,
+    titleKey: 'apps.architecture',
+    description: 'System-Architektur: Diagramme und technische Dokumentation',
+    defaultSize: { width: 1000, height: 700 },
     category: 'admin',
     canDisable: true,
     adminOnly: true,

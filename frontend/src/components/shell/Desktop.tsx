@@ -33,13 +33,15 @@ export function Desktop() {
                       target instanceof HTMLSelectElement ||
                       target.isContentEditable
 
-      // ESC - Aktives Fenster schließen (global, unabhängig von Focus)
+      // ESC - Aktives Fenster schließen oder Settings öffnen wenn keine App offen
       // Spotlight hat eigenen ESC-Handler, der zuerst greift
       // Skip if a modal/preview is open (marked with data-modal-open)
       const hasOpenModal = document.querySelector('[data-modal-open="true"]')
-      if (e.key === 'Escape' && !isInput && !hasOpenModal) {
+      if (e.key === 'Escape' && !isInput && !hasOpenModal && !isSpotlightOpen) {
         const windowState = useWindowStore.getState()
-        if (windowState.activeWindowId && !isSpotlightOpen) {
+        const visibleWindows = windowState.windows.filter(w => !w.isMinimized)
+
+        if (windowState.activeWindowId) {
           const activeWindow = windowState.windows.find(w => w.id === windowState.activeWindowId)
 
           // For masterdata/transactions: go back to home first, then close
@@ -65,6 +67,11 @@ export function Desktop() {
           e.preventDefault()
           e.stopPropagation()
           windowState.closeWindow(windowState.activeWindowId)
+        } else if (visibleWindows.length === 0) {
+          // Keine Fenster offen - Settings öffnen
+          e.preventDefault()
+          e.stopPropagation()
+          windowState.openWindow('settings')
         }
       }
 
@@ -180,7 +187,7 @@ export function Desktop() {
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">Space</kbd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="opacity-60">{t('shortcuts.close', 'Schließen')}</span>
+                <span className="opacity-60">{t('shortcuts.closeOrSettings', 'Schließen/Settings')}</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">ESC</kbd>
               </div>
               <div className="flex items-center justify-between gap-4">

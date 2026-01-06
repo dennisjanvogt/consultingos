@@ -265,7 +265,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
         {/* New Entry Button - Gold */}
         <button
           onClick={() => handleNewEntry()}
-          className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
           {t('timetracking.newEntry')}
@@ -651,7 +651,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
           setFormData({ client: '', name: '', description: '', hourly_rate: '', color: 'violet', status: 'active' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors"
       >
         <Plus className="h-4 w-4" />
         {t('timetracking.newProject')}
@@ -883,7 +883,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
           setFormData({ name: '', email: '', phone: '', address: '', notes: '' })
           setShowForm(true)
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors"
       >
         <Plus className="h-4 w-4" />
         {t('timetracking.newClient')}

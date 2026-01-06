@@ -36,11 +36,29 @@
     "chess": "Chess",
     "go": "Go",
     "aidashboard": "AI Dashboard",
-    "admin": "Admin"
+    "admin": "Admin",
+    "architecture": "Architecture"
+  },
+  "architecture": {
+    "title": "Architecture",
+    "subtitle": "System Diagrams",
+    "adminOnly": "Administrators only",
+    "systemOverview": "System Overview",
+    "systemOverviewDesc": "Full stack: Frontend, Backend, Database",
+    "frontendShell": "Frontend Shell",
+    "frontendShellDesc": "Desktop components and hierarchy",
+    "stateManagement": "State Management",
+    "stateManagementDesc": "Zustand stores and persistence",
+    "aiTools": "AI Tools System",
+    "aiToolsDesc": "Spotlight, Orb and tool execution",
+    "backendApi": "Backend API",
+    "backendApiDesc": "Django Ninja REST API structure"
   },
   "auth": {
     "login": "Login",
     "logout": "Logout",
+    "logoutConfirmTitle": "Log out?",
+    "logoutConfirmMessage": "Are you sure you want to log out?",
     "register": "Register",
     "username": "Username",
     "email": "Email",
@@ -393,7 +411,7 @@
   "shortcuts": {
     "aiOrb": "AI Orb (hold)",
     "maximize": "Max/Minimize",
-    "close": "Close",
+    "closeOrSettings": "Close/Settings",
     "tiling": "Tiling",
     "stageManager": "Stage Manager",
     "dock": "Dock",

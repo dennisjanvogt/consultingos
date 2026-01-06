@@ -121,13 +121,39 @@ To add new AI tools:
 
 ### Translations
 
-Two locales: German (`de.json`) and English (`en.json`) in `src/i18n/locales/`.
-Both files must have matching keys.
+Three locales in `src/i18n/locales/`: German (`de.json`), English (`en.json`), Turkish (`tr.json`).
+All files must have matching keys.
 
 ```typescript
 const { t } = useTranslation()
 return <span>{t('apps.dashboard')}</span>
 ```
+
+### TitleBar Controls Pattern
+
+App-specific controls in window title bars are defined in `Window.tsx`:
+
+```typescript
+function MyAppTitleBarControls() {
+  return (
+    <button onClick={(e) => { e.stopPropagation(); /* action */ }}>
+      Action
+    </button>
+  )
+}
+// Then add to TitleBarContent:
+{window.appId === 'myapp' && <MyAppTitleBarControls />}
+```
+
+### Global Keyboard Shortcuts (Desktop.tsx)
+
+| Key | Action |
+|-----|--------|
+| `Cmd/Ctrl + K` | Open Spotlight |
+| `Space` | Maximize/restore active window |
+| `Escape` | Close active window (or open Settings if none open) |
+| `Arrow Right` | Tile all windows |
+| `Option/Alt` (hold) | AI Orb voice input |
 
 ## Environment Variables
 

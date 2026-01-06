@@ -32,16 +32,26 @@ const EVENT_COLORS = [
 
 type ViewType = 'day' | 'week' | 'month' | 'year'
 
+const CALENDAR_VIEW_KEY = 'calendar-view'
+
 export function CalendarApp() {
   const { t, i18n } = useTranslation()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [showEventForm, setShowEventForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null)
-  const [view, setView] = useState<ViewType>('month')
+  const [view, setView] = useState<ViewType>(() => {
+    const saved = localStorage.getItem(CALENDAR_VIEW_KEY)
+    return (saved as ViewType) || 'month'
+  })
 
-  const { events, fetchEvents, addEvent, updateEvent, deleteEvent, getEventsForDate, selectedEventId, setSelectedEventId, enableMeeting, inviteAttendee, removeInvitation } = useCalendarStore()
+  // Persist view selection
+  const handleViewChange = (newView: ViewType) => {
+    setView(newView)
+    localStorage.setItem(CALENDAR_VIEW_KEY, newView)
+  }
+
+  const { events, fetchEvents, addEvent, updateEvent, deleteEvent, getEventsForDate, selectedEventId, setSelectedEventId, enableMeeting, inviteAttendee, removeInvitation, showEventForm, setShowEventForm } = useCalendarStore()
 
   // Fetch events on mount
   useEffect(() => {
@@ -256,7 +266,7 @@ export function CalendarApp() {
             {(['day', 'week', 'month', 'year'] as ViewType[]).map((v) => (
               <button
                 key={v}
-                onClick={() => setView(v)}
+                onClick={() => handleViewChange(v)}
                 className={`px-2 py-1 text-xs rounded-md transition-colors ${
                   view === v
                     ? 'bg-white dark:bg-gray-600 shadow-sm'
@@ -267,14 +277,6 @@ export function CalendarApp() {
               </button>
             ))}
           </div>
-
-          <button
-            onClick={() => handleCreateEvent()}
-            className="flex items-center gap-1.5 text-sm bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            {t('calendar.newEvent')}
-          </button>
         </div>
       </div>
 
@@ -316,7 +318,7 @@ export function CalendarApp() {
               events={events}
               onSelectMonth={(month) => {
                 setCurrentDate(new Date(currentDate.getFullYear(), month, 1))
-                setView('month')
+                handleViewChange('month')
               }}
               locale={locale}
             />

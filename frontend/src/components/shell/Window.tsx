@@ -9,7 +9,9 @@ import { useMasterDataStore } from '@/stores/masterdataStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
 import { useAIStore } from '@/stores/aiStore'
 import { useChessStore } from '@/stores/chessStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2 } from 'lucide-react'
+import { useCalendarStore } from '@/stores/calendarStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
 import { appRegistry } from '@/config/apps'
@@ -390,6 +392,26 @@ const TIMETRACKING_TABS: { id: TimeTrackingTab; labelKey: string; label: string 
   { id: 'reports', labelKey: 'timetracking.reports', label: 'Auswertung' },
 ]
 
+// Calendar Title Bar Controls
+function CalendarTitleBarControls() {
+  const { t } = useTranslation()
+  const { setShowEventForm } = useCalendarStore()
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        setShowEventForm(true)
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      {t('calendar.newEvent', 'Neuer Termin')}
+    </button>
+  )
+}
+
 // Chess Title Bar Controls
 function ChessTitleBarControls() {
   const { setShowNewGameModal } = useChessStore()
@@ -401,11 +423,76 @@ function ChessTitleBarControls() {
         setShowNewGameModal(true)
       }}
       onPointerDown={(e) => e.stopPropagation()}
-      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-sm"
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
     >
       <Plus className="w-3 h-3" />
       Neues Spiel
     </button>
+  )
+}
+
+function SettingsTitleBarControls() {
+  const { t } = useTranslation()
+  const { logout } = useAuthStore()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  return (
+    <>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setShowLogoutConfirm(true)
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-red-500/80 hover:bg-red-500 text-white transition-all"
+      >
+        <LogOut className="w-3 h-3" />
+        {t('auth.logout', 'Abmelden')}
+      </button>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowLogoutConfirm(false)}
+          data-modal-open="true"
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm mx-4 border border-gray-200 dark:border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
+                <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {t('auth.logoutConfirmTitle', 'Abmelden?')}
+              </h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              {t('auth.logoutConfirmMessage', 'Möchtest du dich wirklich abmelden?')}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                {t('common.cancel', 'Abbrechen')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false)
+                  logout()
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+              >
+                {t('auth.logout', 'Abmelden')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -500,11 +587,17 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         {window.appId === 'transactions' && (
           <TransactionsTitleBarControls />
         )}
+        {window.appId === 'calendar' && (
+          <CalendarTitleBarControls />
+        )}
         {window.appId === 'chat' && (
           <ChatTitleBarControls />
         )}
         {window.appId === 'chess' && (
           <ChessTitleBarControls />
+        )}
+        {window.appId === 'settings' && (
+          <SettingsTitleBarControls />
         )}
       </div>
     </>
@@ -606,7 +699,7 @@ function MasterDataTitleBarControls() {
         triggerNewForm()
       }}
       onPointerDown={(e) => e.stopPropagation()}
-      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
     >
       <Plus className="w-3 h-3" />
       {getButtonLabel()}
@@ -639,7 +732,7 @@ function TransactionsTitleBarControls() {
         triggerNewForm()
       }}
       onPointerDown={(e) => e.stopPropagation()}
-      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
     >
       <Plus className="w-3 h-3" />
       {getButtonLabel()}
@@ -659,7 +752,7 @@ function ChatTitleBarControls() {
           clearCurrentConversation()
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
       >
         <Plus className="w-3 h-3" />
         Neues Gespräch
@@ -670,7 +763,7 @@ function ChatTitleBarControls() {
           setShowHelperDialog(true)
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
       >
         <Settings2 className="w-3 h-3" />
         Helfer

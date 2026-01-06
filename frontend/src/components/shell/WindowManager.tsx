@@ -250,7 +250,7 @@ const ScaledWindowThumbnail = memo(function ScaledWindowThumbnail({
       {/* Close Button - Mitte oben */}
       <button
         onClick={handleClose}
-        className="absolute left-1/2 -translate-x-1/2 -top-2 z-20 w-5 h-5 rounded-full bg-gold-500 hover:bg-gold-600 flex items-center justify-center shadow-md"
+        className="absolute left-1/2 -translate-x-1/2 -top-2 z-20 w-5 h-5 rounded-full bg-gold-600 hover:bg-gold-700 flex items-center justify-center shadow-md"
       >
         <X className="w-3 h-3 text-white" />
       </button>

@@ -761,7 +761,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                 pomodoroActive
                   ? isBreak
                     ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                    : 'bg-red-500/20 text-red-600 dark:text-red-400'
+                    : 'bg-gold-600/20 text-gold-600 dark:text-gold-400'
                   : 'hover:bg-black/5 dark:hover:bg-white/10'
               }`}
             >
@@ -781,7 +781,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                 <>
                   <div className="text-center">
                     <div className={`text-3xl font-mono font-bold ${
-                      isBreak ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                      isBreak ? 'text-green-600 dark:text-green-400' : 'text-gold-600 dark:text-gold-400'
                     }`}>
                       {formatPomodoroTime(pomodoroRemaining)}
                     </div>

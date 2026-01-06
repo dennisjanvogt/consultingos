@@ -86,16 +86,23 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
       ? settings.enabled_apps.filter(id => id !== appId)
       : [...settings.enabled_apps, appId]
 
+    // Wenn App aktiviert wird und nicht im Dock ist, ans Ende hinzufügen
+    let newDockOrder = settings.dock_order
+    if (!isEnabled && !settings.dock_order.includes(appId)) {
+      newDockOrder = [...settings.dock_order, appId]
+    }
+
     // Optimistic update
     set({
       settings: {
         ...settings,
         enabled_apps: newEnabledApps,
+        dock_order: newDockOrder,
       },
     })
 
     // Sync with backend
-    await updateSettings({ enabled_apps: newEnabledApps })
+    await updateSettings({ enabled_apps: newEnabledApps, dock_order: newDockOrder })
   },
 
   reorderDock: async (newOrder: string[]) => {

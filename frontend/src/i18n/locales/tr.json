@@ -40,6 +40,8 @@
   "auth": {
     "login": "Giris Yap",
     "logout": "Cikis Yap",
+    "logoutConfirmTitle": "Cikis yap?",
+    "logoutConfirmMessage": "Cikis yapmak istediginizden emin misiniz?",
     "register": "Kayit Ol",
     "username": "Kullanici Adi",
     "email": "E-posta",
@@ -363,7 +365,7 @@
   "shortcuts": {
     "aiOrb": "AI Orb (basili tut)",
     "maximize": "Buyut/Kucult",
-    "close": "Kapat",
+    "closeOrSettings": "Kapat/Ayarlar",
     "tiling": "Dosemeleme",
     "stageManager": "Stage Manager",
     "dock": "Dock",

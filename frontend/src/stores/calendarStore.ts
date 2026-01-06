@@ -9,8 +9,10 @@ interface CalendarState {
   isLoading: boolean
   error: string | null
   selectedEventId: number | null
+  showEventForm: boolean
 
   // Actions
+  setShowEventForm: (show: boolean) => void
   fetchEvents: (startDate?: string, endDate?: string) => Promise<void>
   addEvent: (event: CalendarEventCreate) => Promise<CalendarEvent | null>
   updateEvent: (id: number, event: CalendarEventUpdate) => Promise<CalendarEvent | null>
@@ -48,6 +50,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   isLoading: false,
   error: null,
   selectedEventId: null,
+  showEventForm: false,
+
+  setShowEventForm: (show) => set({ showEventForm: show }),
 
   fetchEvents: async (startDate, endDate) => {
     set({ isLoading: true, error: null })

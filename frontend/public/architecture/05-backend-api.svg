@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="djangoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#092e20"/>
+      <stop offset="100%" style="stop-color:#0c4b33"/>
+    </linearGradient>
+    <filter id="shadow5" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-size="22" font-weight="600" fill="#1f2937">Backend API Structure</text>
+  <text x="400" y="55" text-anchor="middle" font-size="12" fill="#6b7280">Django Ninja REST API</text>
+
+  <!-- Main API Container -->
+  <rect x="50" y="75" width="700" height="440" rx="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+  <rect x="50" y="75" width="700" height="40" rx="12" fill="url(#djangoGrad)"/>
+  <rect x="50" y="100" width="700" height="15" fill="url(#djangoGrad)"/>
+  <text x="400" y="102" text-anchor="middle" font-size="15" font-weight="600" fill="white">Django Ninja API — /api/</text>
+
+  <!-- Auth Section -->
+  <rect x="70" y="130" width="310" height="120" rx="8" fill="white" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow5)"/>
+  <rect x="70" y="130" width="310" height="30" rx="8" fill="#8b5cf6"/>
+  <rect x="70" y="152" width="310" height="8" fill="#8b5cf6"/>
+  <text x="225" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="white">/api/auth/ — Authentication</text>
+
+  <text x="85" y="180" font-size="10" fill="#4b5563">POST /login, /logout</text>
+  <text x="85" y="195" font-size="10" fill="#4b5563">GET /me — Current user</text>
+  <text x="85" y="210" font-size="10" fill="#4b5563">POST /github/auth-url, /callback</text>
+  <text x="85" y="225" font-size="10" fill="#4b5563">GET /admin/pending, users</text>
+  <text x="85" y="240" font-size="10" fill="#4b5563">POST /admin/approve, reject</text>
+
+  <!-- Auth Features -->
+  <rect x="400" y="130" width="330" height="120" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="565" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="#7c3aed">Authentication Features</text>
+  <text x="415" y="178" font-size="10" fill="#6b7280">• Session-based with CSRF</text>
+  <text x="415" y="195" font-size="10" fill="#6b7280">• GitHub OAuth integration</text>
+  <text x="415" y="212" font-size="10" fill="#6b7280">• Admin approval workflow</text>
+  <text x="415" y="229" font-size="10" fill="#6b7280">• Encrypted API key storage (Fernet)</text>
+
+  <!-- Business Routers -->
+  <rect x="70" y="265" width="660" height="175" rx="8" fill="white" stroke="#10b981" stroke-width="2" filter="url(#shadow5)"/>
+  <rect x="70" y="265" width="660" height="30" rx="8" fill="#10b981"/>
+  <rect x="70" y="287" width="660" height="8" fill="#10b981"/>
+  <text x="400" y="287" text-anchor="middle" font-size="12" font-weight="600" fill="white">Business Routers — CRUD Pattern</text>
+
+  <!-- Router Grid -->
+  <g font-size="10">
+    <!-- Row 1 -->
+    <rect x="85" y="310" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="157" y="330" text-anchor="middle" font-weight="500" fill="#166534">/customers/</text>
+    <text x="157" y="350" text-anchor="middle" fill="#6b7280">Customer CRM</text>
+
+    <rect x="245" y="310" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="317" y="330" text-anchor="middle" font-weight="500" fill="#166534">/invoices/</text>
+    <text x="317" y="350" text-anchor="middle" fill="#6b7280">Invoice + Items</text>
+
+    <rect x="405" y="310" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="477" y="330" text-anchor="middle" font-weight="500" fill="#166534">/documents/</text>
+    <text x="477" y="350" text-anchor="middle" fill="#6b7280">Files + Folders</text>
+
+    <rect x="565" y="310" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="637" y="330" text-anchor="middle" font-weight="500" fill="#166534">/calendar/</text>
+    <text x="637" y="350" text-anchor="middle" fill="#6b7280">Events + Meetings</text>
+
+    <!-- Row 2 -->
+    <rect x="85" y="370" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="157" y="390" text-anchor="middle" font-weight="500" fill="#166534">/kanban/</text>
+    <text x="157" y="410" text-anchor="middle" fill="#6b7280">Boards + Cards</text>
+
+    <rect x="245" y="370" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="317" y="390" text-anchor="middle" font-weight="500" fill="#166534">/timetracking/</text>
+    <text x="317" y="410" text-anchor="middle" fill="#6b7280">Entries + Timer</text>
+
+    <rect x="405" y="370" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="477" y="390" text-anchor="middle" font-weight="500" fill="#166534">/settings/</text>
+    <text x="477" y="410" text-anchor="middle" fill="#6b7280">Company Config</text>
+
+    <rect x="565" y="370" width="145" height="50" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="637" y="390" text-anchor="middle" font-weight="500" fill="#166534">/ai/, /chess/</text>
+    <text x="637" y="410" text-anchor="middle" fill="#6b7280">AI + Games</text>
+  </g>
+
+  <!-- Endpoint Pattern -->
+  <rect x="70" y="455" width="320" height="50" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="230" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#92400e">Standard Endpoint Pattern</text>
+  <text x="230" y="492" text-anchor="middle" font-size="9" fill="#6b7280">GET / | GET /{id} | POST / | PUT /{id} | DELETE /{id}</text>
+
+  <!-- Multi-tenancy -->
+  <rect x="410" y="455" width="320" height="50" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="570" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#1d4ed8">Multi-Tenancy</text>
+  <text x="570" y="492" text-anchor="middle" font-size="9" fill="#6b7280">All queries filter by request.user</text>
+
+  <!-- Database -->
+  <ellipse cx="400" cy="560" rx="150" ry="30" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" filter="url(#shadow5)"/>
+  <text x="400" y="565" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">SQLite / PostgreSQL</text>
+
+  <!-- Arrow -->
+  <path d="M400 515 L400 530" stroke="#6b7280" stroke-width="2" fill="none"/>
+
+  <!-- App Structure Note -->
+  <rect x="620" y="530" width="150" height="55" rx="6" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="695" y="550" text-anchor="middle" font-size="10" font-weight="600" fill="#4b5563">App Structure</text>
+  <text x="695" y="568" text-anchor="middle" font-size="9" fill="#6b7280">apps/&lt;name&gt;/</text>
+  <text x="695" y="580" text-anchor="middle" font-size="9" fill="#9ca3af">models.py + api.py</text>
+</svg>
