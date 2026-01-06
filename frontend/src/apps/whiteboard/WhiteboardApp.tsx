@@ -12,6 +12,18 @@ import {
 
 import '@excalidraw/excalidraw/index.css'
 
+// Hide Excalidraw branding elements
+const excalidrawStyles = `
+  .excalidraw .welcome-screen-center,
+  .excalidraw .excalidraw-link,
+  .excalidraw [title="GitHub"],
+  .excalidraw [title="Discord"],
+  .excalidraw [title="Twitter"],
+  .excalidraw .help-icon {
+    display: none !important;
+  }
+`
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawAPI = any
 
@@ -39,6 +51,14 @@ export default function WhiteboardApp() {
   const [renameValue, setRenameValue] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const saveTimeoutRef = useRef<number | null>(null)
+
+  // Inject custom styles to hide Excalidraw branding
+  useEffect(() => {
+    const styleElement = document.createElement('style')
+    styleElement.textContent = excalidrawStyles
+    document.head.appendChild(styleElement)
+    return () => styleElement.remove()
+  }, [])
 
   // Watch for dark mode changes
   useEffect(() => {
@@ -362,7 +382,12 @@ export default function WhiteboardApp() {
                 loadScene: false,
                 saveToActiveFile: false,
                 toggleTheme: false,
+                export: false,
               },
+              tools: {
+                image: true,
+              },
+              welcomeScreen: false,
             }}
           />
         ) : (
