@@ -385,7 +385,10 @@
     "analysisMode": "Analysis Mode",
     "inlineCharts": "Charts in Chat",
     "inlineChartsOnHint": "Charts appear directly in messages",
-    "inlineChartsOffHint": "Charts are shown in AI Dashboard"
+    "inlineChartsOffHint": "Charts are shown in AI Dashboard",
+    "noApiKey": "No OpenRouter API key configured",
+    "noApiKeyDescription": "To use AI features, add your API key in settings.",
+    "goToSettings": "Go to settings →"
   },
   "colors": {
     "gray": "Gray",

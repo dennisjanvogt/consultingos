@@ -17,6 +17,12 @@ export interface AIModel {
   created?: number  // Unix timestamp
 }
 
+interface APIKeyStatus {
+  hasUserKey: boolean
+  hasServerKey: boolean
+  keyPreview?: string
+}
+
 interface AIState {
   // Model selection
   chatModel: string
@@ -29,6 +35,12 @@ interface AIState {
   getChatModelInfo: () => AIModel | undefined
   getImageModelInfo: () => AIModel | undefined
   fetchModels: (forceRefresh?: boolean) => Promise<void>
+
+  // API Key status
+  apiKeyStatus: APIKeyStatus | null
+  isCheckingApiKey: boolean
+  checkApiKeyStatus: () => Promise<APIKeyStatus | null>
+  hasValidApiKey: () => boolean
 
   // Analysis Mode (for inline visualizations in chat)
   analysisMode: boolean
@@ -168,6 +180,39 @@ export const useAIStore = create<AIState>()(
 
       setChatModel: (model) => set({ chatModel: model }),
       setImageModel: (model) => set({ imageModel: model }),
+
+      // API Key status
+      apiKeyStatus: null,
+      isCheckingApiKey: false,
+
+      checkApiKeyStatus: async () => {
+        set({ isCheckingApiKey: true })
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/api-keys`, {
+            credentials: 'include',
+          })
+          if (!response.ok) {
+            set({ apiKeyStatus: null, isCheckingApiKey: false })
+            return null
+          }
+          const data = await response.json()
+          const status: APIKeyStatus = {
+            hasUserKey: data.has_openrouter_key,
+            hasServerKey: data.has_server_fallback,
+            keyPreview: data.key_preview,
+          }
+          set({ apiKeyStatus: status, isCheckingApiKey: false })
+          return status
+        } catch {
+          set({ apiKeyStatus: null, isCheckingApiKey: false })
+          return null
+        }
+      },
+
+      hasValidApiKey: () => {
+        const status = get().apiKeyStatus
+        return status ? (status.hasUserKey || status.hasServerKey) : false
+      },
 
       // Analysis Mode state
       analysisMode: false,

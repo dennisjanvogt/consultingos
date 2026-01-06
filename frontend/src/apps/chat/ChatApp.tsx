@@ -121,15 +121,20 @@ export function ChatApp() {
     // Analysis mode
     analysisMode,
     setAnalysisMode,
+    // API Key status
+    apiKeyStatus,
+    checkApiKeyStatus,
+    hasValidApiKey,
   } = useAIStore()
 
   const currentHelper = getCurrentHelper()
 
-  // Fetch conversations and helpers on mount
+  // Fetch conversations, helpers, and check API key on mount
   useEffect(() => {
     fetchConversations()
     fetchHelpers()
-  }, [fetchConversations, fetchHelpers])
+    checkApiKeyStatus()
+  }, [fetchConversations, fetchHelpers, checkApiKeyStatus])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -734,6 +739,31 @@ export function ChatApp() {
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
+        {/* API Key Warning */}
+        {apiKeyStatus && !hasValidApiKey() && (
+          <div className="mx-4 mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-800/50 flex items-center justify-center shrink-0">
+                <Bot className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {t('chat.noApiKey', 'Kein OpenRouter API-Key hinterlegt')}
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                  {t('chat.noApiKeyDescription', 'Um AI-Funktionen zu nutzen, hinterlege deinen API-Key in den Einstellungen.')}
+                </p>
+                <button
+                  onClick={() => openWindow('settings')}
+                  className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline"
+                >
+                  {t('chat.goToSettings', 'Zu den Einstellungen →')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
           {messages.length === 0 ? (

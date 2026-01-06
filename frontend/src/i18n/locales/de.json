@@ -385,7 +385,10 @@
     "analysisMode": "Analyse-Modus",
     "inlineCharts": "Charts im Chat",
     "inlineChartsOnHint": "Charts erscheinen direkt in der Nachricht",
-    "inlineChartsOffHint": "Charts werden im AI Dashboard angezeigt"
+    "inlineChartsOffHint": "Charts werden im AI Dashboard angezeigt",
+    "noApiKey": "Kein OpenRouter API-Key hinterlegt",
+    "noApiKeyDescription": "Um AI-Funktionen zu nutzen, hinterlege deinen API-Key in den Einstellungen.",
+    "goToSettings": "Zu den Einstellungen →"
   },
   "colors": {
     "gray": "Grau",
