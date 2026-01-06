@@ -431,7 +431,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-1.5 text-xs hover:bg-black/5 dark:hover:bg-white/10 px-2 py-0.5 rounded transition-colors">
               <Image className="h-3.5 w-3.5 opacity-60" />
-              <span className="max-w-[80px] truncate">{currentImageModel?.name || 'Bild'}</span>
+              <span>{currentImageModel?.name?.split('(')[0].trim() || 'Bild'}</span>
               {hasActiveImageFilter && (
                 <Filter className="h-3 w-3 text-lavender-500" />
               )}
