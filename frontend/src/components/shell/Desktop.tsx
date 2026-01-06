@@ -168,7 +168,7 @@ export function Desktop() {
           onMouseLeave={() => setShowShortcuts(false)}
         >
           {showShortcuts ? (
-            <div className="glass rounded-lg p-3 text-xs space-y-1.5 min-w-[160px] animate-in fade-in duration-200">
+            <div className="glass rounded-lg p-3 text-xs space-y-1.5 min-w-[180px] animate-in fade-in duration-200">
               <div className="flex items-center justify-between gap-4">
                 <span className="opacity-60">AI Orb (halten)</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">⌥</kbd>
@@ -184,6 +184,15 @@ export function Desktop() {
               <div className="flex items-center justify-between gap-4">
                 <span className="opacity-60">Tiling</span>
                 <kbd className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[10px] font-mono">→</kbd>
+              </div>
+              <div className="border-t border-black/10 dark:border-white/10 my-1.5" />
+              <div className="flex items-center justify-between gap-4">
+                <span className="opacity-60">Stage Manager</span>
+                <span className="text-[10px] opacity-50">Hover oben</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="opacity-60">Dock</span>
+                <span className="text-[10px] opacity-50">Hover unten</span>
               </div>
             </div>
           ) : (

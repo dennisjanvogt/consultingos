@@ -227,6 +227,13 @@ const ScaledWindowThumbnail = memo(function ScaledWindowThumbnail({
           <Window window={window} isThumbnail />
         </div>
 
+        {/* Gradient Overlay am unteren Rand für bessere Text-Lesbarkeit */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+          }}
+        />
       </div>
 
       {/* Active Indicator - oben bei horizontal, links bei vertikal */}
@@ -248,12 +255,12 @@ const ScaledWindowThumbnail = memo(function ScaledWindowThumbnail({
         <X className="w-3 h-3 text-white" />
       </button>
 
-      {/* App Title - mit Blur-Hintergrund */}
+      {/* App Title */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 text-center"
-        style={{ bottom: 2 }}
+        className="absolute left-0 right-0 text-center"
+        style={{ bottom: 0 }}
       >
-        <span className="inline-block text-[11px] font-medium text-gray-800 dark:text-gray-100 truncate max-w-full px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/50 backdrop-blur-md shadow-sm">
+        <span className="text-[11px] font-medium text-white truncate block max-w-full px-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
           {t(window.title)}
         </span>
       </div>
