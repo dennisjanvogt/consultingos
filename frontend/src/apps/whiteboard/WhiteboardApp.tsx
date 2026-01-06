@@ -15,11 +15,23 @@ import '@excalidraw/excalidraw/index.css'
 // Hide Excalidraw branding elements
 const excalidrawStyles = `
   .excalidraw .welcome-screen-center,
+  .excalidraw .welcome-screen-decor,
   .excalidraw .excalidraw-link,
+  .excalidraw .main-menu-trigger,
   .excalidraw [title="GitHub"],
   .excalidraw [title="Discord"],
   .excalidraw [title="Twitter"],
-  .excalidraw .help-icon {
+  .excalidraw [title="X"],
+  .excalidraw [href*="twitter"],
+  .excalidraw [href*="x.com"],
+  .excalidraw [href*="github"],
+  .excalidraw [href*="discord"],
+  .excalidraw [href*="excalidraw"],
+  .excalidraw .help-icon,
+  .excalidraw .HelpButton,
+  .excalidraw .MainMenu__socials,
+  .excalidraw .main-menu-item[href],
+  .excalidraw a[target="_blank"] {
     display: none !important;
   }
 `
