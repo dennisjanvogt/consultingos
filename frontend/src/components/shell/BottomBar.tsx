@@ -37,8 +37,33 @@ export function BottomBar() {
         ConsultingOS
       </span>
 
-      {/* Left spacer for balance */}
-      <div />
+      {/* Left - Keyboard Shortcuts */}
+      <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1">
+          <span>AI Orb</span>
+          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">⌥</kbd>
+        </div>
+        <div className="flex items-center gap-1">
+          <span>Max/Min</span>
+          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">Space</kbd>
+        </div>
+        <div className="flex items-center gap-1">
+          <span>Close</span>
+          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">ESC</kbd>
+        </div>
+        <div className="flex items-center gap-1">
+          <span>Tiling</span>
+          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">→</kbd>
+        </div>
+        <div className="flex items-center gap-1">
+          <span>Stage Manager</span>
+          <span className="text-[9px] opacity-70">hover ↑</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span>Dock</span>
+          <span className="text-[9px] opacity-70">hover ↓</span>
+        </div>
+      </div>
 
       {/* Right side - Settings */}
       <div className="flex items-center gap-3">
