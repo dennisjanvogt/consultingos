@@ -12,27 +12,26 @@ import {
 
 import '@excalidraw/excalidraw/index.css'
 
-// Hide Excalidraw branding elements
+// Hide Excalidraw branding elements and move help to right
 const excalidrawStyles = `
   .excalidraw .welcome-screen-center,
   .excalidraw .welcome-screen-decor,
-  .excalidraw .excalidraw-link,
-  .excalidraw .main-menu-trigger,
-  .excalidraw [title="GitHub"],
-  .excalidraw [title="Discord"],
-  .excalidraw [title="Twitter"],
-  .excalidraw [title="X"],
-  .excalidraw [href*="twitter"],
+  .excalidraw [href*="twitter.com"],
   .excalidraw [href*="x.com"],
-  .excalidraw [href*="github"],
+  .excalidraw [href*="github.com/excalidraw"],
   .excalidraw [href*="discord"],
-  .excalidraw [href*="excalidraw"],
-  .excalidraw .help-icon,
-  .excalidraw .HelpButton,
   .excalidraw .MainMenu__socials,
-  .excalidraw .main-menu-item[href],
-  .excalidraw a[target="_blank"] {
+  .excalidraw .HelpDialog__header:has([href]),
+  .excalidraw .HelpDialog a[href*="excalidraw"],
+  .excalidraw [class*="socials"],
+  .excalidraw .help-icon__heading:has(a) {
     display: none !important;
+  }
+
+  /* Move help button to right side */
+  .excalidraw .HelpButton {
+    left: auto !important;
+    right: 12px !important;
   }
 `
 
