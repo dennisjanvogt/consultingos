@@ -14,6 +14,7 @@ import {
   Sparkles,
   Circle,
   Blocks,
+  PenTool,
 } from 'lucide-react'
 
 // App Components
@@ -32,6 +33,7 @@ import { GoApp } from '@/apps/go/GoApp'
 import { AdminApp } from '@/apps/admin/AdminApp'
 import { AIDashboardApp } from '@/apps/aidashboard/AIDashboardApp'
 import { ArchitectureApp } from '@/apps/architecture/ArchitectureApp'
+import WhiteboardApp from '@/apps/whiteboard/WhiteboardApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
@@ -200,6 +202,16 @@ export const appRegistry: Record<string, AppDefinition> = {
     canDisable: true,
     adminOnly: true,
   },
+  whiteboard: {
+    id: 'whiteboard',
+    component: WhiteboardApp,
+    icon: <PenTool className="h-6 w-6" />,
+    titleKey: 'apps.whiteboard',
+    description: 'Whiteboard: Architektur-Diagramme zeichnen und skizzieren',
+    defaultSize: { width: 1000, height: 700 },
+    category: 'tools',
+    canDisable: true,
+  },
 }
 
 // Helper Funktionen
@@ -231,6 +243,7 @@ export const defaultDockOrder = [
   'kanban',
   'chat',
   'timetracking',
+  'whiteboard',
   'chess',
   'go',
   'settings',
@@ -247,6 +260,7 @@ export const defaultEnabledApps = [
   'kanban',
   'chat',
   'timetracking',
+  'whiteboard',
   'chess',
   'go',
   'settings',

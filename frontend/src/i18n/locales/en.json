@@ -37,7 +37,24 @@
     "go": "Go",
     "aidashboard": "AI Dashboard",
     "admin": "Admin",
-    "architecture": "Architecture"
+    "architecture": "Architecture",
+    "whiteboard": "Whiteboard"
+  },
+  "whiteboard": {
+    "title": "Whiteboard",
+    "newDiagram": "New",
+    "selectDiagram": "Select diagram...",
+    "noDiagrams": "No diagrams",
+    "noDiagramSelected": "No diagram selected",
+    "createFirst": "Create first diagram",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "autoSaving": "Saving...",
+    "unsaved": "Unsaved",
+    "delete": "Delete",
+    "rename": "Rename",
+    "confirmDelete": "Really delete this diagram?"
   },
   "architecture": {
     "title": "Architecture",

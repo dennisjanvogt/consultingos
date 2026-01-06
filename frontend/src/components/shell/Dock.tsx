@@ -135,18 +135,18 @@ const DockIcon = memo(function DockIcon({ item, label, isOpen, onClick }: DockIc
     <Reorder.Item
       value={item}
       layout
-      className="relative flex flex-col items-center p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors group cursor-grab active:cursor-grabbing"
+      className="relative flex flex-col items-center p-1.5 group cursor-grab active:cursor-grabbing"
       initial={{ scale: 1, y: 0 }}
       animate={{ scale: 1, y: 0 }}
-      whileHover={{ scale: 1.15, y: -4 }}
+      whileHover={{ y: -6 }}
       whileTap={{ scale: 0.95 }}
-      whileDrag={{ scale: 1.1, y: 0, zIndex: 50 }}
+      whileDrag={{ scale: 1.05, y: 0, zIndex: 50 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
       {/* Clickable Area */}
       <button
         onClick={handleClick}
-        className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm"
+        className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-200"
       >
         {item.icon}
       </button>

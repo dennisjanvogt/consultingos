@@ -4,6 +4,7 @@ import { X, Sparkles, Loader2, Check } from 'lucide-react'
 import { useAIStore } from '@/stores/aiStore'
 import { getToolsByCategory } from '@/services/tools'
 import type { AIHelper } from '@/api/types'
+import { HELPER_ICONS, type HelperIconKey } from './components/HelperIcons'
 
 interface HelperFormProps {
   helper?: AIHelper | null
@@ -12,11 +13,11 @@ interface HelperFormProps {
   onSave: () => void
 }
 
-const ICON_OPTIONS = ['🤖', '💻', '✍️', '📊', '🎨', '📝', '🔧', '💡', '🎯', '📚', '🧠', '⚡', '🔍', '📈', '🎭']
+const ICON_OPTIONS = Object.keys(HELPER_ICONS) as HelperIconKey[]
 
 export function HelperForm({ helper, isAIAssisted, onClose, onSave }: HelperFormProps) {
   const [name, setName] = useState(helper?.name || '')
-  const [icon, setIcon] = useState(helper?.icon || '🤖')
+  const [icon, setIcon] = useState(helper?.icon || 'assistant')
   const [description, setDescription] = useState(helper?.description || '')
   const [systemPrompt, setSystemPrompt] = useState(helper?.system_prompt || '')
   const [enabledTools, setEnabledTools] = useState<string[]>(helper?.enabled_tools || [])
@@ -185,23 +186,27 @@ export function HelperForm({ helper, isAIAssisted, onClose, onSave }: HelperForm
                     required
                   />
                 </div>
-                <div>
+                <div className="shrink-0">
                   <label className="block text-sm font-medium mb-1">Icon</label>
-                  <div className="flex gap-1 p-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    {ICON_OPTIONS.slice(0, 8).map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => setIcon(emoji)}
-                        className={`w-7 h-7 flex items-center justify-center rounded text-sm transition-colors ${
-                          icon === emoji
-                            ? 'bg-gray-200 dark:bg-gray-600'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap gap-1 p-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg max-w-[200px]">
+                    {ICON_OPTIONS.map((iconKey) => {
+                      const IconComponent = HELPER_ICONS[iconKey].component
+                      return (
+                        <button
+                          key={iconKey}
+                          type="button"
+                          onClick={() => setIcon(iconKey)}
+                          className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${
+                            icon === iconKey
+                              ? 'bg-lavender-100 dark:bg-lavender-900/40 ring-1 ring-lavender-400'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                          title={HELPER_ICONS[iconKey].label}
+                        >
+                          <IconComponent size={18} />
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

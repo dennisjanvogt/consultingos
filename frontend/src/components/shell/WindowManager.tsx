@@ -43,7 +43,8 @@ export function WindowManager({ windows }: WindowManagerProps) {
     if (!stageManagerEnabled) {
       setShowThumbnails(false)
     }
-  }, [stageManagerEnabled, setShowThumbnails])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageManagerEnabled])
 
   // Effect 2: Center active window when it changes (Stage Manager only)
   // Use ref to prevent centering the same window multiple times
@@ -55,14 +56,16 @@ export function WindowManager({ windows }: WindowManagerProps) {
         centerActiveWindow()
       })
     }
-  }, [stageManagerEnabled, activeWindowId, centerActiveWindow])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageManagerEnabled, activeWindowId])
 
   // Effect 3: Ensure a window is active when Stage Manager is enabled
   useEffect(() => {
     if (stageManagerEnabled && visibleWindows.length > 0 && !activeWindowId) {
       focusWindow(visibleWindows[0].id)
     }
-  }, [stageManagerEnabled, visibleWindows.length, activeWindowId, focusWindow])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageManagerEnabled, visibleWindows.length, activeWindowId])
 
   // Stage Manager Modus
   if (stageManagerEnabled && visibleWindows.length > 0) {

@@ -10,6 +10,7 @@ import { useTransactionsStore } from '@/stores/transactionsStore'
 import { useAIStore } from '@/stores/aiStore'
 import { useChessStore } from '@/stores/chessStore'
 import { useCalendarStore } from '@/stores/calendarStore'
+import { useWhiteboardStore } from '@/stores/whiteboardStore'
 import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
@@ -412,6 +413,26 @@ function CalendarTitleBarControls() {
   )
 }
 
+// Whiteboard Title Bar Controls
+function WhiteboardTitleBarControls() {
+  const { t } = useTranslation()
+  const { createDiagram } = useWhiteboardStore()
+
+  return (
+    <button
+      onClick={async (e) => {
+        e.stopPropagation()
+        await createDiagram()
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      {t('whiteboard.newDiagram', 'Neu')}
+    </button>
+  )
+}
+
 // Chess Title Bar Controls
 function ChessTitleBarControls() {
   const { setShowNewGameModal } = useChessStore()
@@ -589,6 +610,9 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'calendar' && (
           <CalendarTitleBarControls />
+        )}
+        {window.appId === 'whiteboard' && (
+          <WhiteboardTitleBarControls />
         )}
         {window.appId === 'chat' && (
           <ChatTitleBarControls />

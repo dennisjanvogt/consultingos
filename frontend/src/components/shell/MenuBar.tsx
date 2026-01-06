@@ -96,9 +96,9 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
     setPomodoroPopoverOpen(false)
   }
 
-  const stopPomodoro = () => {
+  const stopPomodoro = useCallback(() => {
     stopPomodoroStore()
-  }
+  }, [stopPomodoroStore])
 
   // Pomodoro countdown effect
   useEffect(() => {
@@ -132,7 +132,8 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
     updateRemaining()
     const interval = setInterval(updateRemaining, 1000)
     return () => clearInterval(interval)
-  }, [pomodoroActive, pomodoroEndTime, isBreak, pomodoroMinutes, setBreak, stopPomodoro])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pomodoroActive, pomodoroEndTime, isBreak, pomodoroMinutes])
 
   // Request notification permission
   useEffect(() => {
@@ -211,7 +212,8 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
     fetchEvents()
     fetchProjects()
     fetchModels()
-  }, [fetchEvents, fetchProjects, fetchModels])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Update elapsed time every second when timer is running
   useEffect(() => {

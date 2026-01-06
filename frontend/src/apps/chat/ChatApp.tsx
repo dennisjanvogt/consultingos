@@ -30,6 +30,7 @@ import { sendMessage, sendMessageStream, type Message, type ToolCall, type AIRes
 import { executeTool } from '@/services/tools'
 import { HelperDialog } from './HelperDialog'
 import { InlineChatWidget, parseMessageContent } from './components/InlineChatWidget'
+import { renderHelperIcon } from './components/HelperIcons'
 
 const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'
 
@@ -622,7 +623,7 @@ export function ChatApp() {
               className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-lg">{currentHelper?.icon || '🤖'}</span>
+                <span className="shrink-0">{renderHelperIcon(currentHelper?.icon || 'assistant', 20)}</span>
                 <span className="truncate font-medium">{currentHelper?.name || t('chat.noHelper')}</span>
               </div>
               <ChevronDown className="w-4 h-4 shrink-0 text-gray-500" />
@@ -641,7 +642,7 @@ export function ChatApp() {
                       currentHelperId === helper.id ? 'bg-gray-100 dark:bg-gray-700' : ''
                     }`}
                   >
-                    <span className="text-lg">{helper.icon}</span>
+                    <span className="shrink-0">{renderHelperIcon(helper.icon, 20)}</span>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">{helper.name}</div>
                       {helper.description && (

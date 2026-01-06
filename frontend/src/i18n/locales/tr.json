@@ -35,7 +35,26 @@
     "chat": "Sohbet",
     "chess": "Satranc",
     "aidashboard": "AI Paneli",
-    "admin": "Yonetici"
+    "admin": "Yonetici",
+    "go": "Go",
+    "architecture": "Mimari",
+    "whiteboard": "Beyaz Tahta"
+  },
+  "whiteboard": {
+    "title": "Beyaz Tahta",
+    "newDiagram": "Yeni",
+    "selectDiagram": "Diyagram sec...",
+    "noDiagrams": "Diyagram yok",
+    "noDiagramSelected": "Diyagram secilmedi",
+    "createFirst": "Ilk diyagrami olustur",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor...",
+    "saved": "Kaydedildi",
+    "autoSaving": "Kaydediliyor...",
+    "unsaved": "Kaydedilmedi",
+    "delete": "Sil",
+    "rename": "Yeniden Adlandir",
+    "confirmDelete": "Bu diyagrami silmek istediginizden emin misiniz?"
   },
   "auth": {
     "login": "Giris Yap",
