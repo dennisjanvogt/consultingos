@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw'
 import { Plus, Save, Trash2, Edit3, Check, X, FileText, ChevronDown } from 'lucide-react'
@@ -38,7 +38,7 @@ export default function WhiteboardApp() {
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [saveTimeoutId, setSaveTimeoutId] = useState<number | null>(null)
+  const saveTimeoutRef = useRef<number | null>(null)
 
   // Watch for dark mode changes
   useEffect(() => {
@@ -63,12 +63,12 @@ export default function WhiteboardApp() {
       setHasUnsavedChanges(true)
 
       // Clear previous timeout
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
       }
 
       // Auto-save after 3 seconds of inactivity
-      const timeoutId = window.setTimeout(async () => {
+      saveTimeoutRef.current = window.setTimeout(async () => {
         const content = {
           elements,
           appState: {
@@ -99,28 +99,26 @@ export default function WhiteboardApp() {
         await saveDiagram(currentDiagram.id, content, thumbnail)
         setHasUnsavedChanges(false)
       }, 3000)
-
-      setSaveTimeoutId(timeoutId)
     },
-    [currentDiagram, saveDiagram, saveTimeoutId]
+    [currentDiagram, saveDiagram]
   )
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [saveTimeoutId])
+  }, [])
 
   // Manual save
   const handleManualSave = useCallback(async () => {
     if (!currentDiagram || !excalidrawAPI) return
 
     // Clear auto-save timeout
-    if (saveTimeoutId) {
-      clearTimeout(saveTimeoutId)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
     }
 
     const elements = excalidrawAPI.getSceneElements()
@@ -156,7 +154,7 @@ export default function WhiteboardApp() {
 
     await saveDiagram(currentDiagram.id, content, thumbnail)
     setHasUnsavedChanges(false)
-  }, [currentDiagram, excalidrawAPI, saveDiagram, saveTimeoutId])
+  }, [currentDiagram, excalidrawAPI, saveDiagram])
 
   // Load diagram
   const handleLoadDiagram = async (diagram: DiagramListItem) => {
