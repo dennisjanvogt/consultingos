@@ -241,15 +241,57 @@ function ProfileSettings({ user }: ProfileSettingsProps) {
 
       {/* Account Info */}
       <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
           {t('settings.accountInfo', 'Kontoinformationen')}
         </h3>
-        <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-          <p><span className="font-medium">ID:</span> {user.id}</p>
-          <p><span className="font-medium">Username:</span> @{user.username}</p>
-          {user.is_staff && (
-            <p><span className="font-medium">Rolle:</span> Administrator</p>
-          )}
+        <div className="grid grid-cols-2 gap-3">
+          {/* User ID */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+              {t('settings.userId', 'User ID')}
+            </p>
+            <p className="text-sm font-mono text-gray-700 dark:text-gray-300">
+              #{user.id}
+            </p>
+          </div>
+
+          {/* Username */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+              {t('settings.username', 'Username')}
+            </p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              @{user.username}
+            </p>
+          </div>
+
+          {/* Role */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+              {t('settings.role', 'Rolle')}
+            </p>
+            <div className="flex items-center gap-1.5">
+              {user.is_staff ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Administrator</span>
+                </>
+              ) : (
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.roleUser', 'Benutzer')}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Account Status */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+              {t('settings.status', 'Status')}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm text-green-600 dark:text-green-400">{t('settings.statusActive', 'Aktiv')}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
