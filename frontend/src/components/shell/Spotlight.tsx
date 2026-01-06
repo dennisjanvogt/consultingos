@@ -97,7 +97,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const { openWindow } = useWindowStore()
+  const { openWindow, closeWindowByAppId, minimizeByAppId } = useWindowStore()
 
   // AI Store for conversation persistence
   const {
@@ -188,25 +188,52 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
     const speakWithVoice = () => {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = 'de-DE'
-      utterance.rate = 1.4 // Faster, more natural
-      utterance.pitch = 1.05 // Slightly higher, more lively
+      utterance.rate = 1.1 // Slightly faster but still natural
+      utterance.pitch = 1.0 // Natural pitch
 
-      // Find the best German voice (prefer natural/premium voices)
+      // Find the best German voice (prioritize premium/neural voices)
       const voices = window.speechSynthesis.getVoices()
       const germanVoices = voices.filter(v => v.lang.startsWith('de'))
 
-      // Prefer Helena or other natural voices
-      const preferredVoice = germanVoices.find(v =>
-        v.name.toLowerCase().includes('helena')
-      ) || germanVoices.find(v =>
-        v.name.toLowerCase().includes('anna') ||
-        v.name.toLowerCase().includes('natural') ||
-        v.name.toLowerCase().includes('neural')
-      ) || germanVoices[0]
+      // Priority order for most human-like voices:
+      // 1. Premium/Enhanced voices (Google, Microsoft Neural)
+      // 2. Voices with "Premium", "Enhanced", "Neural", "Natural" in name
+      // 3. Male voices (often sound more natural for assistants)
+      // 4. Any German voice
+      const findBestVoice = () => {
+        // Check for premium neural voices first
+        const premiumKeywords = ['premium', 'enhanced', 'neural', 'natural', 'wavenet', 'standard']
+        for (const keyword of premiumKeywords) {
+          const found = germanVoices.find(v => v.name.toLowerCase().includes(keyword))
+          if (found) return found
+        }
 
-      if (preferredVoice) {
-        utterance.voice = preferredVoice
-        console.log('Using voice:', preferredVoice.name)
+        // Check for specific high-quality voices
+        const specificVoices = ['markus', 'stefan', 'hans', 'florian', 'yannick', 'petra', 'marlene', 'vicki']
+        for (const name of specificVoices) {
+          const found = germanVoices.find(v => v.name.toLowerCase().includes(name))
+          if (found) return found
+        }
+
+        // Google voices are usually good
+        const googleVoice = germanVoices.find(v => v.name.toLowerCase().includes('google'))
+        if (googleVoice) return googleVoice
+
+        // Microsoft voices are also good
+        const msVoice = germanVoices.find(v =>
+          v.name.toLowerCase().includes('microsoft') ||
+          v.name.toLowerCase().includes('edge')
+        )
+        if (msVoice) return msVoice
+
+        // Fallback to any German voice
+        return germanVoices[0]
+      }
+
+      const selectedVoice = findBestVoice()
+      if (selectedVoice) {
+        utterance.voice = selectedVoice
+        console.log('Using voice:', selectedVoice.name)
       }
 
       utterance.onstart = () => setIsSpeaking(true)
@@ -318,8 +345,8 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
   // Tool execution is now handled by the centralized tool registry
   const executeToolCall = useCallback(async (toolCall: ToolCall): Promise<string> => {
     const args = JSON.parse(toolCall.function.arguments)
-    return executeTool(toolCall.function.name, args, { openWindow, onClose })
-  }, [openWindow, onClose])
+    return executeTool(toolCall.function.name, args, { openWindow, closeWindowByAppId, minimizeByAppId, onClose })
+  }, [openWindow, closeWindowByAppId, minimizeByAppId, onClose])
 
   // Handle Option/Alt key for recording toggle and ESC to close
   useEffect(() => {
@@ -367,6 +394,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
               content: spokenText
             }]
 
+            // Respect analysis mode setting for inline charts
             let response = await sendMessage(newHistory)
             let currentHistory = [...newHistory]
             let lastImageUrl: string | null = null

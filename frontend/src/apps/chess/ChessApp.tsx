@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Plus,
   Trophy,
@@ -21,6 +22,7 @@ type ViewMode = 'list' | 'game'
 type GameFilter = 'active' | 'finished' | 'all'
 
 export function ChessApp() {
+  const { t } = useTranslation()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [gameFilter, setGameFilter] = useState<GameFilter>('active')
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -96,13 +98,13 @@ export function ChessApp() {
 
   const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
-      waiting: 'Warte auf Gegner',
-      active: 'Aktiv',
-      checkmate: 'Schachmatt',
-      stalemate: 'Patt',
-      draw: 'Remis',
-      resigned: 'Aufgegeben',
-      timeout: 'Zeit abgelaufen',
+      waiting: t('chess.waiting'),
+      active: t('chess.active'),
+      checkmate: t('chess.checkmate'),
+      stalemate: t('chess.stalemate'),
+      draw: t('chess.draw'),
+      resigned: t('chess.resigned'),
+      timeout: t('chess.timeout'),
     }
     return labels[status] || status
   }
@@ -130,7 +132,7 @@ export function ChessApp() {
             <div className="flex items-center gap-2 mb-2">
               <Trophy className="w-4 h-4 text-yellow-500" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Statistik
+                {t('chess.statistics')}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -138,19 +140,19 @@ export function ChessApp() {
                 <div className="font-bold text-green-600 dark:text-green-400">
                   {stats.wins}
                 </div>
-                <div className="text-gray-500">Siege</div>
+                <div className="text-gray-500">{t('chess.wins')}</div>
               </div>
               <div className="bg-red-50 dark:bg-red-900/20 rounded p-1.5">
                 <div className="font-bold text-red-600 dark:text-red-400">
                   {stats.losses}
                 </div>
-                <div className="text-gray-500">Nieder.</div>
+                <div className="text-gray-500">{t('chess.losses')}</div>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 rounded p-1.5">
                 <div className="font-bold text-gray-600 dark:text-gray-400">
                   {stats.draws}
                 </div>
-                <div className="text-gray-500">Remis</div>
+                <div className="text-gray-500">{t('chess.draws')}</div>
               </div>
             </div>
           </div>
@@ -162,7 +164,7 @@ export function ChessApp() {
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Einladungen
+                {t('chess.invitations')}
               </span>
             </div>
             <div className="space-y-2">
@@ -174,20 +176,20 @@ export function ChessApp() {
                     className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2"
                   >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      {invitation.from_user.username} hat dich eingeladen
+                      {invitation.from_user.username} {t('chess.hasInvitedYou')}
                     </div>
                     <div className="flex gap-1">
                       <button
                         onClick={() => handleAcceptInvitation(invitation)}
                         className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                       >
-                        Annehmen
+                        {t('chess.accept')}
                       </button>
                       <button
                         onClick={() => declineInvitation(invitation.id)}
                         className="flex-1 px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
                       >
-                        Ablehnen
+                        {t('chess.decline')}
                       </button>
                     </div>
                   </div>
@@ -208,9 +210,9 @@ export function ChessApp() {
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              {filter === 'active' && 'Aktiv'}
-              {filter === 'finished' && 'Beendet'}
-              {filter === 'all' && 'Alle'}
+              {filter === 'active' && t('chess.active')}
+              {filter === 'finished' && t('chess.finished')}
+              {filter === 'all' && t('chess.all')}
             </button>
           ))}
         </div>
@@ -224,7 +226,7 @@ export function ChessApp() {
           ) : filteredGames.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500">
               <div className="text-3xl mb-2">&#9812;</div>
-              <p>Keine Spiele</p>
+              <p>{t('chess.noGames')}</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -246,7 +248,7 @@ export function ChessApp() {
                     )}
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                       {game.is_ai_game
-                        ? `vs KI (Stufe ${game.ai_difficulty})`
+                        ? t('chess.vsAI', { level: game.ai_difficulty })
                         : `vs ${
                             game.white_player?.username === 'me'
                               ? game.black_player?.username
@@ -263,7 +265,7 @@ export function ChessApp() {
                       {getStatusLabel(game.status)}
                     </span>
                     <span className="text-[10px] text-gray-400">
-                      {game.moves.length} Zuege
+                      {game.moves.length} {t('chess.moves')}
                     </span>
                   </div>
                 </button>
@@ -281,17 +283,17 @@ export function ChessApp() {
             <div className="text-center">
               <div className="text-6xl mb-4">&#9812;</div>
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                Schach
+                {t('chess.title')}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
-                Spiele gegen die KI oder fordere andere Spieler heraus.
+                {t('chess.description')}
               </p>
               <button
                 onClick={() => setShowNewGameModal(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors font-medium"
               >
                 <Plus className="w-5 h-5" />
-                Neues Spiel starten
+                {t('chess.newGame')}
               </button>
             </div>
           </div>
@@ -358,6 +360,7 @@ interface NewGameModalProps {
 }
 
 function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProps) {
+  const { t } = useTranslation()
   const [gameType, setGameType] = useState<'ai' | 'multiplayer'>('ai')
   const [aiDifficulty, setAiDifficulty] = useState(10)
   const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white')
@@ -375,12 +378,12 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
     setIsCreating(false)
   }
 
-  const difficultyLabels: Record<number, string> = {
-    1: 'Anfaenger',
-    5: 'Leicht',
-    10: 'Mittel',
-    15: 'Schwer',
-    20: 'Meister',
+  const getDifficultyLabel = (level: number): string => {
+    if (level <= 1) return t('chess.beginner')
+    if (level <= 5) return t('chess.easy')
+    if (level <= 10) return t('chess.medium')
+    if (level <= 15) return t('chess.hard')
+    return t('chess.master')
   }
 
   return (
@@ -388,7 +391,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            Neues Spiel
+            {t('chess.newGame')}
           </h2>
         </div>
 
@@ -396,7 +399,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
           {/* Game Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Spieltyp
+              {t('chess.gameType')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -408,7 +411,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                 }`}
               >
                 <Bot className="w-5 h-5" />
-                <span className="font-medium">Gegen KI</span>
+                <span className="font-medium">{t('chess.playAgainstAI')}</span>
               </button>
               <button
                 onClick={() => setGameType('multiplayer')}
@@ -419,7 +422,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                 }`}
               >
                 <Users className="w-5 h-5" />
-                <span className="font-medium">Multiplayer</span>
+                <span className="font-medium">{t('chess.multiplayer')}</span>
               </button>
             </div>
           </div>
@@ -428,7 +431,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
           {gameType === 'ai' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Schwierigkeit: {difficultyLabels[aiDifficulty] || `Stufe ${aiDifficulty}`}
+                {t('chess.difficulty')}: {getDifficultyLabel(aiDifficulty)}
               </label>
               <input
                 type="range"
@@ -439,8 +442,8 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>Leicht</span>
-                <span>Schwer</span>
+                <span>{t('chess.easy')}</span>
+                <span>{t('chess.hard')}</span>
               </div>
             </div>
           )}
@@ -448,7 +451,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
           {/* Player Color */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Deine Farbe
+              {t('chess.yourColor')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -460,7 +463,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                 }`}
               >
                 <div className="w-6 h-6 rounded-full bg-white border-2 border-gray-300" />
-                <span className="font-medium">Weiss</span>
+                <span className="font-medium">{t('chess.white')}</span>
               </button>
               <button
                 onClick={() => setPlayerColor('black')}
@@ -471,7 +474,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                 }`}
               >
                 <div className="w-6 h-6 rounded-full bg-gray-800 dark:bg-gray-900" />
-                <span className="font-medium">Schwarz</span>
+                <span className="font-medium">{t('chess.black')}</span>
               </button>
             </div>
           </div>
@@ -479,7 +482,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
           {/* Time Control */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Zeitkontrolle
+              {t('chess.timeControl')}
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[null, 5, 10, 15].map((time) => (
@@ -492,7 +495,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                       : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                   }`}
                 >
-                  {time === null ? 'Keine' : `${time} min`}
+                  {time === null ? t('chess.noTimeLimit') : `${time} min`}
                 </button>
               ))}
             </div>
@@ -504,7 +507,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            Abbrechen
+            {t('common.cancel')}
           </button>
           {gameType === 'ai' ? (
             <button
@@ -517,7 +520,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
               ) : (
                 <ChevronRight className="w-4 h-4" />
               )}
-              Spiel starten
+              {t('chess.startGame')}
             </button>
           ) : (
             <button
@@ -525,7 +528,7 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors"
             >
               <Users className="w-4 h-4" />
-              Spieler einladen
+              {t('chess.invitePlayer')}
             </button>
           )}
         </div>
@@ -554,6 +557,7 @@ function GameView({
   getStatusLabel,
   getStatusColor,
 }: GameViewProps) {
+  const { t } = useTranslation()
   // Determine player color from game data
   const playerColor = game.player_color as 'white' | 'black'
 
@@ -613,7 +617,7 @@ function GameView({
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Zurueck
+            {t('chess.back')}
           </button>
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-1 rounded ${getStatusColor(game.status)}`}>
@@ -628,7 +632,7 @@ function GameView({
             {game.is_ai_game && (
               <span className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
                 <Cpu className="w-3.5 h-3.5" />
-                KI Stufe {game.ai_difficulty}
+                {t('chess.aiLevel')} {game.ai_difficulty}
               </span>
             )}
           </div>
@@ -652,16 +656,16 @@ function GameView({
                 aiThinking ? (
                   <span className="flex items-center justify-center gap-2 text-sm text-purple-600 dark:text-purple-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    KI denkt nach...
+                    {t('chess.aiThinking')}
                   </span>
                 ) : (
                   <span className={`text-sm ${isPlayerTurn ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500'}`}>
-                    {isPlayerTurn ? 'Du bist am Zug' : 'Gegner ist am Zug...'}
+                    {isPlayerTurn ? t('chess.yourTurn') : t('chess.opponentTurn')}
                   </span>
                 )
               ) : (
                 <span className="text-sm text-gray-500">
-                  Spiel beendet: {getStatusLabel(game.status)}
+                  {t('chess.gameEnded')}: {getStatusLabel(game.status)}
                 </span>
               )}
             </div>

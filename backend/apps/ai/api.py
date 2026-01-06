@@ -1,11 +1,14 @@
 import os
 import base64
 import uuid
+import logging
 import httpx
 from ninja import Router, Schema
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
 from typing import Optional, List
+
+logger = logging.getLogger(__name__)
 
 from apps.documents.models import Folder, Document
 from .models import Conversation, Message, Helper
@@ -53,11 +56,10 @@ def generate_image(request, data: ImageGenerateSchema):
 
     # Use provided model or fall back to default
     image_model = data.model or DEFAULT_IMAGE_MODEL
-    print(f'Using image model: {image_model}')
+    logger.debug(f'Using image model: {image_model}')
 
     try:
-        print(f'Calling OpenRouter API with model: {image_model}')
-        print(f'Prompt: {data.prompt}')
+        logger.debug(f'Calling OpenRouter API with model: {image_model}')
 
         # Call OpenRouter with selected image model
         response = httpx.post(
@@ -79,8 +81,7 @@ def generate_image(request, data: ImageGenerateSchema):
             timeout=120.0  # Image generation can take time
         )
 
-        print(f'OpenRouter response status: {response.status_code}')
-        print(f'OpenRouter response: {response.text[:1000]}')
+        logger.debug(f'OpenRouter response status: {response.status_code}')
 
         if response.status_code != 200:
             error_text = response.text
@@ -134,17 +135,14 @@ def generate_image(request, data: ImageGenerateSchema):
                     mime_type = mime_part.split(':')[1].split(';')[0] if ':' in mime_part else 'image/png'
                     return save_image(request.user, bilder_folder, image_data, mime_type, data)
 
-        print(f'Could not extract image. Message keys: {message.keys()}')
-        print(f'Content type: {type(content)}, Content preview: {str(content)[:200]}')
+        logger.warning(f'Could not extract image. Message keys: {message.keys()}, Content type: {type(content)}')
         return 500, {'error': 'Could not extract image from response. Model may not support image generation.'}
 
     except httpx.TimeoutException:
-        print('Timeout exception during image generation')
+        logger.warning('Timeout during image generation')
         return 500, {'error': 'Request timeout - image generation took too long'}
     except Exception as e:
-        import traceback
-        print(f'Exception during image generation: {e}')
-        traceback.print_exc()
+        logger.exception(f'Error during image generation: {e}')
         return 500, {'error': f'Error generating image: {str(e)}'}
 
 

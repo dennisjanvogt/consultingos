@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { Dock } from './Dock'
 import { BottomBar } from './BottomBar'
 import { WindowManager } from './WindowManager'
 import { MenuBar } from './MenuBar'
 import { Spotlight } from './Spotlight'
+import { AIOrb } from './AIOrb'
 import { useWindowStore } from '@/stores/windowStore'
 import { useMasterDataStore } from '@/stores/masterdataStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
@@ -11,9 +12,12 @@ import { useTransactionsStore } from '@/stores/transactionsStore'
 export function Desktop() {
   const windows = useWindowStore((state) => state.windows)
   const tileAllWindows = useWindowStore((state) => state.tileAllWindows)
-  const stageManagerEnabled = useWindowStore((state) => state.stageManagerEnabled)
-  const toggleStageManager = useWindowStore((state) => state.toggleStageManager)
-  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false)
+  const isSpotlightOpen = useWindowStore((state) => state.isSpotlightOpen)
+  const setSpotlightOpen = useWindowStore((state) => state.setSpotlightOpen)
+
+  // Stabile Callbacks für MenuBar und Spotlight
+  const openSpotlight = useCallback(() => setSpotlightOpen(true), [setSpotlightOpen])
+  const closeSpotlight = useCallback(() => setSpotlightOpen(false), [setSpotlightOpen])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -26,7 +30,9 @@ export function Desktop() {
 
       // ESC - Aktives Fenster schließen (global, unabhängig von Focus)
       // Spotlight hat eigenen ESC-Handler, der zuerst greift
-      if (e.key === 'Escape' && !isInput) {
+      // Skip if a modal/preview is open (marked with data-modal-open)
+      const hasOpenModal = document.querySelector('[data-modal-open="true"]')
+      if (e.key === 'Escape' && !isInput && !hasOpenModal) {
         const windowState = useWindowStore.getState()
         if (windowState.activeWindowId && !isSpotlightOpen) {
           const activeWindow = windowState.windows.find(w => w.id === windowState.activeWindowId)
@@ -67,11 +73,14 @@ export function Desktop() {
         }
       }
 
-      // Option/Alt key to open Spotlight (only when closed)
-      // When open, the Spotlight component handles Option for voice recording
-      if (e.key === 'Alt' && !isSpotlightOpen) {
-        e.preventDefault()
-        setIsSpotlightOpen(true)
+      // Option/Alt key DOWN - Start AI Orb (push-to-talk)
+      // Ignore repeated events (key held down)
+      if (e.key === 'Alt' && !e.repeat && !isSpotlightOpen) {
+        const currentOrbOpen = useWindowStore.getState().isOrbOpen
+        if (!currentOrbOpen) {
+          e.preventDefault()
+          useWindowStore.getState().setOrbOpen(true)
+        }
       }
 
       // Arrow Right - Stage Manager aus + Alle Fenster tilen/untilen
@@ -86,14 +95,30 @@ export function Desktop() {
       }
     }
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Option/Alt key UP - Stop AI Orb and send (push-to-talk)
+      if (e.key === 'Alt') {
+        const currentOrbOpen = useWindowStore.getState().isOrbOpen
+        if (currentOrbOpen) {
+          e.preventDefault()
+          useWindowStore.getState().setOrbOpen(false)
+        }
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown, true)  // Capture phase
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [isSpotlightOpen, tileAllWindows, stageManagerEnabled, toggleStageManager])
+    window.addEventListener('keyup', handleKeyUp, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+      window.removeEventListener('keyup', handleKeyUp, true)
+    }
+    // Alt/Orb handlers use getState() for fresh values
+  }, [isSpotlightOpen, tileAllWindows])
 
   return (
     <div className="desktop-bg h-screen w-screen flex flex-col overflow-hidden">
       {/* Menu Bar */}
-      <MenuBar onOpenSpotlight={() => setIsSpotlightOpen(true)} />
+      <MenuBar onOpenSpotlight={openSpotlight} />
 
       {/* Desktop Area with Windows */}
       <div className="flex-1 relative">
@@ -127,6 +152,9 @@ export function Desktop() {
         </div>
         <WindowManager windows={windows} />
 
+        {/* AI Orb - Schwebendes Indikator wenn Chat minimiert */}
+        <AIOrb />
+
         {/* Dock - Overlay */}
         <Dock />
       </div>
@@ -135,7 +163,7 @@ export function Desktop() {
       <BottomBar />
 
       {/* Spotlight AI Assistant */}
-      <Spotlight isOpen={isSpotlightOpen} onClose={() => setIsSpotlightOpen(false)} />
+      <Spotlight isOpen={isSpotlightOpen} onClose={closeSpotlight} />
     </div>
   )
 }

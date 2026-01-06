@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, Loader2, X, Send } from 'lucide-react'
 import { useChessStore } from '@/stores/chessStore'
 
@@ -8,6 +9,7 @@ interface InviteModalProps {
 }
 
 export function InviteModal({ onClose, onInvite }: InviteModalProps) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
   const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white')
@@ -42,7 +44,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            Spieler einladen
+            {t('chess.invitePlayer')}
           </h2>
           <button
             onClick={onClose}
@@ -60,7 +62,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Spieler suchen..."
+              placeholder={t('chess.searchPlayer')}
               className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
             />
           </div>
@@ -69,7 +71,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
           <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
             {availableUsers.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-500">
-                Keine Spieler gefunden
+                {t('chess.noPlayersFound')}
               </div>
             ) : (
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -108,7 +110,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
           {selectedUser && (
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Ausgewaehlt:
+                {t('chess.selected')}:
               </div>
               <div className="font-medium text-gray-800 dark:text-gray-200">
                 {selectedUser.username}
@@ -119,7 +121,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
           {/* Player Color Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Du spielst als:
+              {t('chess.playAs')}:
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -131,7 +133,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
                 }`}
               >
                 <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-300" />
-                <span className="text-sm font-medium">Weiss</span>
+                <span className="text-sm font-medium">{t('chess.white')}</span>
               </button>
               <button
                 onClick={() => setPlayerColor('black')}
@@ -142,7 +144,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
                 }`}
               >
                 <div className="w-5 h-5 rounded-full bg-gray-800 dark:bg-gray-900" />
-                <span className="text-sm font-medium">Schwarz</span>
+                <span className="text-sm font-medium">{t('chess.black')}</span>
               </button>
             </div>
           </div>
@@ -153,7 +155,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            Abbrechen
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleInvite}
@@ -165,7 +167,7 @@ export function InviteModal({ onClose, onInvite }: InviteModalProps) {
             ) : (
               <Send className="w-4 h-4" />
             )}
-            Einladung senden
+            {t('chess.sendInvitation')}
           </button>
         </div>
       </div>

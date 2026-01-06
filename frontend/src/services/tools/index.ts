@@ -7,6 +7,11 @@ import { invoiceTools } from './invoices.tools'
 import { kanbanTools } from './kanban.tools'
 import { timetrackingTools } from './timetracking.tools'
 import { aiTools } from './ai.tools'
+import { dashboardTools } from './dashboard.tools'
+import { searchTools } from './search.tools'
+import { dataTools } from './data.tools'
+import { analysisTools } from './analysis.tools'
+import { inlineWidgetTools } from './inline-widget.tools'
 
 /**
  * Tool Registry - Auto-discovery of all registered tools
@@ -21,6 +26,11 @@ export const toolRegistry: AITool[] = [
   ...kanbanTools,
   ...timetrackingTools,
   ...aiTools,
+  ...dashboardTools,
+  ...searchTools,
+  ...dataTools,
+  ...analysisTools,
+  ...inlineWidgetTools,
 ]
 
 /**
@@ -50,6 +60,64 @@ export const getFilteredToolDefinitions = (enabledTools: string[]): OpenRouterTo
         parameters: tool.parameters
       }
     }))
+
+// Inline chart tools - only available when "Inline Charts" mode is on in Chat
+const INLINE_CHART_TOOL_NAMES = [
+  'inline_stock_chart',
+  'inline_stock_with_ma',
+  'inline_crypto_chart',
+]
+
+// Dashboard tools - ONLY available for AI Orb, NOT for Chat
+// These tools open the AI Dashboard window and should not be triggered from chat
+const DASHBOARD_TOOL_NAMES = [
+  // dashboard.tools.ts
+  'show_chart',
+  'show_info',
+  'show_table',
+  'clear_dashboard',
+  // analysis.tools.ts
+  'linear_regression',
+  'moving_average',
+  'autoregressive',
+  'analyze_stock',
+  'analyze_crypto',
+  // data.tools.ts (tools that open dashboard)
+  'get_stock_history',
+  'compare_stocks',
+  'get_weather_forecast',
+  'get_crypto_chart',
+  'get_exchange_rates',
+  'get_top_cryptos',
+  'create_multi_stock_charts',
+  'create_market_dashboard',
+  'create_crypto_overview',
+]
+
+/**
+ * Get tool definitions for chat
+ * - Dashboard tools are ALWAYS excluded (AI Dashboard is only controlled via AI Orb)
+ * - analysisMode ON: Include inline chart tools (charts appear in chat)
+ * - analysisMode OFF: Exclude inline chart tools too (no charts at all in chat)
+ */
+export const getToolDefinitionsForChat = (analysisMode: boolean): OpenRouterToolDefinition[] => {
+  // Start with all tools except dashboard tools (dashboard is AI Orb only)
+  let tools = toolRegistry.filter(tool => !DASHBOARD_TOOL_NAMES.includes(tool.name))
+
+  // If analysisMode is OFF, also exclude inline chart tools
+  if (!analysisMode) {
+    tools = tools.filter(tool => !INLINE_CHART_TOOL_NAMES.includes(tool.name))
+  }
+
+  return tools.map(tool => ({
+    type: 'function' as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters
+    }
+  }))
+}
 
 /**
  * Execute a tool by name
@@ -98,6 +166,11 @@ export const getToolStats = () => ({
     kanban: kanbanTools.length,
     timetracking: timetrackingTools.length,
     ai: aiTools.length,
+    dashboard: dashboardTools.length,
+    search: searchTools.length,
+    data: dataTools.length,
+    analysis: analysisTools.length,
+    inlineWidgets: inlineWidgetTools.length,
   }
 })
 
@@ -113,6 +186,11 @@ export const getToolsByCategory = (): Record<string, { name: string; description
   'Kanban': kanbanTools.map(t => ({ name: t.name, description: t.description })),
   'Zeiterfassung': timetrackingTools.map(t => ({ name: t.name, description: t.description })),
   'Bilder': aiTools.map(t => ({ name: t.name, description: t.description })),
+  'AI Dashboard': dashboardTools.map(t => ({ name: t.name, description: t.description })),
+  'Web Suche': searchTools.map(t => ({ name: t.name, description: t.description })),
+  'Marktdaten': dataTools.map(t => ({ name: t.name, description: t.description })),
+  'Analyse': analysisTools.map(t => ({ name: t.name, description: t.description })),
+  'Inline Widgets': inlineWidgetTools.map(t => ({ name: t.name, description: t.description })),
 })
 
 // Re-export types

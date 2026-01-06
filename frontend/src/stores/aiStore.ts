@@ -14,6 +14,7 @@ export interface AIModel {
   isVision?: boolean
   isImageGen?: boolean
   isFree?: boolean
+  created?: number  // Unix timestamp
 }
 
 interface AIState {
@@ -28,6 +29,10 @@ interface AIState {
   getChatModelInfo: () => AIModel | undefined
   getImageModelInfo: () => AIModel | undefined
   fetchModels: () => Promise<void>
+
+  // Analysis Mode (for inline visualizations in chat)
+  analysisMode: boolean
+  setAnalysisMode: (enabled: boolean) => void
 
   // Helper management
   helpers: AIHelper[]
@@ -62,6 +67,7 @@ interface OpenRouterModel {
   name: string
   description?: string
   context_length: number
+  created?: number  // Unix timestamp
   pricing: {
     prompt: string  // Price per token as string
     completion: string
@@ -93,6 +99,7 @@ const getProvider = (id: string): string => {
     'amazon': 'Amazon',
     'ai21': 'AI21',
     'nousresearch': 'Nous',
+    'z-ai': 'Z.ai',
     'black-forest-labs': 'FLUX',
     'stability-ai': 'Stability',
     'ideogram': 'Ideogram',
@@ -135,6 +142,7 @@ const convertModel = (model: OpenRouterModel): AIModel => {
     isVision: hasVision,
     isImageGen,
     isFree: inputPrice === 0 && outputPrice === 0,
+    created: model.created,
   }
 }
 
@@ -150,6 +158,10 @@ export const useAIStore = create<AIState>()(
 
       setChatModel: (model) => set({ chatModel: model }),
       setImageModel: (model) => set({ imageModel: model }),
+
+      // Analysis Mode state
+      analysisMode: false,
+      setAnalysisMode: (enabled) => set({ analysisMode: enabled }),
 
       getChatModelInfo: () => get().chatModels.find((m) => m.id === get().chatModel),
       getImageModelInfo: () => get().imageModels.find((m) => m.id === get().imageModel),
@@ -172,9 +184,10 @@ export const useAIStore = create<AIState>()(
           const chatModels = allModels
             .filter(m => !m.isImageGen && m.contextLength > 0)
             .sort((a, b) => {
-              // Sort by provider, then by name
+              // Sort by provider, then by created date (newest first)
               if (a.provider !== b.provider) return a.provider.localeCompare(b.provider)
-              return a.name.localeCompare(b.name)
+              // Newest first within provider
+              return (b.created || 0) - (a.created || 0)
             })
 
           // Filter image models
@@ -182,7 +195,7 @@ export const useAIStore = create<AIState>()(
             .filter(m => m.isImageGen)
             .sort((a, b) => {
               if (a.provider !== b.provider) return a.provider.localeCompare(b.provider)
-              return a.name.localeCompare(b.name)
+              return (b.created || 0) - (a.created || 0)
             })
 
           set({ chatModels, imageModels, isLoadingModels: false })
@@ -360,6 +373,7 @@ export const useAIStore = create<AIState>()(
         chatModel: state.chatModel,
         imageModel: state.imageModel,
         currentHelperId: state.currentHelperId,
+        analysisMode: state.analysisMode,
       }),
     }
   )

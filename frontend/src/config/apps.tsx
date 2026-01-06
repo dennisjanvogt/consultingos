@@ -11,6 +11,8 @@ import {
   MessageSquare,
   Crown,
   Shield,
+  Sparkles,
+  Circle,
 } from 'lucide-react'
 
 // App Components
@@ -25,7 +27,9 @@ import { TimeTrackingApp } from '@/apps/timetracking/TimeTrackingApp'
 import { ImageViewerApp } from '@/apps/imageviewer/ImageViewerApp'
 import { ChatApp } from '@/apps/chat/ChatApp'
 import { ChessApp } from '@/apps/chess/ChessApp'
+import { GoApp } from '@/apps/go/GoApp'
 import { AdminApp } from '@/apps/admin/AdminApp'
+import { AIDashboardApp } from '@/apps/aidashboard/AIDashboardApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'admin'
 
@@ -34,6 +38,7 @@ export interface AppDefinition {
   component: React.ComponentType
   icon: React.ReactNode
   titleKey: string
+  description: string // Beschreibung für AI Agent
   defaultSize: { width: number; height: number }
   category: AppCategory
   canDisable: boolean
@@ -46,6 +51,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: DashboardApp,
     icon: <LayoutDashboard className="h-6 w-6" />,
     titleKey: 'apps.dashboard',
+    description: 'Übersicht mit Umsatz, offenen Rechnungen, letzten Kunden',
     defaultSize: { width: 900, height: 600 },
     category: 'core',
     canDisable: true,
@@ -55,6 +61,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: MasterDataApp,
     icon: <Users className="h-6 w-6" />,
     titleKey: 'apps.masterdata',
+    description: 'Stammdaten: Kunden, Produkte und Steuersätze verwalten',
     defaultSize: { width: 850, height: 600 },
     category: 'core',
     canDisable: true,
@@ -64,6 +71,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: TransactionsApp,
     icon: <FileText className="h-6 w-6" />,
     titleKey: 'apps.transactions',
+    description: 'Bewegungsdaten/Belege: Rechnungen, Angebote und Gutschriften',
     defaultSize: { width: 900, height: 650 },
     category: 'core',
     canDisable: true,
@@ -73,6 +81,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: DocumentsApp,
     icon: <FolderOpen className="h-6 w-6" />,
     titleKey: 'apps.documents',
+    description: 'Dokumentenverwaltung mit Ordnern und Dateien',
     defaultSize: { width: 850, height: 600 },
     category: 'productivity',
     canDisable: true,
@@ -82,6 +91,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: CalendarApp,
     icon: <Calendar className="h-6 w-6" />,
     titleKey: 'apps.calendar',
+    description: 'Termine und Events verwalten',
     defaultSize: { width: 950, height: 650 },
     category: 'productivity',
     canDisable: true,
@@ -91,6 +101,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: KanbanApp,
     icon: <Kanban className="h-6 w-6" />,
     titleKey: 'apps.kanban',
+    description: 'Aufgaben und Projekte im Kanban-Board',
     defaultSize: { width: 1100, height: 700 },
     category: 'productivity',
     canDisable: true,
@@ -100,6 +111,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: ChatApp,
     icon: <MessageSquare className="h-6 w-6" />,
     titleKey: 'apps.chat',
+    description: 'Chat-Assistent mit Gesprächsverlauf',
     defaultSize: { width: 900, height: 650 },
     category: 'productivity',
     canDisable: true,
@@ -109,6 +121,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: TimeTrackingApp,
     icon: <Clock className="h-6 w-6" />,
     titleKey: 'apps.timetracking',
+    description: 'Arbeitszeiten erfassen und Projekte verwalten',
     defaultSize: { width: 950, height: 700 },
     category: 'productivity',
     canDisable: true,
@@ -118,6 +131,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: ImageViewerApp,
     icon: <Image className="h-6 w-6" />,
     titleKey: 'apps.imageviewer',
+    description: 'Bilder anzeigen und generierte Bilder betrachten',
     defaultSize: { width: 800, height: 600 },
     category: 'tools',
     canDisable: true,
@@ -127,7 +141,28 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: ChessApp,
     icon: <Crown className="h-6 w-6" />,
     titleKey: 'apps.chess',
+    description: 'Schach spielen gegen Stockfish AI',
     defaultSize: { width: 900, height: 700 },
+    category: 'tools',
+    canDisable: true,
+  },
+  go: {
+    id: 'go',
+    component: GoApp,
+    icon: <Circle className="h-6 w-6" />,
+    titleKey: 'apps.go',
+    description: 'Go (Weiqi/Baduk) spielen gegen KI',
+    defaultSize: { width: 850, height: 700 },
+    category: 'tools',
+    canDisable: true,
+  },
+  aidashboard: {
+    id: 'aidashboard',
+    component: AIDashboardApp,
+    icon: <Sparkles className="h-6 w-6" />,
+    titleKey: 'apps.aidashboard',
+    description: 'AI Dashboard: Diagramme, Charts, Marktdaten und Visualisierungen',
+    defaultSize: { width: 1000, height: 700 },
     category: 'tools',
     canDisable: true,
   },
@@ -136,18 +171,20 @@ export const appRegistry: Record<string, AppDefinition> = {
     component: SettingsApp,
     icon: <Settings className="h-6 w-6" />,
     titleKey: 'apps.settings',
+    description: 'Einstellungen: Firmendaten, Bankverbindung, Stundensätze',
     defaultSize: { width: 600, height: 500 },
     category: 'core',
-    canDisable: false, // Settings kann nicht deaktiviert werden
+    canDisable: true, // Kann deaktiviert werden - Settings sind auch über BottomBar erreichbar
   },
   admin: {
     id: 'admin',
     component: AdminApp,
     icon: <Shield className="h-6 w-6" />,
     titleKey: 'apps.admin',
+    description: 'Admin-Bereich: Benutzerverwaltung und Systemeinstellungen',
     defaultSize: { width: 700, height: 550 },
     category: 'admin',
-    canDisable: false,
+    canDisable: true,
     adminOnly: true,
   },
 }
@@ -163,6 +200,14 @@ export const getDisableableApps = () => Object.values(appRegistry).filter(app =>
 export const getAppsByCategory = (category: AppCategory) =>
   Object.values(appRegistry).filter(app => app.category === category)
 
+// Für AI Agent: Liste aller Apps mit Beschreibungen
+export const getAppsForAI = (): string => {
+  return Object.values(appRegistry)
+    .filter(app => !app.adminOnly) // Admin-Apps ausblenden
+    .map(app => `- ${app.id}: ${app.description}`)
+    .join('\n')
+}
+
 // Default Dock-Reihenfolge
 export const defaultDockOrder = [
   'dashboard',
@@ -174,6 +219,7 @@ export const defaultDockOrder = [
   'chat',
   'timetracking',
   'chess',
+  'go',
   'settings',
   'admin',
 ]
@@ -189,6 +235,7 @@ export const defaultEnabledApps = [
   'chat',
   'timetracking',
   'chess',
+  'go',
   'settings',
   'admin',
 ]

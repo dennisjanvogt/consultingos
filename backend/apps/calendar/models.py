@@ -51,7 +51,7 @@ class CalendarEvent(models.Model):
     def meeting_link(self):
         """Get the full Jitsi meeting URL"""
         if self.is_meeting and self.meeting_id:
-            jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.jit.si')
+            jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.dennis24.com')
             return f"https://{jitsi_domain}/{self.meeting_id}"
         return None
 

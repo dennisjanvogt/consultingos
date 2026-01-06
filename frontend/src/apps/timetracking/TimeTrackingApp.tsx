@@ -19,15 +19,15 @@ import type {
   ProjectColor,
 } from '@/api/types'
 
-const colorOptions: { value: ProjectColor; label: string; class: string }[] = [
-  { value: 'gray', label: 'Grau', class: 'bg-gray-500' },
-  { value: 'violet', label: 'Lavendel', class: 'bg-lavender-500' },
-  { value: 'green', label: 'Grün', class: 'bg-green-500' },
-  { value: 'yellow', label: 'Gold', class: 'bg-gold-500' },
-  { value: 'red', label: 'Rot', class: 'bg-red-500' },
-  { value: 'purple', label: 'Lila', class: 'bg-purple-500' },
-  { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
-  { value: 'orange', label: 'Orange', class: 'bg-orange-500' },
+const colorOptions: { value: ProjectColor; colorKey: string; class: string }[] = [
+  { value: 'gray', colorKey: 'gray', class: 'bg-gray-500' },
+  { value: 'violet', colorKey: 'violet', class: 'bg-lavender-500' },
+  { value: 'green', colorKey: 'green', class: 'bg-green-500' },
+  { value: 'yellow', colorKey: 'yellow', class: 'bg-gold-500' },
+  { value: 'red', colorKey: 'red', class: 'bg-red-500' },
+  { value: 'purple', colorKey: 'purple', class: 'bg-purple-500' },
+  { value: 'pink', colorKey: 'pink', class: 'bg-pink-500' },
+  { value: 'orange', colorKey: 'orange', class: 'bg-orange-500' },
 ]
 
 function getColorClass(color: ProjectColor): string {
@@ -148,6 +148,7 @@ interface EntriesTabProps {
 }
 
 function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onUpdate, onDelete }: EntriesTabProps) {
+  const { t, i18n } = useTranslation()
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [showForm, setShowForm] = useState(false)
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null)
@@ -267,7 +268,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
           className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Neuer Eintrag
+          {t('timetracking.newEntry')}
         </button>
 
         {/* Week/Day Navigation */}
@@ -283,21 +284,21 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
             {viewMode === 'week' ? (
               <>
                 <span className="font-medium">
-                  {weekDates[0].toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}
+                  {weekDates[0].toLocaleDateString(i18n.language === 'tr' ? 'tr-TR' : i18n.language === 'en' ? 'en-US' : 'de-DE', { day: 'numeric', month: 'short' })}
                   {' - '}
-                  {weekDates[6].toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {weekDates[6].toLocaleDateString(i18n.language === 'tr' ? 'tr-TR' : i18n.language === 'en' ? 'en-US' : 'de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
                 <div className="text-sm text-gray-500">
-                  Gesamt: {formatDuration(getWeekTotal())} h
+                  {t('timetracking.total')}: {formatDuration(getWeekTotal())} h
                 </div>
               </>
             ) : (
               <>
                 <span className="font-medium">
-                  {currentDate.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                  {currentDate.toLocaleDateString(i18n.language === 'tr' ? 'tr-TR' : i18n.language === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
                 <div className="text-sm text-gray-500">
-                  Gesamt: {formatDuration(dayTotal)} h
+                  {t('timetracking.total')}: {formatDuration(dayTotal)} h
                 </div>
               </>
             )}
@@ -322,7 +323,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
             }`}
           >
             <Calendar className="h-4 w-4" />
-            Woche
+            {t('timetracking.week')}
           </button>
           <button
             onClick={() => setViewMode('day')}
@@ -333,7 +334,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
             }`}
           >
             <List className="h-4 w-4" />
-            Tag
+            {t('timetracking.day')}
           </button>
         </div>
       </div>
@@ -343,14 +344,14 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
         <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Projekt</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.project')}</label>
               <select
                 value={formData.project}
                 onChange={(e) => setFormData({ ...formData, project: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 required
               >
-                <option value="">Projekt wählen...</option>
+                <option value="">{t('timetracking.selectProject')}</option>
                 {activeProjects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} ({p.client_name})
@@ -359,7 +360,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Datum</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.date')}</label>
               <input
                 type="date"
                 value={formData.date}
@@ -369,7 +370,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Start</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.startTime')}</label>
               <input
                 type="time"
                 value={formData.start_time}
@@ -379,7 +380,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Ende</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.endTime')}</label>
               <input
                 type="time"
                 value={formData.end_time}
@@ -390,13 +391,13 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Beschreibung</label>
+            <label className="block text-sm font-medium mb-1">{t('timetracking.description')}</label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-              placeholder="Was hast du gemacht?"
+              placeholder={t('timetracking.whatDidYouDo')}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -407,7 +408,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               onChange={(e) => setFormData({ ...formData, billable: e.target.checked })}
               className="rounded"
             />
-            <label htmlFor="billable" className="text-sm">Abrechenbar</label>
+            <label htmlFor="billable" className="text-sm">{t('timetracking.billable')}</label>
           </div>
           <div className="flex gap-2">
             <button
@@ -415,7 +416,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
-              {editingEntry ? 'Speichern' : 'Erstellen'}
+              {editingEntry ? t('common.save') : t('timetracking.create')}
             </button>
             <button
               type="button"
@@ -426,7 +427,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               className="flex items-center gap-2 px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
             >
               <X className="h-4 w-4" />
-              Abbrechen
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -436,22 +437,22 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
       {deleteConfirmEntry && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold mb-2">Eintrag löschen?</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('timetracking.deleteEntry')}</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Möchtest du den Eintrag "{deleteConfirmEntry.project_name}" vom {deleteConfirmEntry.date} ({deleteConfirmEntry.start_time} - {deleteConfirmEntry.end_time}) wirklich löschen?
+              {t('timetracking.deleteEntryConfirm', { name: deleteConfirmEntry.project_name, date: deleteConfirmEntry.date, start: deleteConfirmEntry.start_time, end: deleteConfirmEntry.end_time })}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirmEntry(null)}
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Löschen
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -474,7 +475,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-sm font-medium">
-                    {date.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric' })}
+                    {date.toLocaleDateString(i18n.language === 'tr' ? 'tr-TR' : i18n.language === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric' })}
                   </div>
                   <button
                     onClick={() => handleNewEntry(date)}
@@ -525,7 +526,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
         <div className="space-y-2">
           {dayEntries.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
-              Keine Einträge für diesen Tag
+              {t('timetracking.noEntriesForDay')}
             </div>
           ) : (
             dayEntries.map((entry) => {
@@ -538,7 +539,7 @@ function EntriesTab({ entries, projects, currentDate, setCurrentDate, onAdd, onU
                   <div className={`w-2 h-12 rounded-full ${getColorClass(project?.color || 'gray')}`} />
                   <div className="flex-1">
                     <div className="font-medium">{entry.project_name}</div>
-                    <div className="text-sm text-gray-500">{entry.description || 'Keine Beschreibung'}</div>
+                    <div className="text-sm text-gray-500">{entry.description || t('timetracking.noDescription')}</div>
                   </div>
                   <div className="text-right">
                     <div className="font-mono text-lg">{formatDuration(entry.duration_minutes)}</div>
@@ -581,6 +582,7 @@ interface ProjectsTabProps {
 }
 
 function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsTabProps) {
+  const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [editingProject, setEditingProject] = useState<TimeTrackingProject | null>(null)
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<TimeTrackingProject | null>(null)
@@ -652,28 +654,28 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
         className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
-        Neues Projekt
+        {t('timetracking.newProject')}
       </button>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Kunde</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.client')}</label>
               <select
                 value={formData.client}
                 onChange={(e) => setFormData({ ...formData, client: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 required
               >
-                <option value="">Kunde wählen...</option>
+                <option value="">{t('timetracking.selectClient')}</option>
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.name')}</label>
               <input
                 type="text"
                 value={formData.name}
@@ -683,7 +685,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Stundensatz (€)</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.hourlyRateLabel')}</label>
               <input
                 type="number"
                 step="0.01"
@@ -693,7 +695,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Farbe</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.color')}</label>
               <div className="flex gap-1">
                 {colorOptions.map((c) => (
                   <button
@@ -709,7 +711,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Beschreibung</label>
+            <label className="block text-sm font-medium mb-1">{t('timetracking.description')}</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -723,7 +725,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
               className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
-              {editingProject ? 'Speichern' : 'Erstellen'}
+              {editingProject ? t('common.save') : t('timetracking.create')}
             </button>
             <button
               type="button"
@@ -734,7 +736,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
               className="flex items-center gap-2 px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
             >
               <X className="h-4 w-4" />
-              Abbrechen
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -744,22 +746,22 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
       {deleteConfirmProject && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold mb-2">Projekt löschen?</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('timetracking.deleteProject')}</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Möchtest du das Projekt "{deleteConfirmProject.name}" wirklich löschen?
+              {t('timetracking.deleteProjectConfirm', { name: deleteConfirmProject.name })}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirmProject(null)}
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Löschen
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -769,7 +771,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
       {/* Projects List */}
       <div className="space-y-2">
         {projects.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Keine Projekte vorhanden</p>
+          <p className="text-gray-500 text-center py-8">{t('timetracking.noProjects')}</p>
         ) : (
           projects.map((project) => (
             <div
@@ -787,7 +789,7 @@ function ProjectsTab({ projects, clients, onAdd, onUpdate, onDelete }: ProjectsT
                 <div className="text-right">
                   <div className="font-medium">{project.hourly_rate} €/h</div>
                   <div className={`text-xs ${project.status === 'active' ? 'text-green-500' : 'text-gray-500'}`}>
-                    {project.status === 'active' ? 'Aktiv' : 'Archiviert'}
+                    {project.status === 'active' ? t('timetracking.status.active') : t('timetracking.status.archived')}
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -823,6 +825,7 @@ interface ClientsTabProps {
 }
 
 function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
+  const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [editingClient, setEditingClient] = useState<TimeTrackingClient | null>(null)
   const [deleteConfirmClient, setDeleteConfirmClient] = useState<TimeTrackingClient | null>(null)
@@ -883,14 +886,14 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
         className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-600 transition-colors"
       >
         <Plus className="h-4 w-4" />
-        Neuer Kunde
+        {t('timetracking.newClient')}
       </button>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.name')}</label>
               <input
                 type="text"
                 value={formData.name}
@@ -900,7 +903,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">E-Mail</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.email')}</label>
               <input
                 type="email"
                 value={formData.email}
@@ -909,7 +912,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Telefon</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.phone')}</label>
               <input
                 type="tel"
                 value={formData.phone}
@@ -918,7 +921,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Adresse</label>
+              <label className="block text-sm font-medium mb-1">{t('timetracking.address')}</label>
               <input
                 type="text"
                 value={formData.address}
@@ -928,7 +931,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Notizen</label>
+            <label className="block text-sm font-medium mb-1">{t('timetracking.notes')}</label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -942,7 +945,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
               className="flex items-center gap-2 px-4 py-2 bg-lavender-500 text-white rounded-lg hover:bg-lavender-600"
             >
               <Check className="h-4 w-4" />
-              {editingClient ? 'Speichern' : 'Erstellen'}
+              {editingClient ? t('common.save') : t('timetracking.create')}
             </button>
             <button
               type="button"
@@ -953,7 +956,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
               className="flex items-center gap-2 px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
             >
               <X className="h-4 w-4" />
-              Abbrechen
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -963,22 +966,22 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
       {deleteConfirmClient && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold mb-2">Kunde löschen?</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('timetracking.deleteClient')}</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Möchtest du den Kunden "{deleteConfirmClient.name}" wirklich löschen?
+              {t('timetracking.deleteClientConfirm', { name: deleteConfirmClient.name })}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirmClient(null)}
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Löschen
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -988,7 +991,7 @@ function ClientsTab({ clients, onAdd, onUpdate, onDelete }: ClientsTabProps) {
       {/* Clients List */}
       <div className="space-y-2">
         {clients.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Keine Kunden vorhanden</p>
+          <p className="text-gray-500 text-center py-8">{t('timetracking.noClients')}</p>
         ) : (
           clients.map((client) => (
             <div
@@ -1030,8 +1033,10 @@ interface ReportsTabProps {
 }
 
 function ReportsTab({ summary }: ReportsTabProps) {
+  const { t } = useTranslation()
+
   if (!summary) {
-    return <p className="text-gray-500 text-center py-8">Keine Daten für diesen Zeitraum</p>
+    return <p className="text-gray-500 text-center py-8">{t('timetracking.noDataForPeriod')}</p>
   }
 
   return (
@@ -1039,29 +1044,29 @@ function ReportsTab({ summary }: ReportsTabProps) {
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-lavender-50 dark:bg-lavender-900/20 p-4 rounded-lg">
-          <div className="text-sm text-lavender-600 dark:text-lavender-400">Gesamt Stunden</div>
+          <div className="text-sm text-lavender-600 dark:text-lavender-400">{t('timetracking.totalHours')}</div>
           <div className="text-2xl font-bold text-lavender-700 dark:text-lavender-300">
             {summary.total_hours.toFixed(1)} h
           </div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-          <div className="text-sm text-green-600 dark:text-green-400">Gesamt Umsatz</div>
+          <div className="text-sm text-green-600 dark:text-green-400">{t('timetracking.totalRevenue')}</div>
           <div className="text-2xl font-bold text-green-700 dark:text-green-300">
             {summary.total_revenue.toFixed(2)} €
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Anzahl Einträge</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('timetracking.entryCount')}</div>
           <div className="text-2xl font-bold">{summary.entries_count}</div>
         </div>
       </div>
 
       {/* By Project */}
       <div>
-        <h3 className="font-medium mb-3">Nach Projekt</h3>
+        <h3 className="font-medium mb-3">{t('timetracking.byProject')}</h3>
         <div className="space-y-2">
           {summary.by_project.length === 0 ? (
-            <p className="text-gray-500">Keine Projektdaten</p>
+            <p className="text-gray-500">{t('timetracking.noProjectData')}</p>
           ) : (
             summary.by_project.map((p: any) => (
               <div
@@ -1081,10 +1086,10 @@ function ReportsTab({ summary }: ReportsTabProps) {
 
       {/* By Client */}
       <div>
-        <h3 className="font-medium mb-3">Nach Kunde</h3>
+        <h3 className="font-medium mb-3">{t('timetracking.byClient')}</h3>
         <div className="space-y-2">
           {summary.by_client.length === 0 ? (
-            <p className="text-gray-500">Keine Kundendaten</p>
+            <p className="text-gray-500">{t('timetracking.noClientData')}</p>
           ) : (
             summary.by_client.map((c: any) => (
               <div

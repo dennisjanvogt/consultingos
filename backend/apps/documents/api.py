@@ -1,3 +1,5 @@
+import os
+import re
 from ninja import Router, File, Schema
 from ninja.files import UploadedFile
 from django.shortcuts import get_object_or_404
@@ -8,6 +10,50 @@ from .models import Folder, Document
 from .signals import create_default_folders_for_user
 
 router = Router()
+
+# File upload constraints
+MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB
+ALLOWED_EXTENSIONS = {
+    # Documents
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.csv', '.rtf', '.odt', '.ods',
+    # Images
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico',
+    # Audio
+    '.mp3', '.wav', '.ogg', '.webm', '.m4a', '.flac',
+    # Video
+    '.mp4', '.avi', '.mov', '.mkv', '.wmv',
+    # Archives
+    '.zip', '.rar', '.7z', '.tar', '.gz',
+}
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to prevent directory traversal and special chars"""
+    # Get base name (remove path)
+    filename = os.path.basename(filename)
+    # Replace potentially dangerous characters
+    filename = re.sub(r'[^\w\s\-\.]', '_', filename)
+    # Remove multiple consecutive underscores/spaces
+    filename = re.sub(r'[\s_]+', '_', filename)
+    # Limit length
+    name, ext = os.path.splitext(filename)
+    if len(name) > 100:
+        name = name[:100]
+    return f"{name}{ext}"
+
+
+def validate_file(file: UploadedFile) -> tuple[bool, str]:
+    """Validate uploaded file. Returns (is_valid, error_message)"""
+    # Check file size
+    if file.size > MAX_FILE_SIZE:
+        return False, f'Datei zu groß. Maximum: {MAX_FILE_SIZE // (1024*1024*1024)} GB'
+
+    # Check extension
+    _, ext = os.path.splitext(file.name.lower())
+    if ext not in ALLOWED_EXTENSIONS:
+        return False, f'Dateityp nicht erlaubt: {ext}'
+
+    return True, ''
 
 
 # Schemas
@@ -118,7 +164,7 @@ def delete_folder(request, folder_id: int):
 @router.get('/', response=List[DocumentSchema])
 def list_documents(request, folder_id: Optional[int] = None, search: str = ''):
     """List all documents for the current user"""
-    docs = Document.objects.filter(user=request.user)
+    docs = Document.objects.filter(user=request.user).select_related('folder')
 
     if folder_id is not None:
         docs = docs.filter(folder_id=folder_id)
@@ -135,6 +181,14 @@ def list_documents(request, folder_id: Optional[int] = None, search: str = ''):
 @router.post('/', response={201: DocumentSchema, 400: ErrorSchema})
 def upload_document(request, file: UploadedFile = File(...), folder_id: Optional[int] = None, description: str = ''):
     """Upload a new document"""
+    # Validate file
+    is_valid, error_msg = validate_file(file)
+    if not is_valid:
+        return 400, {'error': error_msg}
+
+    # Sanitize filename
+    safe_name = sanitize_filename(file.name)
+
     folder = None
     if folder_id:
         folder = get_object_or_404(Folder, id=folder_id, user=request.user)
@@ -142,7 +196,7 @@ def upload_document(request, file: UploadedFile = File(...), folder_id: Optional
     doc = Document.objects.create(
         user=request.user,
         folder=folder,
-        name=file.name,
+        name=safe_name,
         file=file,
         description=description
     )

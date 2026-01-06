@@ -44,7 +44,7 @@ class CalendarEventSchema(Schema):
     @staticmethod
     def resolve_meeting_link(obj):
         if obj.is_meeting and obj.meeting_id:
-            jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.jit.si')
+            jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.dennis24.com')
             return f"https://{jitsi_domain}/{obj.meeting_id}"
         return None
 
@@ -232,6 +232,9 @@ class MeetingInfoSchema(Schema):
     event_description: str
     meeting_link: str
     host_name: str
+    rsvp_status: str
+    invitee_name: str
+    invitee_email: str
 
 
 @router.get('/join/{token}', response={200: MeetingInfoSchema, 404: ErrorSchema}, auth=None)
@@ -243,7 +246,7 @@ def get_meeting_info(request, token: str):
     if not event.is_meeting or not event.meeting_id:
         return 404, {'error': 'Meeting nicht gefunden'}
 
-    jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.jit.si')
+    jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.dennis24.com')
 
     return {
         'event_title': event.title,
@@ -253,5 +256,70 @@ def get_meeting_info(request, token: str):
         'event_location': event.location,
         'event_description': event.description,
         'meeting_link': f"https://{jitsi_domain}/{event.meeting_id}",
-        'host_name': event.user.get_full_name() or event.user.email
+        'host_name': event.user.get_full_name() or event.user.email,
+        'rsvp_status': invitation.status,
+        'invitee_name': invitation.name,
+        'invitee_email': invitation.email,
     }
+
+
+class RSVPResponseSchema(Schema):
+    status: str
+    message: str
+
+
+@router.post('/rsvp/{token}/accept', response={200: RSVPResponseSchema, 404: ErrorSchema}, auth=None)
+def accept_invitation(request, token: str):
+    """Accept a meeting invitation (public endpoint)"""
+    from django.utils import timezone
+
+    invitation = get_object_or_404(EventInvitation, invitation_token=token)
+    invitation.status = 'accepted'
+    invitation.responded_at = timezone.now()
+    invitation.save()
+
+    return {'status': 'accepted', 'message': 'Einladung angenommen'}
+
+
+@router.post('/rsvp/{token}/decline', response={200: RSVPResponseSchema, 404: ErrorSchema}, auth=None)
+def decline_invitation(request, token: str):
+    """Decline a meeting invitation (public endpoint)"""
+    from django.utils import timezone
+
+    invitation = get_object_or_404(EventInvitation, invitation_token=token)
+    invitation.status = 'declined'
+    invitation.responded_at = timezone.now()
+    invitation.save()
+
+    return {'status': 'declined', 'message': 'Einladung abgelehnt'}
+
+
+@router.get('/rsvp/{token}/status', response={200: RSVPResponseSchema, 404: ErrorSchema}, auth=None)
+def get_rsvp_status(request, token: str):
+    """Get current RSVP status (public endpoint)"""
+    invitation = get_object_or_404(EventInvitation, invitation_token=token)
+
+    status_messages = {
+        'pending': 'Noch keine Antwort',
+        'accepted': 'Angenommen',
+        'declined': 'Abgelehnt',
+    }
+
+    return {'status': invitation.status, 'message': status_messages.get(invitation.status, '')}
+
+
+@router.get('/ics/{token}', auth=None)
+def download_ics(request, token: str):
+    """Download ICS calendar file for an event (public endpoint)"""
+    from django.http import HttpResponse
+    from .services import generate_ics_content
+
+    invitation = get_object_or_404(EventInvitation, invitation_token=token)
+    event = invitation.event
+
+    ics_content = generate_ics_content(event, invitation)
+    filename = f"{event.title.replace(' ', '_')}.ics"
+
+    response = HttpResponse(ics_content, content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

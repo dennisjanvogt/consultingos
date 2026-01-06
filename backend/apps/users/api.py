@@ -17,6 +17,7 @@ class UserSchema(Schema):
     last_name: str
     is_approved: bool
     is_staff: bool
+    avatar_url: str | None = None
 
 
 class PendingUserSchema(Schema):
@@ -50,6 +51,32 @@ def get_current_user(request: HttpRequest):
             return 403, {'error': 'Account pending approval'}
         return 200, request.user
     return 401, {'error': 'Not authenticated'}
+
+
+class UpdateProfileSchema(Schema):
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+
+
+@router.put('/me', response={200: UserSchema, 401: ErrorSchema, 403: ErrorSchema})
+def update_current_user(request: HttpRequest, data: UpdateProfileSchema):
+    """Update current user's profile"""
+    if not request.user.is_authenticated:
+        return 401, {'error': 'Not authenticated'}
+    if not request.user.is_approved:
+        return 403, {'error': 'Account pending approval'}
+
+    user = request.user
+    if data.first_name is not None:
+        user.first_name = data.first_name
+    if data.last_name is not None:
+        user.last_name = data.last_name
+    if data.email is not None:
+        user.email = data.email
+    user.save()
+
+    return 200, user
 
 
 class GitHubAuthUrlSchema(Schema):
@@ -155,6 +182,7 @@ def github_callback(request: HttpRequest, data: GitHubCallbackSchema):
 
         github_username = github_user.get('login')
         github_name = github_user.get('name', '')
+        github_avatar = github_user.get('avatar_url')
 
         # Try to find existing user by GitHub username first
         from django.contrib.auth import get_user_model
@@ -166,8 +194,9 @@ def github_callback(request: HttpRequest, data: GitHubCallbackSchema):
             # Try to find by email
             user = User.objects.filter(email=primary_email).first()
             if user:
-                # Link GitHub username to existing user
+                # Link GitHub username and avatar to existing user
                 user.github_username = github_username
+                user.avatar_url = github_avatar
                 user.save()
 
         is_new_user = False
@@ -181,6 +210,7 @@ def github_callback(request: HttpRequest, data: GitHubCallbackSchema):
                 is_approved=False,
             )
             user.github_username = github_username
+            user.avatar_url = github_avatar
             # Set name if available
             if github_name:
                 name_parts = github_name.split(' ', 1)
@@ -188,6 +218,11 @@ def github_callback(request: HttpRequest, data: GitHubCallbackSchema):
                 if len(name_parts) > 1:
                     user.last_name = name_parts[1]
             user.save()
+        else:
+            # Update avatar for existing user on each login
+            if github_avatar and user.avatar_url != github_avatar:
+                user.avatar_url = github_avatar
+                user.save()
 
         # Clean up session state
         if 'github_oauth_state' in request.session:
@@ -285,6 +320,7 @@ class AdminUserSchema(Schema):
     first_name: str
     last_name: str
     github_username: str | None
+    avatar_url: str | None
     is_approved: bool
     is_staff: bool
     is_active: bool
@@ -310,6 +346,7 @@ def list_all_users(request: HttpRequest):
             'first_name': u.first_name,
             'last_name': u.last_name,
             'github_username': u.github_username,
+            'avatar_url': u.avatar_url,
             'is_approved': u.is_approved,
             'is_staff': u.is_staff,
             'is_active': u.is_active,

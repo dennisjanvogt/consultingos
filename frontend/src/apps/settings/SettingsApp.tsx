@@ -2,22 +2,26 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/components/shell/ThemeProvider'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { Building2, CreditCard, Receipt, Palette, LayoutGrid } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
+import { Building2, CreditCard, Receipt, Palette, LayoutGrid, User as UserIcon, ShieldCheck } from 'lucide-react'
 import { AppsTab } from './AppsTab'
+import type { User } from '@/api/types'
 
-type SettingsTab = 'company' | 'banking' | 'invoices' | 'appearance' | 'apps'
+type SettingsTab = 'profile' | 'company' | 'banking' | 'invoices' | 'appearance' | 'apps'
 
 export function SettingsApp() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('company')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const { settings, fetchSettings } = useSettingsStore()
+  const { user } = useAuthStore()
 
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
 
   const tabs = [
+    { id: 'profile' as const, label: t('settings.profile', 'Profil'), icon: UserIcon },
     { id: 'company' as const, label: t('settings.company'), icon: Building2 },
     { id: 'banking' as const, label: t('settings.banking'), icon: CreditCard },
     { id: 'invoices' as const, label: t('settings.invoiceSettings'), icon: Receipt },
@@ -47,6 +51,7 @@ export function SettingsApp() {
 
       {/* Content */}
       <div className="flex-1 p-6 overflow-auto">
+        {activeTab === 'profile' && user && <ProfileSettings user={user} />}
         {activeTab === 'company' && <CompanySettings settings={settings} />}
         {activeTab === 'banking' && <BankingSettings settings={settings} />}
         {activeTab === 'invoices' && <InvoiceSettings settings={settings} />}
@@ -62,6 +67,145 @@ export function SettingsApp() {
           />
         )}
         {activeTab === 'apps' && <AppsTab />}
+      </div>
+    </div>
+  )
+}
+
+interface ProfileSettingsProps {
+  user: User
+}
+
+function ProfileSettings({ user }: ProfileSettingsProps) {
+  const { t } = useTranslation()
+  const { updateProfile } = useAuthStore()
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [formData, setFormData] = useState({
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    email: user.email || '',
+  })
+
+  useEffect(() => {
+    setFormData({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      email: user.email || '',
+    })
+  }, [user])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    setSaveSuccess(false)
+    const success = await updateProfile(formData)
+    setIsSaving(false)
+    if (success) {
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
+    }
+  }
+
+  const initials = user.first_name
+    ? `${user.first_name[0]}${user.last_name?.[0] || ''}`.toUpperCase()
+    : user.username.slice(0, 2).toUpperCase()
+
+  return (
+    <div className="max-w-lg">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6">
+        {t('settings.profile', 'Profil')}
+      </h2>
+
+      {/* Profile Header */}
+      <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+        {/* Avatar */}
+        <div className="relative">
+          {user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={user.username}
+              className="w-16 h-16 rounded-full object-cover ring-2 ring-white dark:ring-gray-700"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center ring-2 ring-white dark:ring-gray-700">
+              <span className="text-xl font-bold text-white">{initials}</span>
+            </div>
+          )}
+          {user.is_staff && (
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-gray-800">
+              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+            </div>
+          )}
+        </div>
+
+        {/* User Info */}
+        <div>
+          <p className="font-semibold text-gray-900 dark:text-white">@{user.username}</p>
+          {user.is_staff && (
+            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">
+              <ShieldCheck className="w-3 h-3" />
+              Administrator
+            </span>
+          )}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {t('settings.profileAvatarHint', 'Avatar wird von GitHub geladen')}
+          </p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <InputField
+            label={t('settings.firstName', 'Vorname')}
+            value={formData.first_name}
+            onChange={(v) => setFormData({ ...formData, first_name: v })}
+            placeholder="Max"
+          />
+          <InputField
+            label={t('settings.lastName', 'Nachname')}
+            value={formData.last_name}
+            onChange={(v) => setFormData({ ...formData, last_name: v })}
+            placeholder="Mustermann"
+          />
+        </div>
+
+        <InputField
+          label={t('settings.email', 'E-Mail')}
+          value={formData.email}
+          onChange={(v) => setFormData({ ...formData, email: v })}
+          placeholder="max@example.com"
+          type="email"
+        />
+
+        <div className="pt-2 flex items-center gap-3">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="text-sm bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg transition-colors hover:bg-gray-700 dark:hover:bg-gray-200 disabled:opacity-50"
+          >
+            {isSaving ? '...' : t('common.save')}
+          </button>
+          {saveSuccess && (
+            <span className="text-sm text-green-600 dark:text-green-400">
+              {t('common.saved', 'Gespeichert!')}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Account Info */}
+      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          {t('settings.accountInfo', 'Kontoinformationen')}
+        </h3>
+        <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+          <p><span className="font-medium">ID:</span> {user.id}</p>
+          <p><span className="font-medium">Username:</span> @{user.username}</p>
+          {user.is_staff && (
+            <p><span className="font-medium">Rolle:</span> Administrator</p>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -370,6 +514,16 @@ function AppearanceSettings({ theme, setTheme, language, setLanguage }: Appearan
               }`}
             >
               English
+            </button>
+            <button
+              onClick={() => setLanguage('tr')}
+              className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                language === 'tr'
+                  ? 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              Turkce
             </button>
           </div>
         </div>

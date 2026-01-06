@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { useWindowStore, type AppType } from '@/stores/windowStore'
 import { useAppSettingsStore } from '@/stores/appSettingsStore'
@@ -24,51 +24,65 @@ export function Dock() {
     fetchSettings()
   }, [fetchSettings])
 
-  const hasVisibleWindows = windows.some((w) => !w.isMinimized)
+  // Memoize derived state
+  const hasVisibleWindows = useMemo(
+    () => windows.some((w) => !w.isMinimized),
+    [windows]
+  )
   const shouldShow = !hasVisibleWindows || showDock
 
-  const isAppOpen = (appId: string) => {
-    return windows.some((w) => w.appId === appId && !w.isMinimized)
-  }
+  // Set für O(1) lookup statt O(n) windows.some() pro Item
+  const openAppIds = useMemo(
+    () => new Set(windows.filter((w) => !w.isMinimized).map((w) => w.appId)),
+    [windows]
+  )
 
   // Dock Items aus der Registry basierend auf Settings (Reihenfolge + nur aktivierte Apps)
   // Admin-only Apps nur für Staff-User anzeigen
-  const dockItems: DockItem[] = settings.dock_order
-    .filter(id => {
-      const app = appRegistry[id]
-      if (!app || !isAppEnabled(id)) return false
-      if (app.adminOnly && !user?.is_staff) return false
-      return true
-    })
-    .map(id => ({
-      id,
-      icon: appRegistry[id].icon,
-      labelKey: appRegistry[id].titleKey,
-    }))
+  const dockItems: DockItem[] = useMemo(() =>
+    settings.dock_order
+      .filter(id => {
+        const app = appRegistry[id]
+        if (!app || !isAppEnabled(id)) return false
+        if (app.adminOnly && !user?.is_staff) return false
+        return true
+      })
+      .map(id => ({
+        id,
+        icon: appRegistry[id].icon,
+        labelKey: appRegistry[id].titleKey,
+      })),
+    [settings.dock_order, isAppEnabled, user?.is_staff]
+  )
 
   // Handle reorder - update dock_order with new positions
-  const handleReorder = (newItems: DockItem[]) => {
+  const handleReorder = useCallback((newItems: DockItem[]) => {
     const newOrder = newItems.map(item => item.id)
     // Behalte deaktivierte Apps in der Reihenfolge
     const disabledApps = settings.dock_order.filter(id => !isAppEnabled(id))
     reorderDock([...newOrder, ...disabledApps])
-  }
+  }, [settings.dock_order, isAppEnabled, reorderDock])
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current)
       hideTimeoutRef.current = null
     }
     setShowDock(true)
-  }
+  }, [setShowDock])
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (hasVisibleWindows) {
       hideTimeoutRef.current = window.setTimeout(() => {
         setShowDock(false)
       }, 1300)
     }
-  }
+  }, [hasVisibleWindows, setShowDock])
+
+  // Stabile onClick Handler für jedes Item
+  const handleItemClick = useCallback((id: string) => {
+    openWindow(id as AppType)
+  }, [openWindow])
 
   return (
     <AnimatePresence>
@@ -94,8 +108,8 @@ export function Dock() {
                 key={item.id}
                 item={item}
                 label={t(item.labelKey)}
-                isOpen={isAppOpen(item.id)}
-                onClick={() => openWindow(item.id as AppType)}
+                isOpen={openAppIds.has(item.id)}
+                onClick={handleItemClick}
               />
             ))}
           </Reorder.Group>
@@ -109,10 +123,14 @@ interface DockIconProps {
   item: DockItem
   label: string
   isOpen: boolean
-  onClick: () => void
+  onClick: (id: string) => void
 }
 
-function DockIcon({ item, label, isOpen, onClick }: DockIconProps) {
+// Memoized DockIcon verhindert unnötige Re-Renders
+const DockIcon = memo(function DockIcon({ item, label, isOpen, onClick }: DockIconProps) {
+  // Stabiler onClick Handler für dieses Item
+  const handleClick = useCallback(() => onClick(item.id), [onClick, item.id])
+
   return (
     <Reorder.Item
       value={item}
@@ -127,7 +145,7 @@ function DockIcon({ item, label, isOpen, onClick }: DockIconProps) {
     >
       {/* Clickable Area */}
       <button
-        onClick={onClick}
+        onClick={handleClick}
         className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm"
       >
         {item.icon}
@@ -150,4 +168,4 @@ function DockIcon({ item, label, isOpen, onClick }: DockIconProps) {
       )}
     </Reorder.Item>
   )
-}
+})

@@ -27,6 +27,8 @@ interface WindowStore {
   stageManagerEnabled: boolean
   showStageThumbnails: boolean
   showDock: boolean
+  isSpotlightOpen: boolean
+  isOrbOpen: boolean
   openWindow: (appId: AppType) => void
   closeWindow: (id: string) => void
   minimizeWindow: (id: string) => void
@@ -43,6 +45,10 @@ interface WindowStore {
   setShowStageThumbnails: (show: boolean) => void
   setShowDock: (show: boolean) => void
   centerActiveWindow: () => void
+  minimizeByAppId: (appId: AppType) => void
+  closeWindowByAppId: (appId: AppType) => void
+  setSpotlightOpen: (open: boolean) => void
+  setOrbOpen: (open: boolean) => void
 }
 
 // App titles und sizes kommen jetzt aus der zentralen Registry (src/config/apps.tsx)
@@ -78,6 +84,8 @@ export const useWindowStore = create<WindowStore>()(
   stageManagerEnabled: true,
   showStageThumbnails: false,
   showDock: false,
+  isSpotlightOpen: false,
+  isOrbOpen: false,
 
   openWindow: (appId) => {
     const { windows, nextZIndex } = get()
@@ -266,29 +274,23 @@ export const useWindowStore = create<WindowStore>()(
       return
     }
 
-    // Maximierte Fenster de-maximieren
-    const hasMaximized = visibleWindows.some((w) => w.isMaximized)
-    if (hasMaximized) {
-      set((state) => ({
-        windows: state.windows.map((w) => {
-          if (!visibleWindows.find((v) => v.id === w.id)) return w
-          if (w.isMaximized) {
-            return { ...w, isMaximized: false }
-          }
-          return w
-        })
-      }))
-    }
-
-    // Alle sichtbaren Fenster tilen (max 8)
+    // Alle sichtbaren Fenster tilen (max 8) - kombiniert de-maximize und tiling in einem set()
     const toTile = visibleWindows.slice(0, 8)
+    // Map für O(1) lookup statt O(n) find/findIndex
+    const toTileMap = new Map(toTile.map((w, i) => [w.id, i]))
+    const baseTimestamp = Date.now()
+
     set((state) => ({
       windows: state.windows.map((w) => {
-        if (!toTile.find((t) => t.id === w.id)) return w
+        const tileIndex = toTileMap.get(w.id)
+        if (tileIndex === undefined) return w
+
+        // De-maximize und tile in einem Schritt
         return {
           ...w,
+          isMaximized: false,
           isTiled: true,
-          tiledAt: Date.now() + toTile.findIndex((t) => t.id === w.id), // Reihenfolge beibehalten
+          tiledAt: baseTimestamp + tileIndex, // Reihenfolge beibehalten
           previousPosition: w.isTiled ? w.previousPosition : { ...w.position },
           previousSize: w.isTiled ? w.previousSize : { ...w.size },
         }
@@ -422,12 +424,15 @@ export const useWindowStore = create<WindowStore>()(
       }
     }
 
+    // Create a Map for O(1) lookup instead of O(n) findIndex
+    const tiledIndexMap = new Map(tiledWindows.map((tw, i) => [tw.id, i]))
+
     // Update Fenster-Positionen
     set((state) => ({
       windows: state.windows.map((w) => {
         if (!w.isTiled) return w
-        const index = tiledWindows.findIndex((tw) => tw.id === w.id)
-        if (index === -1 || !positions[index]) return w
+        const index = tiledIndexMap.get(w.id)
+        if (index === undefined || !positions[index]) return w
         return {
           ...w,
           position: { x: positions[index].x, y: positions[index].y },
@@ -528,6 +533,30 @@ export const useWindowStore = create<WindowStore>()(
           : w
       ),
     }))
+  },
+
+  minimizeByAppId: (appId) => {
+    const { windows } = get()
+    const targetWindow = windows.find((w) => w.appId === appId && !w.isMinimized)
+    if (targetWindow) {
+      get().minimizeWindow(targetWindow.id)
+    }
+  },
+
+  closeWindowByAppId: (appId) => {
+    const { windows } = get()
+    const targetWindow = windows.find((w) => w.appId === appId)
+    if (targetWindow) {
+      get().closeWindow(targetWindow.id)
+    }
+  },
+
+  setSpotlightOpen: (open) => {
+    set({ isSpotlightOpen: open })
+  },
+
+  setOrbOpen: (open) => {
+    set({ isOrbOpen: open })
   },
     }),
     {

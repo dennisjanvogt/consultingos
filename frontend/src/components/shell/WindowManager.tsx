@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo, memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { Window as WindowType } from '@/stores/windowStore'
@@ -21,31 +21,43 @@ export function WindowManager({ windows }: WindowManagerProps) {
 
   const hideTimeoutRef = useRef<number | null>(null)
 
-  // Zentriere aktives Fenster wenn es wechselt (nur im Stage Manager)
-  useEffect(() => {
-    if (stageManagerEnabled && activeWindowId) {
-      centerActiveWindow()
-    }
-  }, [activeWindowId, stageManagerEnabled, centerActiveWindow])
+  // Memoize derived state to prevent unnecessary recalculations
+  const visibleWindows = useMemo(
+    () => windows.filter((w) => !w.isMinimized),
+    [windows]
+  )
 
-  // Verstecke Thumbnails wenn Stage Manager deaktiviert wird
+  const activeWindow = useMemo(
+    () => visibleWindows.find((w) => w.id === activeWindowId),
+    [visibleWindows, activeWindowId]
+  )
+
+  const inactiveWindows = useMemo(
+    () => visibleWindows.filter((w) => w.id !== activeWindowId),
+    [visibleWindows, activeWindowId]
+  )
+
+  // Effect 1: Hide thumbnails when Stage Manager is disabled
   useEffect(() => {
     if (!stageManagerEnabled) {
       setShowThumbnails(false)
     }
   }, [stageManagerEnabled, setShowThumbnails])
 
-  const visibleWindows = windows.filter((w) => !w.isMinimized)
+  // Effect 2: Center active window when it changes (Stage Manager only)
+  // Separate effect to avoid loop: centerActiveWindow changes windows → visibleWindows recalc → effect retrigger
+  useEffect(() => {
+    if (stageManagerEnabled && activeWindowId) {
+      centerActiveWindow()
+    }
+  }, [stageManagerEnabled, activeWindowId, centerActiveWindow])
 
-  // Safety: Im Stage Manager muss immer ein Fenster aktiv sein wenn Fenster existieren
+  // Effect 3: Ensure a window is active when Stage Manager is enabled
   useEffect(() => {
     if (stageManagerEnabled && visibleWindows.length > 0 && !activeWindowId) {
-      // Auto-aktiviere erstes sichtbares Fenster
       focusWindow(visibleWindows[0].id)
     }
   }, [stageManagerEnabled, visibleWindows, activeWindowId, focusWindow])
-  const activeWindow = visibleWindows.find((w) => w.id === activeWindowId)
-  const inactiveWindows = visibleWindows.filter((w) => w.id !== activeWindowId)
 
   // Stage Manager Modus
   if (stageManagerEnabled && visibleWindows.length > 0) {
@@ -142,12 +154,32 @@ interface ScaledWindowThumbnailProps {
   horizontal?: boolean
 }
 
-function ScaledWindowThumbnail({ window, index, onClick, onClose, horizontal }: ScaledWindowThumbnailProps) {
+// Memoized thumbnail component to prevent unnecessary re-renders
+const ScaledWindowThumbnail = memo(function ScaledWindowThumbnail({
+  window,
+  index,
+  onClick,
+  onClose,
+  horizontal
+}: ScaledWindowThumbnailProps) {
   const { t } = useTranslation()
-  // Kleinere Thumbnails für horizontale Ansicht
-  const thumbnailWidth = horizontal ? 140 : 180
-  const thumbnailHeight = (window.size.height / window.size.width) * thumbnailWidth
-  const scale = thumbnailWidth / window.size.width
+
+  // Memoize calculations
+  const { thumbnailWidth, thumbnailHeight, scale } = useMemo(() => {
+    const width = horizontal ? 140 : 180
+    const height = (window.size.height / window.size.width) * width
+    return {
+      thumbnailWidth: width,
+      thumbnailHeight: height,
+      scale: width / window.size.width
+    }
+  }, [window.size.width, window.size.height, horizontal])
+
+  // Memoize close handler to prevent prop changes
+  const handleClose = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onClose()
+  }, [onClose])
 
   return (
     <motion.div
@@ -203,10 +235,7 @@ function ScaledWindowThumbnail({ window, index, onClick, onClose, horizontal }: 
 
       {/* Close Button - Mitte oben */}
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onClose()
-        }}
+        onClick={handleClose}
         className="absolute left-1/2 -translate-x-1/2 -top-2 z-20 w-5 h-5 rounded-full bg-gold-500 hover:bg-gold-600 flex items-center justify-center shadow-md"
       >
         <X className="w-3 h-3 text-white" />
@@ -223,4 +252,4 @@ function ScaledWindowThumbnail({ window, index, onClick, onClose, horizontal }: 
       </div>
     </motion.div>
   )
-}
+})

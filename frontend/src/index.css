@@ -182,3 +182,161 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+/* ============================================
+   AI Dashboard - Hologram Effects
+   ============================================ */
+
+/* Hologram Scanlines Overlay */
+.hologram-scanlines {
+  position: relative;
+}
+
+.hologram-scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(139, 92, 246, 0.02) 2px,
+    rgba(139, 92, 246, 0.02) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Hologram Widget Card */
+.hologram-widget {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.08) 0%,
+    rgba(34, 211, 238, 0.04) 50%,
+    rgba(139, 92, 246, 0.08) 100%
+  );
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: hologram-border-glow 4s ease-in-out infinite;
+}
+
+.dark .hologram-widget {
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.12) 0%,
+    rgba(34, 211, 238, 0.06) 50%,
+    rgba(139, 92, 246, 0.12) 100%
+  );
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.hologram-widget:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  box-shadow:
+    0 0 30px rgba(139, 92, 246, 0.2),
+    0 0 60px rgba(34, 211, 238, 0.1),
+    inset 0 0 30px rgba(139, 92, 246, 0.05);
+}
+
+/* Animated Border Glow */
+@keyframes hologram-border-glow {
+  0%, 100% {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+  }
+  50% {
+    border-color: rgba(34, 211, 238, 0.4);
+    box-shadow: 0 0 25px rgba(34, 211, 238, 0.15);
+  }
+}
+
+/* Hologram Header */
+.hologram-header {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.15) 0%,
+    rgba(34, 211, 238, 0.1) 50%,
+    rgba(139, 92, 246, 0.15) 100%
+  );
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.dark .hologram-header {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    rgba(34, 211, 238, 0.12) 50%,
+    rgba(139, 92, 246, 0.2) 100%
+  );
+}
+
+/* Pulsing Glow Effect */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(12px);
+  }
+}
+
+/* Chart Glow */
+.chart-glow {
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+}
+
+/* Table Row Hover Glow */
+.hologram-table-row:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.1) 0%,
+    rgba(34, 211, 238, 0.08) 50%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
+}
+
+/* Hologram Background Pattern */
+.hologram-bg {
+  position: relative;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(34, 211, 238, 0.06) 0%, transparent 50%);
+}
+
+.dark .hologram-bg {
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(34, 211, 238, 0.08) 0%, transparent 50%);
+}
+
+/* Floating Particles Effect */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+  50% { transform: translateY(-10px) rotate(180deg); opacity: 0.6; }
+}
+
+/* Grid Pattern Overlay */
+.hologram-grid {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Slow pulse animation for AI Dashboard (GPU-accelerated, low impact) */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}

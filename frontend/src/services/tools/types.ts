@@ -5,7 +5,9 @@ import type { AppType } from '@/stores/windowStore'
  */
 export interface ToolContext {
   openWindow: (app: AppType) => void
+  closeWindowByAppId: (app: AppType) => void
   onClose: () => void
+  minimizeByAppId: (app: AppType) => void
 }
 
 /**

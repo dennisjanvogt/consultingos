@@ -1,4 +1,5 @@
 import { type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Clock, Flag, Handshake } from 'lucide-react'
 import type { ChessGame, ChessMove } from '@/api/types'
 
@@ -17,6 +18,8 @@ export function GameInfo({
   onOfferDraw,
   isPlayerTurn,
 }: GameInfoProps) {
+  const { t } = useTranslation()
+
   const formatTime = (seconds: number | null): string => {
     if (seconds === null) return '--:--'
     const mins = Math.floor(seconds / 60)
@@ -26,10 +29,10 @@ export function GameInfo({
 
   const getPlayerName = (color: 'white' | 'black'): string => {
     if (game.is_ai_game) {
-      return color === playerColor ? 'Du' : `KI (Stufe ${game.ai_difficulty})`
+      return color === playerColor ? t('chess.you') : t('chess.vsAI', { level: game.ai_difficulty }).replace('vs ', '')
     }
     const player = color === 'white' ? game.white_player : game.black_player
-    return player?.username || 'Warte...'
+    return player?.username || t('chess.waiting')
   }
 
   const isGameActive = game.status === 'active' || game.status === 'waiting'
@@ -73,11 +76,11 @@ export function GameInfo({
       {/* Move List */}
       <div className="flex-1 overflow-y-auto p-3">
         <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">
-          Zuege ({game.moves.length})
+          {t('chess.moves')} ({game.moves.length})
         </div>
         {game.moves.length === 0 ? (
           <div className="text-sm text-gray-400 dark:text-gray-500 italic">
-            Noch keine Zuege
+            {t('chess.noMoves')}
           </div>
         ) : (
           <div className="space-y-1">
@@ -104,7 +107,7 @@ export function GameInfo({
               }`}
             />
             <span className="font-medium text-sm text-gray-800 dark:text-gray-200">
-              {getPlayerName(playerColor)} (Du)
+              {getPlayerName(playerColor)} ({t('chess.you')})
             </span>
           </div>
           {game.time_control && (
@@ -128,14 +131,14 @@ export function GameInfo({
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
             <Handshake className="w-3.5 h-3.5" />
-            Remis
+            {t('chess.draw')}
           </button>
           <button
             onClick={onResign}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
           >
             <Flag className="w-3.5 h-3.5" />
-            Aufgeben
+            {t('chess.resign')}
           </button>
         </div>
       )}

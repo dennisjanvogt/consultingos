@@ -1,164 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #1a1a2e;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f7;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: 700;
-            color: #8b5cf6;
-            margin-bottom: 8px;
-        }
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-            color: #1a1a2e;
-            margin: 0 0 8px 0;
-        }
-        .subtitle {
-            color: #666;
-            font-size: 16px;
-        }
-        .event-details {
-            background: #f8f7ff;
-            border-radius: 12px;
-            padding: 24px;
-            margin: 24px 0;
-        }
-        .detail-row {
-            display: flex;
-            margin-bottom: 12px;
-        }
-        .detail-row:last-child {
-            margin-bottom: 0;
-        }
-        .detail-icon {
-            width: 24px;
-            margin-right: 12px;
-            color: #8b5cf6;
-        }
-        .detail-label {
-            font-weight: 500;
-            color: #1a1a2e;
-        }
-        .detail-value {
-            color: #444;
-        }
-        .button-container {
-            text-align: center;
-            margin: 32px 0;
-        }
-        .button {
-            display: inline-block;
-            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
-            color: white !important;
-            text-decoration: none;
-            padding: 16px 40px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
-        }
-        .link-fallback {
-            text-align: center;
-            margin-top: 16px;
-            font-size: 14px;
-            color: #666;
-        }
-        .link-fallback a {
-            color: #8b5cf6;
-            word-break: break-all;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid #eee;
-            color: #888;
-            font-size: 13px;
-        }
+    <meta name="color-scheme" content="light dark">
+    <title>Meeting-Einladung: {{ event.title }}</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        .button-link { padding: 14px 32px !important; }
     </style>
+    <![endif]-->
 </head>
-<body>
-    <div class="container">
-        <div class="card">
-            <div class="header">
-                <div class="logo">ConsultingOS</div>
-                <h1>{{ event.title }}</h1>
-                <p class="subtitle">{{ inviter_name }} laedt Sie zu einem Meeting ein</p>
-            </div>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #111118; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #111118;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <!-- Main Card -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: #18181f; border-radius: 16px; overflow: hidden; border: 1px solid #252530;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 32px 32px 24px; border-bottom: 1px solid #252530;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td>
+                                        <p style="margin: 0 0 4px; font-size: 12px; color: #6b6b80; text-transform: uppercase; letter-spacing: 1px;">
+                                            Meeting-Einladung
+                                        </p>
+                                        <h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #ffffff; line-height: 1.3;">
+                                            {{ event.title }}
+                                        </h1>
+                                        <p style="margin: 8px 0 0; font-size: 13px; color: #8b8ba0;">
+                                            von {{ inviter_name }}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-            <div class="event-details">
-                <div class="detail-row">
-                    <span class="detail-icon">&#128197;</span>
-                    <div>
-                        <span class="detail-label">Datum:</span>
-                        <span class="detail-value">{{ event.date|date:"d.m.Y" }}</span>
-                    </div>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-icon">&#128336;</span>
-                    <div>
-                        <span class="detail-label">Uhrzeit:</span>
-                        <span class="detail-value">{{ event.start_time|time:"H:i" }} - {{ event.end_time|time:"H:i" }} Uhr</span>
-                    </div>
-                </div>
-                {% if event.location %}
-                <div class="detail-row">
-                    <span class="detail-icon">&#128205;</span>
-                    <div>
-                        <span class="detail-label">Ort:</span>
-                        <span class="detail-value">{{ event.location }}</span>
-                    </div>
-                </div>
-                {% endif %}
-                {% if event.description %}
-                <div class="detail-row">
-                    <span class="detail-icon">&#128221;</span>
-                    <div>
-                        <span class="detail-label">Beschreibung:</span>
-                        <span class="detail-value">{{ event.description }}</span>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
+                    <!-- Event Details -->
+                    <tr>
+                        <td style="padding: 24px 32px;">
+                            <!-- Date & Time -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+                                <tr>
+                                    <td width="32" valign="top" style="padding-top: 2px;">
+                                        <span style="font-size: 16px; color: #6b6b80;">&#128197;</span>
+                                    </td>
+                                    <td style="padding-left: 12px;">
+                                        <div style="font-size: 14px; color: #ffffff;">{{ event.date|date:"l, d. F Y" }}</div>
+                                        <div style="font-size: 13px; color: #6b6b80; margin-top: 2px;">{{ event.start_time|time:"H:i" }} – {{ event.end_time|time:"H:i" }} Uhr</div>
+                                    </td>
+                                </tr>
+                            </table>
 
-            <div class="button-container">
-                <a href="{{ meeting_link }}" class="button">Am Meeting teilnehmen</a>
-            </div>
+                            {% if event.location %}
+                            <!-- Location -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+                                <tr>
+                                    <td width="32" valign="top" style="padding-top: 2px;">
+                                        <span style="font-size: 16px; color: #6b6b80;">&#128205;</span>
+                                    </td>
+                                    <td style="padding-left: 12px;">
+                                        <div style="font-size: 14px; color: #ffffff;">{{ event.location }}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            {% endif %}
 
-            <div class="link-fallback">
-                Direkter Link: <a href="{{ meeting_link }}">{{ meeting_link }}</a>
-            </div>
+                            {% if event.description %}
+                            <!-- Description -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="32" valign="top" style="padding-top: 2px;">
+                                        <span style="font-size: 16px; color: #6b6b80;">&#128221;</span>
+                                    </td>
+                                    <td style="padding-left: 12px;">
+                                        <div style="font-size: 14px; color: #9090a0; line-height: 1.5;">{{ event.description }}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            {% endif %}
+                        </td>
+                    </tr>
 
-            <div class="footer">
-                <p>Diese Einladung wurde ueber ConsultingOS versendet.</p>
-            </div>
-        </div>
-    </div>
+                    <!-- RSVP Section -->
+                    <tr>
+                        <td style="padding: 0 32px 24px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #1f1f28; border-radius: 10px; border: 1px solid #252530;">
+                                <tr>
+                                    <td style="padding: 20px; text-align: center;">
+                                        <p style="margin: 0 0 14px; font-size: 13px; color: #8b8ba0;">
+                                            Werden Sie teilnehmen?
+                                        </p>
+                                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="padding-right: 8px;">
+                                                    <a href="{{ accept_link }}" style="display: inline-block; background: #22c55e; color: #ffffff !important; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 500; font-size: 13px;">
+                                                        Zusagen
+                                                    </a>
+                                                </td>
+                                                <td style="padding-left: 8px;">
+                                                    <a href="{{ decline_link }}" style="display: inline-block; background: #3a3a48; color: #ffffff !important; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 500; font-size: 13px;">
+                                                        Absagen
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Meeting Link -->
+                    <tr>
+                        <td style="padding: 0 32px 24px; text-align: center;">
+                            <a href="{{ meeting_link }}" style="display: inline-block; background: #ffffff; color: #111118 !important; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                                Am Meeting teilnehmen
+                            </a>
+                            <p style="margin: 10px 0 0; font-size: 11px; color: #5a5a6a;">
+                                <a href="{{ meeting_link }}" style="color: #7c7c90; word-break: break-all;">{{ meeting_link }}</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Calendar Download -->
+                    <tr>
+                        <td style="padding: 0 32px 24px; text-align: center;">
+                            <a href="{{ ics_link }}" style="font-size: 12px; color: #6b6b80; text-decoration: none;">
+                                &#128197; Zum Kalender hinzufuegen (.ics)
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 32px; border-top: 1px solid #252530;">
+                            <p style="margin: 0; font-size: 11px; color: #4a4a5a; text-align: center;">
+                                Gesendet ueber ConsultingOS
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

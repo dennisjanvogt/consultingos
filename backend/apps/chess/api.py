@@ -158,10 +158,14 @@ def get_game(request, game_id: int):
     return game
 
 
-@router.post('/games/{game_id}/move', response={200: ChessGameSchema, 400: ErrorSchema})
+@router.post('/games/{game_id}/move', response={200: ChessGameSchema, 400: ErrorSchema, 403: ErrorSchema})
 def make_move(request, game_id: int, data: ChessMoveInputSchema):
     """Make a move in a game"""
     game = get_object_or_404(ChessGame, id=game_id)
+
+    # Check if user is a participant
+    if game.white_player != request.user and game.black_player != request.user:
+        return 403, {'error': 'Du bist kein Teilnehmer dieses Spiels'}
 
     # Validate game state
     if game.is_finished:
@@ -226,10 +230,14 @@ def make_move(request, game_id: int, data: ChessMoveInputSchema):
         return 400, {'error': f'Ungültiger Zug: {str(e)}'}
 
 
-@router.post('/games/{game_id}/resign', response={200: ChessGameSchema, 400: ErrorSchema})
+@router.post('/games/{game_id}/resign', response={200: ChessGameSchema, 400: ErrorSchema, 403: ErrorSchema})
 def resign_game(request, game_id: int):
     """Resign from a game"""
     game = get_object_or_404(ChessGame, id=game_id)
+
+    # Check if user is a participant
+    if game.white_player != request.user and game.black_player != request.user:
+        return 403, {'error': 'Du bist kein Teilnehmer dieses Spiels'}
 
     if game.is_finished:
         return 400, {'error': 'Spiel ist bereits beendet'}

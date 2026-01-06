@@ -6,6 +6,7 @@ export interface User {
   last_name: string
   is_approved: boolean
   is_staff: boolean
+  avatar_url?: string | null
 }
 
 export interface Customer {

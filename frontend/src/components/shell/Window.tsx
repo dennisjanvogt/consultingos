@@ -13,6 +13,7 @@ import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2 } from 'l
 import type { KanbanBoard } from '@/api/types'
 
 import { appRegistry } from '@/config/apps'
+import { ErrorBoundary } from './ErrorBoundary'
 
 // Resize constraints
 const MIN_WIDTH = 400
@@ -38,6 +39,9 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   const resizeTargetRef = useRef<HTMLElement | null>(null)
   const pointerIdRef = useRef<number | null>(null)
   const startPosRef = useRef({ x: 0, y: 0, width: 0, height: 0, winX: 0, winY: 0 })
+  // Store actual handler refs for proper cleanup (prevents memory leaks)
+  const resizeMoveHandlerRef = useRef<EventListener | null>(null)
+  const resizeEndHandlerRef = useRef<EventListener | null>(null)
 
   // Motion values für smooth dragging UND resizing (bypasses React re-renders!)
   const x = useMotionValue(window.position.x)
@@ -80,6 +84,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   }
 
   // Sync position AND size from store to motion values (when not dragging/resizing)
+  // Note: x, y, width, height are MotionValues (stable objects) - don't include in deps
   useEffect(() => {
     if (!isDragging && !isResizing && !isThumbnail) {
       x.set(window.position.x)
@@ -87,7 +92,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       width.set(window.size.width)
       height.set(window.size.height)
     }
-  }, [window.position.x, window.position.y, window.size.width, window.size.height, isDragging, isResizing, x, y, width, height, isThumbnail])
+  }, [window.position.x, window.position.y, window.size.width, window.size.height, isDragging, isResizing, isThumbnail])
 
   const handleDragStart = () => {
     setIsDragging(true)
@@ -147,7 +152,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       x.set(newX)
       y.set(newY)
     }
-  }, [width, height, x, y])
+  }, []) // MotionValues are stable objects, no deps needed
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false)
@@ -163,7 +168,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
     // NOW persist to store (single update at the end)
     updateWindowSize(window.id, { width: width.get(), height: height.get() })
     updateWindowPosition(window.id, { x: x.get(), y: y.get() })
-  }, [window.id, updateWindowSize, updateWindowPosition, width, height, x, y])
+  }, [window.id, updateWindowSize, updateWindowPosition]) // MotionValues are stable
 
   const handleResizeStart = useCallback((e: React.PointerEvent, direction: string) => {
     e.preventDefault()
@@ -189,22 +194,26 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       winY: y.get(),
     }
 
-    // Use the target element for events (pointer capture)
-    target.addEventListener('pointermove', handleResizeMove as EventListener)
-    target.addEventListener('pointerup', handleResizeEnd as EventListener)
-    target.addEventListener('lostpointercapture', handleResizeEnd as EventListener)
-  }, [window.isMaximized, window.isTiled, width, height, x, y, handleResizeMove, handleResizeEnd])
+    // Store handler refs for proper cleanup
+    resizeMoveHandlerRef.current = handleResizeMove as EventListener
+    resizeEndHandlerRef.current = handleResizeEnd as EventListener
 
-  // Cleanup resize listeners on unmount
+    // Use the target element for events (pointer capture)
+    target.addEventListener('pointermove', resizeMoveHandlerRef.current)
+    target.addEventListener('pointerup', resizeEndHandlerRef.current)
+    target.addEventListener('lostpointercapture', resizeEndHandlerRef.current)
+  }, [window.isMaximized, window.isTiled, handleResizeMove, handleResizeEnd])
+
+  // Cleanup resize listeners on unmount - uses refs to remove exact handlers that were added
   useEffect(() => {
     return () => {
-      if (resizeTargetRef.current) {
-        resizeTargetRef.current.removeEventListener('pointermove', handleResizeMove as EventListener)
-        resizeTargetRef.current.removeEventListener('pointerup', handleResizeEnd as EventListener)
-        resizeTargetRef.current.removeEventListener('lostpointercapture', handleResizeEnd as EventListener)
+      if (resizeTargetRef.current && resizeMoveHandlerRef.current && resizeEndHandlerRef.current) {
+        resizeTargetRef.current.removeEventListener('pointermove', resizeMoveHandlerRef.current)
+        resizeTargetRef.current.removeEventListener('pointerup', resizeEndHandlerRef.current)
+        resizeTargetRef.current.removeEventListener('lostpointercapture', resizeEndHandlerRef.current)
       }
     }
-  }, [handleResizeMove, handleResizeEnd])
+  }, []) // No deps - cleanup uses refs
 
   // Check if resize is allowed
   const canResize = !window.isMaximized && !window.isTiled
@@ -233,50 +242,11 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         </div>
         {/* Content */}
         <div className="flex-1 overflow-hidden bg-white/50 dark:bg-black/30">
-          <AppComponent />
+          <ErrorBoundary>
+            <AppComponent />
+          </ErrorBoundary>
         </div>
       </div>
-    )
-  }
-
-  // Maximiertes Fenster - MUSS vor isStageManaged geprüft werden!
-  if (window.isMaximized) {
-    return (
-      <motion.div
-        layout
-        layoutId={`window-${window.id}`}
-        className={`absolute glass rounded-none overflow-hidden window-shadow flex flex-col outline-none ${
-          isActive ? 'ring-1 ring-white/20' : ''
-        }`}
-        style={{
-          left: 0,
-          top: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: window.zIndex,
-        }}
-        tabIndex={0}
-        onKeyDown={handleWindowKeyDown}
-        initial={false}
-        animate={{ opacity: 1 }}
-        transition={{
-          type: 'spring',
-          stiffness: 200,
-          damping: 25,
-          layout: { type: 'spring', stiffness: 180, damping: 28, mass: 1 }
-        }}
-        onMouseDown={() => focusWindow(window.id)}
-      >
-        <TitleBar
-          window={window}
-          onClose={() => closeWindow(window.id)}
-          onTile={() => tileWindow(window.id)}
-          onMaximize={() => maximizeWindow(window.id)}
-        />
-        <div className="flex-1 overflow-auto bg-white/50 dark:bg-black/30">
-          <AppComponent />
-        </div>
-      </motion.div>
     )
   }
 
@@ -290,7 +260,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         style={{
           width,
           height,
-          willChange: isResizing ? 'width, height, transform' : 'auto',
+          willChange: isDragging ? 'transform' : isResizing ? 'width, height' : 'auto',
         }}
         tabIndex={0}
         onKeyDown={handleWindowKeyDown}
@@ -319,31 +289,40 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
           />
         </div>
         <div className={`flex-1 overflow-auto bg-white/50 dark:bg-black/30 ${isDragging || isResizing ? 'select-none' : ''}`}>
-          <AppComponent />
+          <ErrorBoundary>
+            <AppComponent />
+          </ErrorBoundary>
         </div>
       </motion.div>
     )
   }
 
-  // Normales Fenster (draggable) - wird auch im Stage Manager verwendet
+  // Normales Fenster (draggable) - handles both maximized and normal states
+  // Using a single return to prevent component remounting on maximize/minimize
   return (
     <motion.div
       layout
       layoutId={`window-${window.id}`}
-      className={`absolute glass rounded-xl overflow-hidden window-shadow flex flex-col outline-none ${
-        isActive ? 'ring-1 ring-white/20' : ''
-      }`}
-      style={{
+      className={`absolute glass overflow-hidden window-shadow flex flex-col outline-none ${
+        window.isMaximized ? 'rounded-none' : 'rounded-xl'
+      } ${isActive ? 'ring-1 ring-white/20' : ''}`}
+      style={window.isMaximized ? {
+        left: 0,
+        top: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: window.zIndex,
+      } : {
         x,
         y,
         width,
         height,
         zIndex: window.zIndex,
-        willChange: isResizing ? 'width, height, transform' : 'auto',
+        willChange: isDragging ? 'transform' : isResizing ? 'width, height' : 'auto',
       }}
       tabIndex={0}
       onKeyDown={handleWindowKeyDown}
-      initial={{ scale: 0.9, opacity: 0 }}
+      initial={false}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0.9, opacity: 0 }}
       transition={{
@@ -353,7 +332,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         layout: { type: 'spring', stiffness: 180, damping: 28, mass: 1 }
       }}
       onMouseDown={() => focusWindow(window.id)}
-      drag={!isResizing}
+      drag={!isResizing && !window.isMaximized}
       dragControls={dragControls}
       dragListener={false}
       dragMomentum={false}
@@ -361,14 +340,16 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Resize Handles */}
-      <ResizeHandles onResizeStart={handleResizeStart} canResize={canResize} />
+      {/* Resize Handles - hidden when maximized */}
+      {!window.isMaximized && <ResizeHandles onResizeStart={handleResizeStart} canResize={canResize} />}
 
       {/* Title Bar - drag handle */}
       <div
-        className="h-8 flex items-center justify-between px-3 glass-header cursor-move select-none shrink-0"
+        className={`h-8 flex items-center justify-between px-3 glass-header select-none shrink-0 ${
+          window.isMaximized ? '' : 'cursor-move'
+        }`}
         onPointerDown={(e) => {
-          if (!isResizing) dragControls.start(e)
+          if (!isResizing && !window.isMaximized) dragControls.start(e)
         }}
       >
         <TitleBarContent
@@ -381,7 +362,9 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
 
       {/* Content */}
       <div className={`flex-1 overflow-auto bg-white/50 dark:bg-black/30 ${isDragging || isResizing ? 'select-none' : ''}`}>
-        <AppComponent />
+        <ErrorBoundary>
+          <AppComponent />
+        </ErrorBoundary>
       </div>
     </motion.div>
   )
@@ -392,19 +375,6 @@ interface TitleBarProps {
   onClose: () => void
   onTile: () => void
   onMaximize: () => void
-}
-
-function TitleBar({ window, onClose, onTile, onMaximize }: TitleBarProps) {
-  return (
-    <div className="h-8 flex items-center justify-between px-3 glass-header select-none shrink-0">
-      <TitleBarContent
-        window={window}
-        onClose={onClose}
-        onTile={onTile}
-        onMaximize={onMaximize}
-      />
-    </div>
-  )
 }
 
 const KANBAN_BOARDS: { id: KanbanBoard; label: string }[] = [
@@ -689,7 +659,7 @@ function ChatTitleBarControls() {
           clearCurrentConversation()
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
       >
         <Plus className="w-3 h-3" />
         Neues Gespräch
@@ -700,7 +670,7 @@ function ChatTitleBarControls() {
           setShowHelperDialog(true)
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-500 hover:bg-gold-600 text-white transition-all shadow-sm"
       >
         <Settings2 className="w-3 h-3" />
         Helfer

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap } from 'lucide-react'
+import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap, Filter } from 'lucide-react'
 import { useWindowStore } from '@/stores/windowStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
@@ -43,6 +43,26 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
 
   const [elapsedTime, setElapsedTime] = useState(0)
   const [timerPopoverOpen, setTimerPopoverOpen] = useState(false)
+
+  // Chat model filters (multi-select)
+  const [filterFree, setFilterFree] = useState(false)
+  const [filterCheap, setFilterCheap] = useState(false)
+  const [filterEstablished, setFilterEstablished] = useState(false)
+  const [filterNewest, setFilterNewest] = useState(false)
+
+  // Established providers (major/well-known AI companies)
+  const establishedProviders = ['Google', 'Anthropic', 'OpenAI', 'xAI', 'Meta', 'Zhipu', 'Z.ai']
+
+  // Get newest model per provider (first model in each provider's list is typically newest)
+  const getNewestModelsPerProvider = (models: AIModel[]): Set<string> => {
+    const newestByProvider = new Map<string, AIModel>()
+    models.forEach((model) => {
+      if (!newestByProvider.has(model.provider)) {
+        newestByProvider.set(model.provider, model)
+      }
+    })
+    return new Set(Array.from(newestByProvider.values()).map(m => m.id))
+  }
 
   // Pomodoro state from store (persisted)
   const {
@@ -132,8 +152,25 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
   const visibleWindows = windows.filter((w) => !w.isMinimized && !w.isMaximized)
   const isSnapEnabled = visibleWindows.length > 0 && visibleWindows.some((w) => w.isTiled)
 
+  // Filter chat models based on selected filters (multi-select)
+  const newestModelIds = filterNewest ? getNewestModelsPerProvider(chatModels) : null
+  const hasActiveFilter = filterFree || filterCheap || filterEstablished || filterNewest
+
+  const filteredChatModels = chatModels.filter((model) => {
+    // If no filters active, show all
+    if (!hasActiveFilter) return true
+
+    // Check each filter - model must pass ALL active filters
+    if (filterFree && !model.isFree) return false
+    if (filterCheap && !model.isFree && (model.inputPrice > 1 || model.outputPrice > 1)) return false
+    if (filterEstablished && !establishedProviders.includes(model.provider)) return false
+    if (filterNewest && newestModelIds && !newestModelIds.has(model.id)) return false
+
+    return true
+  })
+
   // Group models by provider
-  const groupedChatModels = groupModelsByProvider(chatModels)
+  const groupedChatModels = groupModelsByProvider(filteredChatModels)
   const groupedImageModels = groupModelsByProvider(imageModels)
 
   // Format price for display
@@ -247,14 +284,95 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
             <button className="flex items-center gap-1.5 text-xs hover:bg-black/5 dark:hover:bg-white/10 px-2 py-0.5 rounded transition-colors">
               <Bot className="h-3.5 w-3.5 opacity-60" />
               <span className="max-w-[100px] truncate">{currentChatModel?.name || 'Chat'}</span>
+              {hasActiveFilter && (
+                <Filter className="h-3 w-3 text-lavender-500" />
+              )}
               <ChevronDown className="h-3 w-3 opacity-50" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-72 max-h-[400px] overflow-y-auto glass">
+            {/* Filter Buttons - Multi-select toggles */}
+            <div className="p-2 border-b border-black/10 dark:border-white/10">
+              <div className="flex gap-1 flex-wrap">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setFilterNewest(!filterNewest)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    filterNewest
+                      ? 'bg-lavender-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Neueste
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setFilterFree(!filterFree)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    filterFree
+                      ? 'bg-green-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Gratis
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setFilterCheap(!filterCheap)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    filterCheap
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Günstig
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setFilterEstablished(!filterEstablished)
+                  }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
+                    filterEstablished
+                      ? 'bg-gold-500 text-white'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                  }`}
+                >
+                  Etabliert
+                </button>
+              </div>
+              {hasActiveFilter && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setFilterFree(false)
+                    setFilterCheap(false)
+                    setFilterEstablished(false)
+                    setFilterNewest(false)
+                  }}
+                  className="w-full mt-1 px-2 py-0.5 text-[10px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                >
+                  Filter zurücksetzen
+                </button>
+              )}
+            </div>
             {isLoadingModels ? (
               <div className="p-4 text-center text-sm text-gray-500">Lade Modelle...</div>
-            ) : chatModels.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-500">Keine Modelle verfügbar</div>
+            ) : filteredChatModels.length === 0 ? (
+              <div className="p-4 text-center text-sm text-gray-500">
+                Keine Modelle mit diesen Filtern
+              </div>
             ) : (
               Object.entries(groupedChatModels).map(([provider, models]) => (
                 <div key={provider}>

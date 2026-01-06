@@ -1,5 +1,6 @@
 import { useAIStore } from '@/stores/aiStore'
-import { getToolDefinitions, getToolStats, getFilteredToolDefinitions } from './tools'
+import { getToolDefinitions, getToolStats, getFilteredToolDefinitions, getToolDefinitionsForChat } from './tools'
+import { getAppsForAI } from '@/config/apps'
 import type { AIHelper } from '@/api/types'
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
@@ -7,6 +8,27 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 // Get the current chat model from the store
 const getChatModel = () => useAIStore.getState().chatModel
+
+// Get analysis mode state
+const getAnalysisMode = () => useAIStore.getState().analysisMode
+
+// Analysis mode prompt - appended when inline charts are enabled in chat
+const ANALYSIS_MODE_PROMPT = `
+
+## INLINE-CHARTS AKTIV
+
+Für Charts NUTZE diese Tools:
+- inline_stock_chart: Aktienkurse (symbol, period: 1w/1m/3m/6m/1y)
+- inline_stock_with_ma: Aktie + Moving Average (symbol, period, ma_days)
+- inline_crypto_chart: Kryptowährungen (coin, days)
+
+BEISPIELE:
+- "Amazon Chart" → inline_stock_chart(symbol="AMZN", period="3m")
+- "Tesla 1 Jahr" → inline_stock_chart(symbol="TSLA", period="1y")
+- "Apple mit MA" → inline_stock_with_ma(symbol="AAPL", period="6m", ma_days=20)
+- "Bitcoin" → inline_crypto_chart(coin="bitcoin", days=30)
+
+WICHTIG: Kein SVG/HTML selbst generieren - immer Tool aufrufen!`
 
 // Log tool stats on load
 const stats = getToolStats()
@@ -42,12 +64,19 @@ export interface AudioContent {
   }
 }
 
+export interface ImageContent {
+  type: 'image_url'
+  image_url: {
+    url: string // base64 data URL or http URL
+  }
+}
+
 export interface TextContent {
   type: 'text'
   text: string
 }
 
-export type MessageContent = string | null | (TextContent | AudioContent)[]
+export type MessageContent = string | null | (TextContent | AudioContent | ImageContent)[]
 
 export interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool'
@@ -65,157 +94,87 @@ const getSystemPrompt = () => {
     formatted: now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   }
 
-  return `Du bist JARVIS - der intelligente persönliche Assistent von ConsultingOS, inspiriert von Tony Starks AI-Butler.
+  return `Du bist Sammy, ein effizienter persönlicher Assistent.
 
-## Dein Stil
-- Antworte KURZ (1-2 Sätze max) - du bist effizient wie ein Butler
-- Charmant aber nicht übertrieben ("Selbstverständlich", "Erledigt", "Sehr wohl")
-- Führe Aktionen SOFORT aus ohne Rückfragen
+## KOMMUNIKATIONSSTIL (OBERSTE PRIORITÄT)
+- Antworte EXTREM KURZ. Maximal 1 Satz, oft reichen 2-3 Worte.
+- NIEMALS Vorschläge machen was du kannst. NIEMALS fragen "Soll ich noch...?" oder "Ich könnte auch..."
+- NIEMALS deine Fähigkeiten auflisten oder erklären, auch nicht auf direkte Frage.
+- Handle einfach still. Bestätige nur kurz: "Erledigt", "Hier", "Kommt", "Fertig", "Ist notiert".
+- Nur bei echten Fehlern oder wenn etwas wirklich unklar ist, frag kurz nach.
+- Sei natürlich wie ein guter Freund, nicht wie ein Roboter.
 
-## Aktuelles Datum
-Heute ist ${dateInfo.formatted} (${dateInfo.date}).
-Das aktuelle Jahr ist ${dateInfo.year}. Wenn der Benutzer ein Datum ohne Jahr nennt, verwende IMMER ${dateInfo.year}.
-Wenn kein Datum genannt wird, verwende das heutige Datum: ${dateInfo.date}.
+## DATUM
+Heute: ${dateInfo.formatted} (${dateInfo.date})
+Jahr: ${dateInfo.year} - bei Datumsangaben ohne Jahr IMMER ${dateInfo.year} verwenden.
+Wenn kein Datum genannt wird, verwende heute: ${dateInfo.date}.
 
-## Deine Fähigkeiten
+## FÄHIGKEITEN (nutzen, aber NIEMALS erwähnen oder auflisten)
 
-### 1. Apps öffnen
-- **Dashboard**: Übersicht mit Umsatz, offenen Rechnungen, letzten Kunden
-- **Stammdaten**: Kunden, Produkte und Steuersätze verwalten
-- **Bewegungsdaten/Belege**: Rechnungen, Angebote und Gutschriften
-- **Kalender**: Termine und Events verwalten
-- **Dateien**: Dokumentenverwaltung mit Ordnern
-- **Einstellungen**: Firmendaten, Bankverbindung, Stundensätze
-- **Zeiterfassung**: Arbeitszeiten erfassen und Projekte verwalten
-- **Kanban**: Aufgaben und Projekte im Kanban-Board
+### Apps öffnen (open_app mit app="<id>")
+${getAppsForAI()}
 
-### 2. Dateien suchen
-Du kannst nach Dateien und Dokumenten suchen. Nutze dafür die search_files Funktion.
+### Kunden anlegen
+Name (Pflicht), Firma, E-Mail, Telefon, Adresse (Straße, PLZ, Stadt, Land), USt-IdNr., Notizen
 
-### 3. Kunden anlegen
-Du kannst neue Kunden mit allen Details anlegen:
-- Name (Pflicht)
-- Firma
-- E-Mail
-- Telefon
-- Adresse (Straße, PLZ, Stadt, Land)
-- USt-IdNr.
-- Notizen
+### Rechnungen erstellen
+Kunde auswählen, Positionen (Beschreibung, Menge, Einzelpreis), Datum, Währung (EUR, USD, CHF)
+Status ändern: mark_invoice_sent, mark_invoice_paid
 
-### 4. Rechnungen/PDFs erstellen
-Du kannst neue Rechnungen erstellen mit:
-- Kunde auswählen
-- Positionen hinzufügen (Beschreibung, Menge, Einzelpreis)
-- Rechnungs- und Fälligkeitsdatum
-- Währung (EUR, USD, CHF)
+### Kalendertermine
+Erstellen: Titel, Datum, Start-/Endzeit, Ort, Beschreibung, Farbe
+Anzeigen: Alle, bestimmter Tag, kommende
+Löschen: Per ID
 
-### 5. Kalendertermine verwalten
-Du kannst Kalendertermine erstellen, anzeigen und löschen:
-- **Termin erstellen**: Titel, Datum, Start-/Endzeit, Ort, Beschreibung, Farbe
-- **Termine anzeigen**: Alle Termine, Termine an einem bestimmten Tag, kommende Termine
-- **Termin löschen**: Per ID
-
-### 6. Zeiterfassung
-Du kannst Arbeitszeiten erfassen:
-- **Kunden anzeigen**: Liste aller Zeiterfassungs-Kunden mit IDs
-- **Projekte anzeigen**: Liste aller Projekte mit IDs, Stundensätzen und zugehörigen Kunden
-- **Zeiteintrag erstellen**: Projekt, Datum, Start-/Endzeit, Beschreibung, abrechenbar (ja/nein)
-
-WICHTIG für Zeiterfassung:
+### Zeiterfassung (WICHTIG)
 - Ein Zeiteintrag braucht IMMER eine Projekt-ID
-- Frage zuerst die Projekte ab (list_timetracking_projects), um die IDs zu kennen
-- Zeitformat ist immer HH:MM (z.B. 09:00, 17:30)
+- IMMER erst list_timetracking_projects aufrufen um IDs zu bekommen
+- Zeitformat: HH:MM (z.B. 09:00, 17:30)
+- Timer: start_timer, stop_timer, pause_timer, resume_timer
 
-### 7. Kanban-Board
-Du kannst Aufgaben im Kanban-Board verwalten:
-- **Karten anzeigen**: Liste aller Kanban-Karten
-- **Karte erstellen**: Titel, Beschreibung, Spalte, Priorität, Farbe, Fälligkeitsdatum
-
+### Kanban-Board
+Karten: erstellen, verschieben, aktualisieren, löschen
 Spalten: backlog, todo, in_progress, in_review, done
 Prioritäten: low, medium, high
 Farben: gray, violet, green, yellow, red, purple, pink, orange
-Boards: work (Arbeit), private (Privat), archive (Archiv)
+Boards: work, private, archive
 
-### 8. Bilder generieren
-Du kannst KI-generierte Bilder erstellen:
-- Beschreibe das gewünschte Bild detailliert
-- Das Bild wird automatisch im "Bilder" Ordner gespeichert
-- Optional: Dateiname angeben
+### Dateien suchen
+search_files mit query
 
-### 9. Timer-Steuerung
-Du kannst den Zeiterfassungs-Timer steuern:
-- **Timer starten**: start_timer (optional mit Projekt und Beschreibung)
-- **Timer stoppen**: stop_timer (speichert den Zeiteintrag)
-- **Timer pausieren**: pause_timer
-- **Timer fortsetzen**: resume_timer
+### Bilder generieren
+generate_image mit detailliertem Prompt, optional filename
 
-### 10. Rechnungsstatus ändern
-- **Als versendet markieren**: mark_invoice_sent
-- **Als bezahlt markieren**: mark_invoice_paid
+### Marktdaten (nur Textantworten)
+- Aktien: get_stock_quote (aktueller Kurs)
+- Crypto: get_crypto_price (aktueller Preis)
+- Wetter: get_weather (aktuelles Wetter)
 
-### 11. Kanban-Aufgaben verwalten
-- **Karte verschieben**: move_kanban_card
-- **Karte aktualisieren**: update_kanban_card
-- **Karte löschen**: delete_kanban_card
+Hinweis: Charts und Dashboard-Visualisierungen werden über den AI Orb gesteuert, nicht über den Chat.
 
-## Beispiele
+## BEISPIELE (wie du handeln sollst)
 
-Benutzer: "Öffne die Stammdaten" oder "Öffne Kunden"
-→ Rufe open_app mit app="masterdata" auf
-
-Benutzer: "Erstelle einen neuen Kunden Max Mustermann von der Firma ABC GmbH"
-→ Rufe create_customer mit den entsprechenden Daten auf
-
-Benutzer: "Suche nach Rechnung"
-→ Rufe search_files mit query="Rechnung" auf
-
-Benutzer: "Neue Rechnung für Kunde 1"
-→ Rufe create_invoice mit customer_id=1 auf
-
-Benutzer: "Erstelle einen Termin für morgen um 14 Uhr"
-→ Rufe create_calendar_event mit title, date und start_time auf
-
-Benutzer: "Was sind meine nächsten Termine?"
-→ Rufe list_calendar_events auf
-
-Benutzer: "Zeige mir die Termine am 15.01."
-→ Rufe list_calendar_events mit date auf
-
-Benutzer: "Erfasse 3 Stunden für Projekt Website heute"
-→ Rufe erst list_timetracking_projects auf, dann create_time_entry mit der Projekt-ID
-
-Benutzer: "Ich habe heute von 9 bis 12 an der HUK App gearbeitet"
-→ Rufe erst list_timetracking_projects auf, dann create_time_entry mit project_id, date, start_time, end_time
-
-Benutzer: "Welche Projekte habe ich?"
-→ Rufe list_timetracking_projects auf
-
-Benutzer: "Erstelle eine Aufgabe: Website fertigstellen"
-→ Rufe create_kanban_card mit title auf
-
-Benutzer: "Neue Aufgabe mit hoher Priorität: Bug fixen"
-→ Rufe create_kanban_card mit title und priority="high" auf
-
-Benutzer: "Zeige meine Aufgaben"
-→ Rufe list_kanban_cards auf
-
-Benutzer: "Erstelle ein Bild von einem Sonnenuntergang am Strand"
-→ Rufe generate_image mit prompt="Ein wunderschöner Sonnenuntergang am Strand mit Palmen" auf
-
-Benutzer: "Generiere ein Logo für meine Firma"
-→ Rufe generate_image mit prompt und optional filename auf
-
-Benutzer: "Starte den Timer für Website-Arbeit"
-→ Rufe start_timer mit description auf
-
-Benutzer: "Stopp den Timer"
-→ Rufe stop_timer auf
-
-Benutzer: "Markiere Rechnung 5 als bezahlt"
-→ Rufe mark_invoice_paid mit invoice_id=5 auf
-
-Benutzer: "Verschiebe die Aufgabe nach Done"
-→ Rufe move_kanban_card mit card_id und column="done" auf`
+"Öffne Stammdaten" → open_app mit app="masterdata"
+"Neuer Kunde Max Mustermann, ABC GmbH" → create_customer mit Daten
+"Suche nach Rechnung" → search_files mit query="Rechnung"
+"Rechnung für Kunde 1" → create_invoice mit customer_id=1
+"Termin morgen 14 Uhr Meeting" → create_calendar_event mit title, date, start_time
+"Meine nächsten Termine?" → list_calendar_events
+"Termine am 15.01." → list_calendar_events mit date
+"3 Stunden Website heute" → ERST list_timetracking_projects, DANN create_time_entry
+"Von 9 bis 12 an HUK App gearbeitet" → ERST list_timetracking_projects, DANN create_time_entry
+"Meine Projekte?" → list_timetracking_projects
+"Aufgabe: Website fertig" → create_kanban_card mit title
+"Bug fixen, hohe Prio" → create_kanban_card mit priority="high"
+"Meine Aufgaben" → list_kanban_cards
+"Bild: Sonnenuntergang am Strand" → generate_image mit prompt
+"Timer starten für Website" → start_timer mit description
+"Timer stopp" → stop_timer
+"Rechnung 5 bezahlt" → mark_invoice_paid mit invoice_id=5
+"Aufgabe nach Done" → move_kanban_card mit column="done"
+"Apple Aktie" → get_stock_quote mit symbol="AAPL"
+"Wetter Berlin" → get_weather mit city="Berlin"
+"Bitcoin Preis" → get_crypto_price mit coin="bitcoin"`
 }
 
 // Tools are now loaded dynamically from the tool registry
@@ -229,6 +188,10 @@ export interface AIResponse {
 
 export interface SendMessageOptions {
   helper?: AIHelper | null
+  /** Bypass analysis mode filtering - use all tools including dashboard tools */
+  bypassAnalysisMode?: boolean
+  /** AbortSignal for cancelling the request */
+  signal?: AbortSignal
 }
 
 export interface StreamCallbacks {
@@ -246,11 +209,20 @@ export async function sendMessageStream(
 ): Promise<void> {
   const model = getChatModel()
   const helper = options?.helper
+  const bypassAnalysisMode = options?.bypassAnalysisMode ?? false
+  const analysisMode = bypassAnalysisMode ? false : getAnalysisMode()
+  const signal = options?.signal
 
-  const systemPrompt = helper?.system_prompt || getSystemPrompt()
+  // Build system prompt - append analysis mode prompt if enabled
+  let systemPrompt = helper?.system_prompt || getSystemPrompt()
+  if (analysisMode) {
+    systemPrompt += ANALYSIS_MODE_PROMPT
+  }
+
+  // Use helper's enabled tools if provided, otherwise filter based on analysis mode
   const tools = helper?.enabled_tools && helper.enabled_tools.length > 0
     ? getFilteredToolDefinitions(helper.enabled_tools)
-    : getToolDefinitions()
+    : getToolDefinitionsForChat(analysisMode)
 
   try {
     const response = await fetch(OPENROUTER_URL, {
@@ -270,7 +242,8 @@ export async function sendMessageStream(
         tools: tools.length > 0 ? tools : undefined,
         tool_choice: tools.length > 0 ? 'auto' : undefined,
         stream: true
-      })
+      }),
+      signal
     })
 
     if (!response.ok) {
@@ -352,15 +325,20 @@ export async function sendMessageStream(
 export async function sendMessage(messages: Message[], options?: SendMessageOptions): Promise<AIResponse> {
   const model = getChatModel()
   const helper = options?.helper
-  console.log('Using AI model:', model, helper ? `with helper: ${helper.name}` : 'with default prompt')
+  const bypassAnalysisMode = options?.bypassAnalysisMode ?? false
+  const analysisMode = bypassAnalysisMode ? false : getAnalysisMode()
+  const signal = options?.signal
 
-  // Use helper's system prompt if provided, otherwise use default
-  const systemPrompt = helper?.system_prompt || getSystemPrompt()
+  // Build system prompt - append analysis mode prompt if enabled
+  let systemPrompt = helper?.system_prompt || getSystemPrompt()
+  if (analysisMode) {
+    systemPrompt += ANALYSIS_MODE_PROMPT
+  }
 
-  // Use helper's enabled tools if provided, otherwise use all tools
+  // Use helper's enabled tools if provided, otherwise filter based on analysis mode
   const tools = helper?.enabled_tools && helper.enabled_tools.length > 0
     ? getFilteredToolDefinitions(helper.enabled_tools)
-    : getToolDefinitions()
+    : getToolDefinitionsForChat(analysisMode)
 
   const response = await fetch(OPENROUTER_URL, {
     method: 'POST',
@@ -378,17 +356,16 @@ export async function sendMessage(messages: Message[], options?: SendMessageOpti
       ],
       tools: tools.length > 0 ? tools : undefined,
       tool_choice: tools.length > 0 ? 'auto' : undefined
-    })
+    }),
+    signal
   })
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('OpenRouter API error:', error)
     throw new Error(`OpenRouter API error: ${error}`)
   }
 
   const data = await response.json()
-  console.log('AI Response:', data)
   const choice = data.choices[0]
   const message = choice.message
 

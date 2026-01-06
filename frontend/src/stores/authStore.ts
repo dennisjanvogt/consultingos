@@ -8,6 +8,12 @@ interface GitHubCallbackResponse {
   message: string | null
 }
 
+interface UpdateProfileData {
+  first_name?: string
+  last_name?: string
+  email?: string
+}
+
 interface AuthState {
   user: User | null
   isLoading: boolean
@@ -19,6 +25,7 @@ interface AuthState {
   clearError: () => void
   getGitHubAuthUrl: () => Promise<string | null>
   handleGitHubCallback: (code: string, state: string) => Promise<{ success: boolean; pending: boolean }>
+  updateProfile: (data: UpdateProfileData) => Promise<boolean>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -92,6 +99,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       const message = err instanceof ApiError ? err.message : 'GitHub login failed'
       set({ error: message, isLoading: false })
       return { success: false, pending: false }
+    }
+  },
+
+  updateProfile: async (data: UpdateProfileData) => {
+    try {
+      const user = await api.put<User>('/auth/me', data)
+      set({ user })
+      return true
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to update profile'
+      set({ error: message })
+      return false
     }
   },
 }))

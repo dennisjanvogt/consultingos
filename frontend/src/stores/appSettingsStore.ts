@@ -82,9 +82,6 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
     const { settings, updateSettings } = get()
     const isEnabled = settings.enabled_apps.includes(appId)
 
-    // Settings kann nicht deaktiviert werden
-    if (appId === 'settings' && isEnabled) return
-
     const newEnabledApps = isEnabled
       ? settings.enabled_apps.filter(id => id !== appId)
       : [...settings.enabled_apps, appId]
