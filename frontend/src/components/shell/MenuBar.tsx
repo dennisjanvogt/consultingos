@@ -395,7 +395,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                   }}
                   className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                     filterFree
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-rose-950 text-white'
                       : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
                   }`}
                 >
@@ -409,7 +409,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                   }}
                   className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                     filterCheap
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-emerald-900 text-white'
                       : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
                   }`}
                 >
@@ -423,7 +423,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                   }}
                   className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                     filterEstablished
-                      ? 'bg-gold-500 text-white'
+                      ? 'bg-gray-400 text-white'
                       : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
                   }`}
                 >
@@ -519,7 +519,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                   }}
                   className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                     imgFilterCheap
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-emerald-900 text-white'
                       : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
                   }`}
                 >
@@ -533,7 +533,7 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                   }}
                   className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                     imgFilterEstablished
-                      ? 'bg-gold-500 text-white'
+                      ? 'bg-gray-400 text-white'
                       : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
                   }`}
                 >

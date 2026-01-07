@@ -1,8 +1,11 @@
 import os
 import re
+import subprocess
+import tempfile
 from ninja import Router, File, Schema
 from ninja.files import UploadedFile
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse
 from typing import List, Optional
 from datetime import datetime
 
@@ -238,3 +241,69 @@ def delete_document(request, document_id: int):
         doc.file.delete(save=False)
     doc.delete()
     return 204, None
+
+
+@router.get('/{document_id}/download-mp4')
+def download_as_mp4(request, document_id: int):
+    """Convert video to MP4 and download"""
+    doc = get_object_or_404(Document, id=document_id, user=request.user)
+
+    # Check if it's a video file
+    video_extensions = ['.webm', '.avi', '.mov', '.mkv', '.wmv']
+    _, ext = os.path.splitext(doc.name.lower())
+
+    # If already MP4, just return the file
+    if ext == '.mp4':
+        return FileResponse(
+            doc.file.open('rb'),
+            as_attachment=True,
+            filename=doc.name
+        )
+
+    if ext not in video_extensions:
+        return 400, {'error': 'Keine Videodatei'}
+
+    # Get input file path
+    input_path = doc.file.path
+
+    # Create temp output file
+    base_name = os.path.splitext(doc.name)[0]
+    output_filename = f"{base_name}.mp4"
+
+    # Use tempfile for output
+    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_file:
+        output_path = tmp_file.name
+
+    try:
+        # Convert using ffmpeg
+        result = subprocess.run([
+            'ffmpeg', '-y',
+            '-i', input_path,
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            output_path
+        ], capture_output=True, timeout=300)
+
+        if result.returncode != 0:
+            os.unlink(output_path)
+            return 400, {'error': 'Konvertierung fehlgeschlagen'}
+
+        # Return the converted file
+        response = FileResponse(
+            open(output_path, 'rb'),
+            as_attachment=True,
+            filename=output_filename
+        )
+        # Clean up temp file after response is sent
+        response._resource_closers.append(lambda: os.unlink(output_path))
+        return response
+
+    except subprocess.TimeoutExpired:
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        return 400, {'error': 'Konvertierung Timeout'}
+    except FileNotFoundError:
+        return 400, {'error': 'ffmpeg nicht installiert'}

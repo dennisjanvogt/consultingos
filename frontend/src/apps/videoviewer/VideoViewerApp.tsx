@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize, Download, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Download, SkipBack, SkipForward, FileVideo, Loader2 } from 'lucide-react'
 import { useVideoViewerStore } from '@/stores/videoViewerStore'
 
 const MEDIA_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 export function VideoViewerApp() {
   const { currentVideo } = useVideoViewerStore()
@@ -15,6 +16,7 @@ export function VideoViewerApp() {
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isConverting, setIsConverting] = useState(false)
 
   // Reset state when video changes, use stored duration if available
   useEffect(() => {
@@ -142,6 +144,31 @@ export function VideoViewerApp() {
     link.href = videoUrl
     link.download = currentVideo.name
     link.click()
+  }
+
+  const handleDownloadMp4 = async () => {
+    if (!currentVideo || isConverting) return
+    setIsConverting(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${currentVideo.id}/download-mp4`, {
+        credentials: 'include'
+      })
+      if (!response.ok) {
+        throw new Error('Conversion failed')
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const baseName = currentVideo.name.replace(/\.[^.]+$/, '')
+      link.download = `${baseName}.mp4`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('MP4 conversion failed:', error)
+    } finally {
+      setIsConverting(false)
+    }
   }
 
   const formatTime = (seconds: number) => {
@@ -283,14 +310,30 @@ export function VideoViewerApp() {
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Download */}
+            {/* Download Original */}
             <button
               onClick={handleDownload}
               className="p-1.5 hover:bg-gray-700 rounded transition-colors"
-              title="Herunterladen"
+              title="Original herunterladen"
             >
               <Download className="w-4 h-4 text-gray-300" />
             </button>
+
+            {/* Download as MP4 */}
+            {currentVideo.file_type !== 'mp4' && (
+              <button
+                onClick={handleDownloadMp4}
+                disabled={isConverting}
+                className="p-1.5 hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
+                title="Als MP4 herunterladen"
+              >
+                {isConverting ? (
+                  <Loader2 className="w-4 h-4 text-gray-300 animate-spin" />
+                ) : (
+                  <FileVideo className="w-4 h-4 text-gray-300" />
+                )}
+              </button>
+            )}
 
             {/* Fullscreen */}
             <button

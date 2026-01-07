@@ -27,33 +27,50 @@ export function BottomBar() {
       className="glass h-7 flex items-center justify-between px-4 text-sm relative"
       onMouseEnter={() => setShowDock(true)}
     >
-      {/* Center - App name (3D hover reveal) */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 group cursor-default"
-        style={{ perspective: '400px', perspectiveOrigin: 'center center' }}
-      >
-        {/* COS - 3D Monogram */}
-        <span
-          className="relative font-black tracking-widest text-gold-500 group-hover:opacity-0 transition-all duration-300 inline-block"
+      {/* Center - Golden Ratio Symbol */}
+      <div className="absolute left-1/2 -translate-x-1/2 cursor-default group">
+        <svg
+          viewBox="0 0 144 89"
+          className="w-8 h-5"
+          fill="none"
+          stroke="#d4a012"
+          strokeWidth="2.5"
           style={{
-            transform: 'rotateY(-8deg) rotateX(3deg)',
-            transformStyle: 'preserve-3d',
-            textShadow: '1px 1px 0 #8b6914, 2px 2px 0 #6b5210, 2px 3px 5px rgba(0,0,0,0.35)',
+            filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))',
           }}
         >
-          COS
-        </span>
-        {/* ConsultingOS - Full 3D Text */}
-        <span
-          className="absolute left-1/2 -translate-x-1/2 font-black tracking-wide text-gold-500 opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap inline-block"
-          style={{
-            transform: 'rotateY(-8deg) rotateX(3deg)',
-            transformStyle: 'preserve-3d',
-            textShadow: '1px 1px 0 #8b6914, 2px 2px 0 #6b5210, 2px 3px 5px rgba(0,0,0,0.35)',
-          }}
-        >
-          ConsultingOS
-        </span>
+          {/* Glow filter for hover */}
+          <defs>
+            <filter id="golden-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <g className="transition-all duration-500 group-hover:[filter:url(#golden-glow)]">
+            {/* Golden Rectangle outer */}
+            <rect x="1" y="1" width="142" height="87" rx="2" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            {/* Golden spiral using quarter circles - Fibonacci sequence */}
+            <path d="M 89 1 A 55 55 0 0 1 144 56" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            <path d="M 144 56 A 34 34 0 0 1 110 90" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            <path d="M 110 88 A 21 21 0 0 1 89 67" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            <path d="M 89 67 A 13 13 0 0 1 102 54" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            <path d="M 102 54 A 8 8 0 0 1 94 62" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            <path d="M 94 62 A 5 5 0 0 1 99 57" className="transition-all duration-500 group-hover:stroke-[#ffd700]" />
+            {/* Center point - the eye */}
+            <circle cx="97" cy="59" r="3" fill="#d4a012" className="transition-all duration-500 group-hover:fill-[#ffd700]" />
+          </g>
+        </svg>
+        {/* Shimmer overlay on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none overflow-hidden">
+          <div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"
+            style={{ width: '200%' }}
+          />
+        </div>
       </div>
 
       {/* Left - Keyboard Shortcuts Toggle + Shortcuts */}
@@ -170,7 +187,7 @@ export function BottomBar() {
               <span className="text-xs">{user.first_name || user.username}</span>
               {/* Admin Badge */}
               {user.is_staff && (
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                <ShieldCheck className="w-3.5 h-3.5 text-gray-400" />
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="glass w-64">
@@ -195,7 +212,7 @@ export function BottomBar() {
                       </div>
                     )}
                     {user.is_staff && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-gray-800">
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-gray-800">
                         <ShieldCheck className="w-2.5 h-2.5 text-white" />
                       </div>
                     )}
@@ -210,7 +227,7 @@ export function BottomBar() {
                       @{user.username}
                     </p>
                     {user.is_staff && (
-                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-[10px] font-medium">
+                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 rounded-full text-[10px] font-medium">
                         <ShieldCheck className="w-2 h-2" />
                         Admin
                       </span>

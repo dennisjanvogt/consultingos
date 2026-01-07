@@ -144,25 +144,19 @@ export function Desktop() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <svg
             viewBox="0 0 144 89"
-            className="w-48 h-30 opacity-[0.07] dark:opacity-[0.04] select-none"
+            className="w-[768px] h-[480px] opacity-[0.07] dark:opacity-[0.04] select-none"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="0.225"
           >
             {/* Golden Rectangle outer */}
             <rect x="1" y="1" width="142" height="87" rx="2" />
             {/* Golden spiral using quarter circles - Fibonacci sequence */}
-            {/* 55x55 */}
             <path d="M 89 1 A 55 55 0 0 1 144 56" />
-            {/* 34x34 */}
             <path d="M 144 56 A 34 34 0 0 1 110 90" />
-            {/* 21x21 */}
             <path d="M 110 88 A 21 21 0 0 1 89 67" />
-            {/* 13x13 */}
             <path d="M 89 67 A 13 13 0 0 1 102 54" />
-            {/* 8x8 */}
             <path d="M 102 54 A 8 8 0 0 1 94 62" />
-            {/* 5x5 */}
             <path d="M 94 62 A 5 5 0 0 1 99 57" />
             {/* Center point - the eye */}
             <circle cx="97" cy="59" r="2" fill="currentColor" />
