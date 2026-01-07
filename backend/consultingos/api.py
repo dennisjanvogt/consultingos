@@ -18,6 +18,8 @@ from apps.timetracking.api import router as timetracking_router
 from apps.ai.api import router as ai_router
 from apps.chess.api import router as chess_router
 from apps.whiteboard.api import router as whiteboard_router
+from apps.notes.api import router as notes_router
+from apps.workflows.api import router as workflows_router
 
 # Register routers
 api.add_router('/auth/', users_router, tags=['Auth'])
@@ -31,3 +33,5 @@ api.add_router('/timetracking/', timetracking_router, tags=['Time Tracking'])
 api.add_router('/ai/', ai_router, tags=['AI'])
 api.add_router('/chess/', chess_router, tags=['Chess'])
 api.add_router('/whiteboard/', whiteboard_router, tags=['Whiteboard'])
+api.add_router('/notes/', notes_router, tags=['Notes'])
+api.add_router('/workflows/', workflows_router, tags=['Workflows'])

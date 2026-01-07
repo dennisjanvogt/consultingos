@@ -16,12 +16,13 @@ export function VideoViewerApp() {
   const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Reset state when video changes
+  // Reset state when video changes, use stored duration if available
   useEffect(() => {
     setIsPlaying(false)
     setCurrentTime(0)
-    setDuration(0)
-  }, [currentVideo?.id])
+    // Use duration from API if available, otherwise 0
+    setDuration(currentVideo?.duration ?? 0)
+  }, [currentVideo?.id, currentVideo?.duration])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -99,7 +100,19 @@ export function VideoViewerApp() {
   }
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current) {
+    if (videoRef.current && isFinite(videoRef.current.duration)) {
+      setDuration(videoRef.current.duration)
+    }
+  }
+
+  const handleDurationChange = () => {
+    if (videoRef.current && isFinite(videoRef.current.duration)) {
+      setDuration(videoRef.current.duration)
+    }
+  }
+
+  const handleCanPlay = () => {
+    if (videoRef.current && isFinite(videoRef.current.duration) && duration === 0) {
       setDuration(videoRef.current.duration)
     }
   }
@@ -132,6 +145,7 @@ export function VideoViewerApp() {
   }
 
   const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || isNaN(seconds)) return '--:--'
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
@@ -163,8 +177,12 @@ export function VideoViewerApp() {
           ref={videoRef}
           src={videoUrl}
           className="max-w-full max-h-full"
+          preload="auto"
+          crossOrigin="anonymous"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={handleDurationChange}
+          onCanPlay={handleCanPlay}
           onEnded={handleVideoEnded}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}

@@ -78,6 +78,7 @@ class DocumentSchema(Schema):
     file_url: str
     file_type: str
     file_size: int
+    duration: Optional[float]  # Duration in seconds for video/audio
     description: str
     customer_id: Optional[int]
     invoice_id: Optional[int]

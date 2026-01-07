@@ -129,6 +129,7 @@ export interface Document {
   file_url: string
   file_type: string
   file_size: number
+  duration: number | null  // Duration in seconds for video/audio
   description: string
   customer_id: number | null
   invoice_id: number | null
@@ -469,4 +470,188 @@ export interface ChessStats {
   draws: number
   ai_games: number
   multiplayer_games: number
+}
+
+// Notes types
+export type NoteColor = 'default' | 'yellow' | 'green' | 'blue' | 'pink'
+
+export interface Note {
+  id: number
+  title: string
+  content: string
+  is_pinned: boolean
+  color: NoteColor
+  created_at: string
+  updated_at: string
+}
+
+export interface NoteCreate {
+  title?: string
+  content?: string
+  color?: NoteColor
+  is_pinned?: boolean
+}
+
+export interface NoteUpdate {
+  title?: string
+  content?: string
+  color?: NoteColor
+  is_pinned?: boolean
+}
+
+// Workflow types
+export type WorkflowStatus = 'active' | 'completed' | 'paused'
+
+export interface WorkflowCategory {
+  id: number
+  name: string
+  color: string
+  created_at: string
+}
+
+export interface WorkflowCategoryCreate {
+  name: string
+  color?: string
+}
+
+export interface WorkflowCategoryUpdate {
+  name?: string
+  color?: string
+}
+
+export interface WorkflowTemplateStep {
+  id: number
+  parent_id: number | null
+  title: string
+  description: string
+  position: number
+  default_days_offset: number
+  children?: WorkflowTemplateStep[]
+}
+
+export interface WorkflowTemplateStepCreate {
+  parent_id?: number | null
+  title: string
+  description?: string
+  position?: number
+  default_days_offset?: number
+}
+
+export interface WorkflowTemplateStepUpdate {
+  title?: string
+  description?: string
+  position?: number
+  default_days_offset?: number
+}
+
+export interface WorkflowTemplate {
+  id: number
+  category_id: number | null
+  category_name: string | null
+  name: string
+  description: string
+  steps: WorkflowTemplateStep[]
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkflowTemplateList {
+  id: number
+  category_id: number | null
+  category_name: string | null
+  name: string
+  description: string
+  step_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkflowTemplateCreate {
+  name: string
+  description?: string
+  category_id?: number | null
+}
+
+export interface WorkflowTemplateUpdate {
+  name?: string
+  description?: string
+  category_id?: number | null
+}
+
+export interface WorkflowInstanceStep {
+  id: number
+  parent_id: number | null
+  title: string
+  description: string
+  position: number
+  is_completed: boolean
+  completed_at: string | null
+  due_date: string | null
+  notes: string
+  children?: WorkflowInstanceStep[]
+}
+
+export interface WorkflowInstanceStepUpdate {
+  title?: string
+  description?: string
+  notes?: string
+  due_date?: string | null
+}
+
+export interface WorkflowInstance {
+  id: number
+  template_id: number | null
+  template_name: string | null
+  name: string
+  customer_id: number | null
+  customer_name: string | null
+  project_id: number | null
+  project_name: string | null
+  status: WorkflowStatus
+  progress: number
+  steps: WorkflowInstanceStep[]
+  started_at: string
+  completed_at: string | null
+}
+
+export interface WorkflowInstanceList {
+  id: number
+  template_id: number | null
+  name: string
+  customer_id: number | null
+  customer_name: string | null
+  project_id: number | null
+  project_name: string | null
+  status: WorkflowStatus
+  progress: number
+  started_at: string
+  completed_at: string | null
+}
+
+export interface WorkflowInstanceCreate {
+  template_id: number
+  name?: string
+  customer_id?: number | null
+  project_id?: number | null
+}
+
+export interface WorkflowInstanceUpdate {
+  name?: string
+  status?: WorkflowStatus
+  customer_id?: number | null
+  project_id?: number | null
+}
+
+export interface WorkflowCategoryStats {
+  category_id: number | null
+  category_name: string
+  count: number
+  avg_progress: number
+}
+
+export interface WorkflowStats {
+  total_active: number
+  total_completed: number
+  by_category: WorkflowCategoryStats[]
+  overdue_steps: number
 }

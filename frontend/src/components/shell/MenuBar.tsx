@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap, Filter, Video, Circle, Mic, MicOff, Monitor, AppWindow, FolderOpen } from 'lucide-react'
+import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap, Filter, Video, Circle, Mic, MicOff, Monitor, AppWindow, FolderOpen, StickyNote, Plus, Pin } from 'lucide-react'
 import { useWindowStore } from '@/stores/windowStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import { useAIStore, groupModelsByProvider, type AIModel } from '@/stores/aiStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { useRecordingStore } from '@/stores/recordingStore'
+import { useNotesStore } from '@/stores/notesStore'
 import {
   Popover,
   PopoverContent,
@@ -109,6 +110,15 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
   } = useRecordingStore()
   const [recordingElapsed, setRecordingElapsed] = useState(0)
   const [recordingPopoverOpen, setRecordingPopoverOpen] = useState(false)
+
+  // Notes state
+  const [notesPopoverOpen, setNotesPopoverOpen] = useState(false)
+  const { notes, fetchNotes, createNote, getRecentNotes } = useNotesStore()
+
+  // Fetch notes on mount
+  useEffect(() => {
+    fetchNotes()
+  }, [fetchNotes])
 
   const pomodoroOptions = [
     { minutes: 15, label: 'Quick', icon: Zap, breakMinutes: 3 },
@@ -766,6 +776,83 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                 <p className="text-xs text-lavender-600 dark:text-lavender-400 opacity-80">
                   Wähle ein Projekt, um den Eintrag zu speichern.
                 </p>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Notes Quick Access */}
+        <Popover open={notesPopoverOpen} onOpenChange={setNotesPopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              title={t('apps.notes')}
+            >
+              <StickyNote className="h-4 w-4 opacity-60" />
+              {notes.length > 0 && (
+                <span className="text-[10px] text-gray-500">{notes.length}</span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3" align="center">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{t('notes.title')}</span>
+                <button
+                  onClick={async () => {
+                    await createNote()
+                    openWindow('notes')
+                    setNotesPopoverOpen(false)
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-violet-500 hover:bg-violet-600 text-white rounded transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  {t('notes.newNote')}
+                </button>
+              </div>
+
+              {/* Recent Notes */}
+              <div className="space-y-1">
+                {getRecentNotes(3).length === 0 ? (
+                  <div className="text-xs text-gray-500 text-center py-4">
+                    {t('notes.noNotes')}
+                  </div>
+                ) : (
+                  getRecentNotes(3).map((note) => (
+                    <button
+                      key={note.id}
+                      onClick={() => {
+                        useNotesStore.getState().selectNote(note.id)
+                        openWindow('notes')
+                        setNotesPopoverOpen(false)
+                      }}
+                      className="w-full p-2 text-left rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {note.is_pinned && <Pin className="h-3 w-3 text-violet-500" />}
+                        <span className="text-sm font-medium truncate flex-1">
+                          {note.title || t('notes.untitled')}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 truncate mt-0.5">
+                        {note.content || t('notes.noContent')}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Open Notes App */}
+              {notes.length > 3 && (
+                <button
+                  onClick={() => {
+                    openWindow('notes')
+                    setNotesPopoverOpen(false)
+                  }}
+                  className="w-full text-xs text-violet-500 hover:text-violet-600 transition-colors"
+                >
+                  {t('calendar.more')} ({notes.length - 3})
+                </button>
               )}
             </div>
           </PopoverContent>

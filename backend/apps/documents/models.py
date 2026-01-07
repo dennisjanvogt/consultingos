@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+import subprocess
+import json
 
 
 class Folder(models.Model):
@@ -25,6 +27,7 @@ class Document(models.Model):
     file = models.FileField(upload_to='documents/%Y/%m/')
     file_type = models.CharField(max_length=100, blank=True)
     file_size = models.PositiveIntegerField(default=0)
+    duration = models.FloatField(null=True, blank=True)  # Duration in seconds for video/audio
     description = models.TextField(blank=True)
 
     # Optional links to other entities
@@ -40,6 +43,27 @@ class Document(models.Model):
     def __str__(self):
         return self.name
 
+    def _extract_duration(self, file_path: str) -> float | None:
+        """Extract duration from video/audio file using ffprobe"""
+        try:
+            result = subprocess.run(
+                [
+                    'ffprobe', '-v', 'quiet', '-print_format', 'json',
+                    '-show_format', file_path
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                duration = data.get('format', {}).get('duration')
+                if duration:
+                    return float(duration)
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, ValueError):
+            pass
+        return None
+
     def save(self, *args, **kwargs):
         if self.file:
             self.file_size = self.file.size
@@ -47,4 +71,15 @@ class Document(models.Model):
             name = self.file.name
             if '.' in name:
                 self.file_type = name.split('.')[-1].lower()
+
+        # Save first to ensure file is written to disk
         super().save(*args, **kwargs)
+
+        # Extract duration for video/audio files
+        if self.file and self.file_type in ['mp4', 'webm', 'mov', 'avi', 'mkv', 'mp3', 'wav', 'ogg', 'm4a']:
+            if self.duration is None:
+                duration = self._extract_duration(self.file.path)
+                if duration:
+                    self.duration = duration
+                    # Save again with duration (avoid recursion by using update)
+                    Document.objects.filter(pk=self.pk).update(duration=duration)

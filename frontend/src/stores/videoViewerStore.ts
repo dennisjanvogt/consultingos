@@ -6,6 +6,7 @@ export interface VideoDocument {
   file_url: string
   file_type: string
   file_size: number
+  duration?: number | null  // Duration in seconds
   description?: string
 }
 

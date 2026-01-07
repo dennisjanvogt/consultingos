@@ -12,7 +12,9 @@ import { useChessStore } from '@/stores/chessStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useWhiteboardStore } from '@/stores/whiteboardStore'
 import { useRecordingStore } from '@/stores/recordingStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle } from 'lucide-react'
+import { useNotesStore } from '@/stores/notesStore'
+import { useWorkflowStore } from '@/stores/workflowStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
@@ -417,6 +419,65 @@ function CalendarTitleBarControls() {
   )
 }
 
+// Notes Title Bar Controls
+function NotesTitleBarControls() {
+  const { t } = useTranslation()
+  const { createNote } = useNotesStore()
+
+  return (
+    <button
+      onClick={async (e) => {
+        e.stopPropagation()
+        await createNote()
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      {t('notes.newNote')}
+    </button>
+  )
+}
+
+// Workflows Title Bar Controls
+function WorkflowsTitleBarControls() {
+  const { t } = useTranslation()
+  const { viewMode, setViewMode } = useWorkflowStore()
+
+  const tabs = [
+    { id: 'templates' as const, label: t('workflows.templates'), icon: FileText, color: 'bg-yellow-500 hover:bg-yellow-600' },
+    { id: 'active' as const, label: t('workflows.active'), icon: Play, color: 'bg-emerald-700 hover:bg-emerald-800' },
+    { id: 'dashboard' as const, label: t('workflows.dashboard'), icon: BarChart3, color: 'bg-rose-800 hover:bg-rose-900' },
+  ]
+
+  return (
+    <div className="flex items-center gap-1">
+      {tabs.map((tab) => {
+        const Icon = tab.icon
+        const isActive = viewMode === tab.id
+        return (
+          <button
+            key={tab.id}
+            onClick={(e) => {
+              e.stopPropagation()
+              setViewMode(tab.id)
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all shadow-sm ${
+              isActive
+                ? `${tab.color} text-white`
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            <Icon className="w-3 h-3" />
+            {tab.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // Whiteboard Title Bar Controls - Save Button with unsaved indicator
 function WhiteboardTitleBarControls() {
   const { view, hasUnsavedChanges, isSaving } = useWhiteboardStore()
@@ -664,6 +725,12 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'settings' && (
           <SettingsTitleBarControls />
+        )}
+        {window.appId === 'notes' && (
+          <NotesTitleBarControls />
+        )}
+        {window.appId === 'workflows' && (
+          <WorkflowsTitleBarControls />
         )}
       </div>
     </>

@@ -17,6 +17,8 @@ import {
   PenTool,
   Film,
   FileType,
+  StickyNote,
+  GitMerge,
 } from 'lucide-react'
 
 // App Components
@@ -38,6 +40,8 @@ import { AdminApp } from '@/apps/admin/AdminApp'
 import { AIDashboardApp } from '@/apps/aidashboard/AIDashboardApp'
 import { ArchitectureApp } from '@/apps/architecture/ArchitectureApp'
 import WhiteboardApp from '@/apps/whiteboard/WhiteboardApp'
+import { NotesApp } from '@/apps/notes/NotesApp'
+import { WorkflowsApp } from '@/apps/workflows/WorkflowsApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
@@ -236,6 +240,26 @@ export const appRegistry: Record<string, AppDefinition> = {
     category: 'tools',
     canDisable: true,
   },
+  notes: {
+    id: 'notes',
+    component: NotesApp,
+    icon: <StickyNote className="h-6 w-6" />,
+    titleKey: 'apps.notes',
+    description: 'Notizen: Schnelle Notizen erstellen, pinnen und farblich markieren',
+    defaultSize: { width: 800, height: 600 },
+    category: 'productivity',
+    canDisable: true,
+  },
+  workflows: {
+    id: 'workflows',
+    component: WorkflowsApp,
+    icon: <GitMerge className="h-6 w-6" />,
+    titleKey: 'apps.workflows',
+    description: 'Workflows: Vorlagen erstellen, Prozesse steuern und Fortschritt verfolgen',
+    defaultSize: { width: 1000, height: 700 },
+    category: 'productivity',
+    canDisable: true,
+  },
 }
 
 // Helper Funktionen
@@ -265,6 +289,8 @@ export const defaultDockOrder = [
   'documents',
   'calendar',
   'kanban',
+  'notes',
+  'workflows',
   'chat',
   'timetracking',
   'whiteboard',
@@ -282,6 +308,8 @@ export const defaultEnabledApps = [
   'documents',
   'calendar',
   'kanban',
+  'notes',
+  'workflows',
   'chat',
   'timetracking',
   'whiteboard',

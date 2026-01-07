@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'apps.ai',
     'apps.chess',
     'apps.whiteboard',
+    'apps.notes',
+    'apps.workflows',
 ]
 
 MIDDLEWARE = [

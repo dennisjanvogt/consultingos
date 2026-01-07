@@ -47,6 +47,7 @@ export const aiTools: AITool[] = [
           file_url: result.file_url,
           file_type: 'png',
           file_size: 0,
+          duration: null,
           description: '',
           customer_id: null,
           invoice_id: null,
