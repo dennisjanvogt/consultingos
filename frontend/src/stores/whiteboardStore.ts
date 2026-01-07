@@ -20,9 +20,12 @@ export interface DiagramListItem {
   updated_at: string
 }
 
+export type WhiteboardView = 'gallery' | 'editor'
+
 interface WhiteboardState {
   diagrams: DiagramListItem[]
   currentDiagram: Diagram | null
+  view: WhiteboardView
   isLoading: boolean
   isSaving: boolean
   error: string | null
@@ -35,6 +38,7 @@ interface WhiteboardState {
   renameDiagram: (id: number, title: string) => Promise<void>
   deleteDiagram: (id: number) => Promise<boolean>
   setCurrentDiagram: (diagram: Diagram | null) => void
+  setView: (view: WhiteboardView) => void
   clearError: () => void
 }
 
@@ -56,6 +60,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
   diagrams: [],
   currentDiagram: null,
+  view: 'gallery',
   isLoading: false,
   isSaving: false,
   error: null,
@@ -170,6 +175,8 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
   },
 
   setCurrentDiagram: (diagram) => set({ currentDiagram: diagram }),
+
+  setView: (view) => set({ view }),
 
   clearError: () => set({ error: null }),
 }))

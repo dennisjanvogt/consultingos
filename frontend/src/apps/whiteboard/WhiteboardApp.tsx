@@ -37,6 +37,7 @@ export default function WhiteboardApp() {
   const {
     diagrams,
     currentDiagram,
+    view,
     isLoading,
     isSaving,
     fetchDiagrams,
@@ -46,13 +47,13 @@ export default function WhiteboardApp() {
     renameDiagram,
     deleteDiagram,
     setCurrentDiagram,
+    setView,
   } = useWhiteboardStore()
 
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawAPI>(null)
   const [isDarkMode, setIsDarkMode] = useState(
     document.documentElement.classList.contains('dark')
   )
-  const [view, setView] = useState<'gallery' | 'editor'>('gallery')
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
