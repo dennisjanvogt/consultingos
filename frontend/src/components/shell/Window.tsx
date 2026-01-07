@@ -17,7 +17,8 @@ import { useNotesStore } from '@/stores/notesStore'
 import { useWorkflowStore } from '@/stores/workflowStore'
 import { useGoStore } from '@/stores/goStore'
 import { useKnowledgebaseStore } from '@/stores/knowledgebaseStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3 } from 'lucide-react'
+import { useAdminStore } from '@/stores/adminStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3, Clock, Users } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
@@ -462,6 +463,46 @@ function KnowledgebaseTitleBarControls() {
   )
 }
 
+// Admin Title Bar Controls
+function AdminTitleBarControls() {
+  const { activeTab, setActiveTab } = useAdminStore()
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setActiveTab('pending')
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
+          activeTab === 'pending'
+            ? 'bg-gray-700 text-white'
+            : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+        }`}
+      >
+        <Clock className="w-3 h-3" />
+        Ausstehend
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setActiveTab('all')
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
+          activeTab === 'all'
+            ? 'bg-gray-700 text-white'
+            : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+        }`}
+      >
+        <Users className="w-3 h-3" />
+        Alle
+      </button>
+    </div>
+  )
+}
+
 // Workflows Title Bar Controls
 function WorkflowsTitleBarControls() {
   const { t } = useTranslation()
@@ -780,6 +821,9 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'knowledgebase' && (
           <KnowledgebaseTitleBarControls />
+        )}
+        {window.appId === 'admin' && (
+          <AdminTitleBarControls />
         )}
       </div>
     </>

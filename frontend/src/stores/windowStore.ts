@@ -30,6 +30,7 @@ interface WindowStore {
   showKeyboardShortcuts: boolean
   isSpotlightOpen: boolean
   isOrbOpen: boolean
+  isOrbMuted: boolean
   isAppOverviewOpen: boolean
   openWindow: (appId: AppType) => void
   closeWindow: (id: string) => void
@@ -52,6 +53,8 @@ interface WindowStore {
   closeWindowByAppId: (appId: AppType) => void
   setSpotlightOpen: (open: boolean) => void
   setOrbOpen: (open: boolean) => void
+  setOrbMuted: (muted: boolean) => void
+  toggleOrbMuted: () => void
   setAppOverviewOpen: (open: boolean) => void
 }
 
@@ -91,6 +94,7 @@ export const useWindowStore = create<WindowStore>()(
   showKeyboardShortcuts: true,
   isSpotlightOpen: false,
   isOrbOpen: false,
+  isOrbMuted: false,
   isAppOverviewOpen: false,
 
   openWindow: (appId) => {
@@ -569,6 +573,14 @@ export const useWindowStore = create<WindowStore>()(
     set({ isOrbOpen: open })
   },
 
+  setOrbMuted: (muted) => {
+    set({ isOrbMuted: muted })
+  },
+
+  toggleOrbMuted: () => {
+    set((state) => ({ isOrbMuted: !state.isOrbMuted }))
+  },
+
   setAppOverviewOpen: (open) => {
     set({ isAppOverviewOpen: open })
   },
@@ -589,13 +601,15 @@ export const useWindowStore = create<WindowStore>()(
         })),
         stageManagerEnabled: state.stageManagerEnabled,
         showKeyboardShortcuts: state.showKeyboardShortcuts,
+        isOrbMuted: state.isOrbMuted,
       }),
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as { windows?: PersistedWindow[]; stageManagerEnabled?: boolean; showKeyboardShortcuts?: boolean } | undefined
+        const persisted = persistedState as { windows?: PersistedWindow[]; stageManagerEnabled?: boolean; showKeyboardShortcuts?: boolean; isOrbMuted?: boolean } | undefined
         if (!persisted?.windows?.length) {
           return {
             ...currentState,
             showKeyboardShortcuts: persisted?.showKeyboardShortcuts ?? currentState.showKeyboardShortcuts,
+            isOrbMuted: persisted?.isOrbMuted ?? currentState.isOrbMuted,
           }
         }
 
@@ -618,6 +632,7 @@ export const useWindowStore = create<WindowStore>()(
           activeWindowId: restoredWindows.find((w) => !w.isMinimized)?.id || null,
           stageManagerEnabled: persisted.stageManagerEnabled ?? currentState.stageManagerEnabled,
           showKeyboardShortcuts: persisted.showKeyboardShortcuts ?? currentState.showKeyboardShortcuts,
+          isOrbMuted: persisted.isOrbMuted ?? currentState.isOrbMuted,
         }
       },
     }

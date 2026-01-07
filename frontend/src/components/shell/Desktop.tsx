@@ -97,10 +97,10 @@ export function Desktop() {
       // Option/Alt key DOWN - Start AI Orb (push-to-talk)
       // Ignore repeated events (key held down)
       if (e.key === 'Alt' && !e.repeat && !isSpotlightOpen) {
-        const currentOrbOpen = useWindowStore.getState().isOrbOpen
-        if (!currentOrbOpen) {
+        const state = useWindowStore.getState()
+        if (!state.isOrbOpen) {
           e.preventDefault()
-          useWindowStore.getState().setOrbOpen(true)
+          state.setOrbOpen(true)
         }
       }
 

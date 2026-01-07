@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from './ThemeProvider'
 import { useAuthStore } from '@/stores/authStore'
 import { useWindowStore } from '@/stores/windowStore'
-import { Globe, Sun, Moon, Monitor, LogOut, Settings, ShieldCheck, Blocks, Keyboard } from 'lucide-react'
+import { Globe, Sun, Moon, Monitor, LogOut, Settings, ShieldCheck, Blocks, Keyboard, Volume2, VolumeX } from 'lucide-react'
 
 // Platform detection for keyboard shortcuts
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
@@ -18,7 +18,7 @@ export function BottomBar() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
-  const { setShowDock, openWindow, showKeyboardShortcuts, setShowKeyboardShortcuts } = useWindowStore()
+  const { setShowDock, openWindow, showKeyboardShortcuts, setShowKeyboardShortcuts, isOrbMuted, toggleOrbMuted } = useWindowStore()
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng)
@@ -76,9 +76,9 @@ export function BottomBar() {
         </div>
       </div>
 
-      {/* Left - Keyboard Shortcuts Toggle + Shortcuts */}
+      {/* Left - Toggle Buttons + Shortcuts */}
       <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
-        {/* Toggle Button */}
+        {/* Keyboard Shortcuts Toggle */}
         <button
           onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
           className={`p-1 rounded transition-colors ${
@@ -128,6 +128,19 @@ export function BottomBar() {
 
       {/* Right side - Settings */}
       <div className="flex items-center gap-3">
+        {/* AI Orb Mute Toggle */}
+        <button
+          onClick={() => toggleOrbMuted()}
+          className={`p-1 rounded transition-colors ${
+            isOrbMuted
+              ? 'bg-red-500/20 text-red-600 dark:text-red-400'
+              : 'hover:bg-black/5 dark:hover:bg-white/10'
+          }`}
+          title={isOrbMuted ? t('orb.unmute', 'Sprachausgabe aktivieren') : t('orb.mute', 'Sprachausgabe deaktivieren')}
+        >
+          {isOrbMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        </button>
+
         {/* Language Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1 hover:bg-black/5 dark:hover:bg-white/10 px-2 py-0.5 rounded">

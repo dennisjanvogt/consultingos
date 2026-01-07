@@ -7,13 +7,12 @@ import {
   ShieldOff,
   Trash2,
   Loader2,
-  Clock,
   CheckCircle,
-  XCircle,
   Github,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useConfirmStore } from '@/stores/confirmStore'
+import { useAdminStore } from '@/stores/adminStore'
 
 interface AdminUser {
   id: number
@@ -29,10 +28,8 @@ interface AdminUser {
   last_login: string | null
 }
 
-type TabType = 'pending' | 'all'
-
 export function AdminApp() {
-  const [activeTab, setActiveTab] = useState<TabType>('pending')
+  const { activeTab, setActiveTab } = useAdminStore()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
@@ -155,37 +152,6 @@ export function AdminApp() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'pending'
-              ? 'text-gray-900 dark:text-white border-b-2 border-gray-900 dark:border-white'
-              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          Ausstehend
-          {pendingCount > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 rounded-full">
-              {pendingCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('all')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'all'
-              ? 'text-gray-900 dark:text-white border-b-2 border-gray-900 dark:border-white'
-              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Alle Benutzer
-        </button>
       </div>
 
       {/* Content */}

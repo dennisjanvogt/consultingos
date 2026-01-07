@@ -3,9 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useWindowStore } from '@/stores/windowStore'
 import { sendMessage, type Message, type ToolCall } from '@/services/aiAgent'
 import { executeTool } from '@/services/tools'
+import { getAppsForAI } from '@/config/apps'
 
-// Dashboard-focused system prompt for AIOrb
-const ORB_SYSTEM_PROMPT = `Du bist Sammy, ein schneller Sprachassistent für das AI Dashboard.
+// Build system prompt with dynamic app list
+const getOrbSystemPrompt = () => `Du bist Sammy, ein schneller Sprachassistent für ConsultingOS.
+
+## APPS ÖFFNEN (open_app mit app="<id>")
+${getAppsForAI()}
 
 ## DASHBOARD TOOLS
 
@@ -26,17 +30,15 @@ const ORB_SYSTEM_PROMPT = `Du bist Sammy, ein schneller Sprachassistent für das
 
 ## BEISPIELE
 
+Apps:
+- "Öffne Kalender" → open_app(app="calendar")
+- "Zeig mir meine Aufgaben" → open_app(app="kanban")
+- "Whiteboard" → open_app(app="whiteboard")
+- "2048 spielen" → open_app(app="game2048")
+
 Charts:
 - "Tesla Chart" → analyze_stock(symbol="TSLA", model_type="linear")
 - "Bitcoin Verlauf" → get_crypto_chart(coin="bitcoin", days=30)
-
-Tabellen:
-- "Tesla Werte letzte 7 Tage" → get_stock_history für Daten, dann show_table
-- "Zeig mir die Zahlen" → show_table mit den Werten
-
-Text:
-- "Erkläre das" → show_info mit Markdown-Text
-- "Zusammenfassung" → show_info
 
 ## STIL
 - Extrem kurze Antworten (1-3 Worte)
@@ -80,7 +82,7 @@ interface SpeechRecognitionInstance extends EventTarget {
 }
 
 export function AIOrb() {
-  const { isOrbOpen, openWindow, closeWindowByAppId } = useWindowStore()
+  const { isOrbOpen, isOrbMuted, openWindow, closeWindowByAppId } = useWindowStore()
 
   // Orb states
   const [isListening, setIsListening] = useState(false)
@@ -91,11 +93,12 @@ export function AIOrb() {
   // Refs
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const finalTranscriptRef = useRef('')
+  const currentTranscriptRef = useRef('') // Includes interim results
   const wasOrbOpenRef = useRef(false)
 
-  // Text-to-Speech
+  // Text-to-Speech (respects mute setting)
   const speak = useCallback((text: string) => {
-    if (!text || !window.speechSynthesis) return
+    if (!text || !window.speechSynthesis || isOrbMuted) return
 
     window.speechSynthesis.cancel()
 
@@ -118,7 +121,7 @@ export function AIOrb() {
     }
 
     window.speechSynthesis.speak(utterance)
-  }, [])
+  }, [isOrbMuted])
 
   // Tool execution
   const executeToolCall = useCallback(async (toolCall: ToolCall): Promise<string> => {
@@ -146,7 +149,7 @@ export function AIOrb() {
         name: 'Orb',
         icon: '🔮',
         description: 'AI Dashboard Voice Assistant',
-        system_prompt: ORB_SYSTEM_PROMPT,
+        system_prompt: getOrbSystemPrompt(),
         enabled_tools: [] as string[],
         is_default: false,
         created_at: '',
@@ -190,8 +193,15 @@ export function AIOrb() {
         speak(response.content)
       }
     } catch (error) {
-      console.error('AI Error:', error)
-      speak('Entschuldigung, es gab einen Fehler.')
+      console.error('AI Orb Error:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage.includes('API key') || errorMessage.includes('401') || errorMessage.includes('403')) {
+        speak('API-Schlüssel fehlt oder ungültig.')
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        speak('Netzwerkfehler.')
+      } else {
+        speak('Fehler bei der Verarbeitung.')
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -199,12 +209,20 @@ export function AIOrb() {
 
   // Stop listening and return the text
   const stopListening = useCallback(() => {
-    const text = finalTranscriptRef.current.trim()
+    // Use currentTranscript which includes interim results (what user saw on screen)
+    const text = currentTranscriptRef.current.trim()
+    console.log('AI Orb: stopListening called, transcript:', text)
 
     if (recognitionRef.current) {
+      // Remove handlers to prevent any callbacks after stop
       recognitionRef.current.onend = null
       recognitionRef.current.onresult = null
-      recognitionRef.current.stop()
+      recognitionRef.current.onerror = null
+      try {
+        recognitionRef.current.stop()
+      } catch (e) {
+        console.log('AI Orb: stop() error (already stopped?):', e)
+      }
       recognitionRef.current = null
     }
 
@@ -218,12 +236,16 @@ export function AIOrb() {
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognitionAPI) {
       console.error('Speech Recognition not supported')
+      speak('Spracherkennung nicht unterstützt.')
       return
     }
+
+    console.log('AI Orb: startListening called')
 
     try {
       // Reset state
       finalTranscriptRef.current = ''
+      currentTranscriptRef.current = ''
       setTranscribedText('')
       setIsListening(true)
 
@@ -245,12 +267,14 @@ export function AIOrb() {
         }
 
         const fullText = (finalTranscriptRef.current + interimTranscript).trim()
+        currentTranscriptRef.current = fullText // Save for stopListening
         setTranscribedText(fullText)
       }
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (event.error !== 'no-speech' && event.error !== 'aborted') {
-          console.error('Speech recognition error:', event.error)
+        console.log('Speech recognition error:', event.error)
+        if (event.error === 'not-allowed') {
+          speak('Mikrofon-Zugriff verweigert.')
         }
       }
 
@@ -265,7 +289,7 @@ export function AIOrb() {
       console.error('Speech recognition failed:', error)
       setIsListening(false)
     }
-  }, [])
+  }, [speak])
 
   // Handle orb open/close - Push-to-talk behavior
   useEffect(() => {
@@ -282,9 +306,13 @@ export function AIOrb() {
       const text = stopListening()
       setTranscribedText('')
       finalTranscriptRef.current = ''
+      currentTranscriptRef.current = ''
 
       if (text) {
+        console.log('AI Orb: Processing text:', text)
         processText(text)
+      } else {
+        console.log('AI Orb: No text detected')
       }
     }
   }, [isOrbOpen, isProcessing, startListening, stopListening, processText])
