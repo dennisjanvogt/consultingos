@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/components/shell/ThemeProvider'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import { Building2, CreditCard, Receipt, Palette, LayoutGrid, User as UserIcon, ShieldCheck, Key, Eye, EyeOff, Trash2, Check } from 'lucide-react'
 import { AppsTab } from './AppsTab'
 import type { User } from '@/api/types'
@@ -645,6 +646,7 @@ function InputField({ label, value, onChange, placeholder, type = 'text' }: Inpu
 
 function APIKeysSettings() {
   const { t } = useTranslation()
+  const confirm = useConfirmStore((state) => state.confirm)
   const [hasKey, setHasKey] = useState(false)
   const [keyPreview, setKeyPreview] = useState<string | null>(null)
   const [hasServerFallback, setHasServerFallback] = useState(false)
@@ -717,7 +719,13 @@ function APIKeysSettings() {
   }
 
   const handleDeleteKey = async () => {
-    if (!confirm(t('settings.confirmDeleteApiKey', 'Are you sure you want to delete your API key?'))) {
+    const confirmed = await confirm({
+      title: t('settings.deleteApiKey', 'API Key löschen'),
+      message: t('settings.confirmDeleteApiKey', 'Are you sure you want to delete your API key?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (!confirmed) {
       return
     }
 

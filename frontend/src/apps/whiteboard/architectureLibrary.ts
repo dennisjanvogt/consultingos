@@ -1,7 +1,8 @@
 // System Architecture Library for Excalidraw
 // Contains reusable components for system architecture diagrams
 
-import type { LibraryItem } from '@excalidraw/excalidraw/types/types'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LibraryItem = any
 
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 15)

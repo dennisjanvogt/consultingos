@@ -8,6 +8,7 @@ import { AIOrb } from './AIOrb'
 import { useWindowStore } from '@/stores/windowStore'
 import { useMasterDataStore } from '@/stores/masterdataStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
+import { useWhiteboardStore } from '@/stores/whiteboardStore'
 
 export function Desktop() {
   const windows = useWindowStore((state) => state.windows)
@@ -56,6 +57,15 @@ export function Desktop() {
               e.preventDefault()
               e.stopPropagation()
               transactionsState.setActiveView('home')
+              return
+            }
+          }
+
+          // For whiteboard: let the app handle ESC when in editor or project view
+          if (activeWindow?.appId === 'whiteboard') {
+            const whiteboardState = useWhiteboardStore.getState()
+            if (whiteboardState.view === 'editor' || whiteboardState.currentProjectId !== null) {
+              // Let WhiteboardApp's own ESC handler take care of it
               return
             }
           }

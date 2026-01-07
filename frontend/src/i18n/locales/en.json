@@ -22,6 +22,15 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "window": {
+    "close": "Close",
+    "maximize": "Maximize",
+    "recordWindow": "Record Window",
+    "stopRecording": "Stop Recording"
+  },
+  "shortcuts": {
+    "toggle": "Show Keyboard Shortcuts"
+  },
   "apps": {
     "dashboard": "Dashboard",
     "masterdata": "Master Data",
@@ -32,6 +41,8 @@
     "timetracking": "Time Tracking",
     "settings": "Settings",
     "imageviewer": "Image Viewer",
+    "videoviewer": "Video Player",
+    "pdfviewer": "PDF Viewer",
     "chat": "Chat",
     "chess": "Chess",
     "go": "Go",
@@ -42,7 +53,7 @@
   },
   "whiteboard": {
     "title": "Whiteboard",
-    "newDiagram": "New",
+    "newDiagram": "New Diagram",
     "selectDiagram": "Select diagram...",
     "noDiagrams": "No diagrams",
     "noDiagramSelected": "No diagram selected",
@@ -54,7 +65,15 @@
     "unsaved": "Unsaved",
     "delete": "Delete",
     "rename": "Rename",
-    "confirmDelete": "Really delete this diagram?"
+    "confirmDelete": "Really delete this diagram?",
+    "allDiagrams": "All Diagrams",
+    "newProject": "New Project",
+    "projectName": "Project name",
+    "deleteProject": "Delete Project",
+    "confirmDeleteProject": "Really delete this project? Diagrams will not be deleted.",
+    "deleteDiagram": "Delete Diagram",
+    "createWithAI": "Create with AI",
+    "insertWithAI": "Insert with AI"
   },
   "architecture": {
     "title": "Architecture",

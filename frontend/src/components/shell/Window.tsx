@@ -11,7 +11,8 @@ import { useAIStore } from '@/stores/aiStore'
 import { useChessStore } from '@/stores/chessStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useWhiteboardStore } from '@/stores/whiteboardStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save } from 'lucide-react'
+import { useRecordingStore } from '@/stores/recordingStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
@@ -307,6 +308,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
     <motion.div
       layout
       layoutId={`window-${window.id}`}
+      data-window-id={window.id}
       className={`absolute glass overflow-hidden window-shadow flex flex-col outline-none ${
         window.isMaximized ? 'rounded-none' : 'rounded-xl'
       } ${isActive ? 'ring-1 ring-white/20' : ''}`}
@@ -531,6 +533,18 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
   const { t } = useTranslation()
   const { activeBoard, setActiveBoard } = useKanbanStore()
   const { activeTab, setActiveTab } = useTimeTrackingStore()
+  const { isRecording, targetWindowId, startWindowRecording, stopRecording, isUploading } = useRecordingStore()
+
+  const isRecordingThisWindow = isRecording && targetWindowId === window.id
+
+  const handleRecordClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isRecordingThisWindow) {
+      stopRecording()
+    } else if (!isRecording) {
+      startWindowRecording(window.id)
+    }
+  }
 
   return (
     <>
@@ -543,7 +557,7 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
           }}
           onPointerDown={(e) => e.stopPropagation()}
           className="w-6 h-5 rounded-md bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 hover:from-red-400 hover:to-red-500 border border-gray-300/50 dark:border-gray-500/50 hover:border-red-400/50 transition-all duration-150 flex items-center justify-center group shadow-sm"
-          title="Schließen"
+          title={t('window.close', 'Schließen')}
         >
           <X className="w-3 h-3 text-gray-500 dark:text-gray-300 group-hover:text-white transition-colors" />
         </button>
@@ -554,9 +568,27 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
           }}
           onPointerDown={(e) => e.stopPropagation()}
           className="w-6 h-5 rounded-md bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 hover:from-lavender-400 hover:to-lavender-500 border border-gray-300/50 dark:border-gray-500/50 hover:border-lavender-400/50 transition-all duration-150 flex items-center justify-center group shadow-sm"
-          title="Maximieren"
+          title={t('window.maximize', 'Maximieren')}
         >
           <Square className="w-2.5 h-2.5 text-gray-500 dark:text-gray-300 group-hover:text-white transition-colors" />
+        </button>
+        {/* Record Button */}
+        <button
+          onClick={handleRecordClick}
+          onPointerDown={(e) => e.stopPropagation()}
+          disabled={isUploading || (isRecording && !isRecordingThisWindow)}
+          className={`w-6 h-5 rounded-md transition-all duration-150 flex items-center justify-center group shadow-sm border ${
+            isRecordingThisWindow
+              ? 'bg-gradient-to-b from-red-400 to-red-500 border-red-400/50'
+              : 'bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 hover:from-gold-400 hover:to-gold-500 border-gray-300/50 dark:border-gray-500/50 hover:border-gold-400/50'
+          } disabled:opacity-40 disabled:cursor-not-allowed`}
+          title={isRecordingThisWindow ? t('window.stopRecording', 'Aufnahme stoppen') : t('window.recordWindow', 'Fenster aufnehmen')}
+        >
+          <Circle className={`w-2.5 h-2.5 ${
+            isRecordingThisWindow
+              ? 'text-white fill-white animate-pulse'
+              : 'text-gray-500 dark:text-gray-300 group-hover:text-white'
+          } transition-colors`} />
         </button>
       </div>
 

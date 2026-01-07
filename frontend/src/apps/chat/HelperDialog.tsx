@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Plus, Trash2, Edit2, Sparkles, Loader2 } from 'lucide-react'
 import { useAIStore } from '@/stores/aiStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import { HelperForm } from './HelperForm'
 import type { AIHelper } from '@/api/types'
 
@@ -16,6 +17,7 @@ export function HelperDialog({ open, onClose }: HelperDialogProps) {
   const [isCreatingWithAI, setIsCreatingWithAI] = useState(false)
 
   const { helpers, deleteHelper, isLoadingHelpers } = useAIStore()
+  const confirm = useConfirmStore((state) => state.confirm)
 
   // ESC key handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -34,7 +36,13 @@ export function HelperDialog({ open, onClose }: HelperDialogProps) {
   if (!open) return null
 
   const handleDelete = async (id: number) => {
-    if (confirm('Helfer wirklich löschen?')) {
+    const confirmed = await confirm({
+      title: 'Helfer löschen',
+      message: 'Helfer wirklich löschen?',
+      confirmLabel: 'Löschen',
+      variant: 'danger',
+    })
+    if (confirmed) {
       await deleteHelper(id)
     }
   }

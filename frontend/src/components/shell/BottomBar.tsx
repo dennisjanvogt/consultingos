@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from './ThemeProvider'
 import { useAuthStore } from '@/stores/authStore'
 import { useWindowStore } from '@/stores/windowStore'
-import { Globe, Sun, Moon, Monitor, LogOut, Settings, ShieldCheck } from 'lucide-react'
+import { Globe, Sun, Moon, Monitor, LogOut, Settings, ShieldCheck, Blocks, Keyboard } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ export function BottomBar() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
-  const { setShowDock, openWindow } = useWindowStore()
+  const { setShowDock, openWindow, showKeyboardShortcuts, setShowKeyboardShortcuts } = useWindowStore()
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng)
@@ -27,42 +27,79 @@ export function BottomBar() {
       className="glass h-7 flex items-center justify-between px-4 text-sm relative"
       onMouseEnter={() => setShowDock(true)}
     >
-      {/* Center - App name (eingestanzt) */}
-      <span
-        className="absolute left-1/2 -translate-x-1/2 font-semibold pointer-events-none text-gold-600/80"
-        style={{
-          textShadow: '0 1px 1px rgba(255,255,255,0.3), 0 -1px 1px rgba(0,0,0,0.4)',
-        }}
+      {/* Center - App name (3D hover reveal) */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 group cursor-default"
+        style={{ perspective: '400px', perspectiveOrigin: 'center center' }}
       >
-        ConsultingOS
-      </span>
+        {/* COS - 3D Monogram */}
+        <span
+          className="relative font-black tracking-widest text-gold-500 group-hover:opacity-0 transition-all duration-300 inline-block"
+          style={{
+            transform: 'rotateY(-8deg) rotateX(3deg)',
+            transformStyle: 'preserve-3d',
+            textShadow: '1px 1px 0 #8b6914, 2px 2px 0 #6b5210, 2px 3px 5px rgba(0,0,0,0.35)',
+          }}
+        >
+          COS
+        </span>
+        {/* ConsultingOS - Full 3D Text */}
+        <span
+          className="absolute left-1/2 -translate-x-1/2 font-black tracking-wide text-gold-500 opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap inline-block"
+          style={{
+            transform: 'rotateY(-8deg) rotateX(3deg)',
+            transformStyle: 'preserve-3d',
+            textShadow: '1px 1px 0 #8b6914, 2px 2px 0 #6b5210, 2px 3px 5px rgba(0,0,0,0.35)',
+          }}
+        >
+          ConsultingOS
+        </span>
+      </div>
 
-      {/* Left - Keyboard Shortcuts */}
+      {/* Left - Keyboard Shortcuts Toggle + Shortcuts */}
       <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-1">
-          <span>AI Orb</span>
-          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">⌥</kbd>
-        </div>
-        <div className="flex items-center gap-1">
-          <span>Max/Min</span>
-          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">Space</kbd>
-        </div>
-        <div className="flex items-center gap-1">
-          <span>Close</span>
-          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">ESC</kbd>
-        </div>
-        <div className="flex items-center gap-1">
-          <span>Tiling</span>
-          <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">→</kbd>
-        </div>
-        <div className="flex items-center gap-1">
-          <span>Stage Manager</span>
-          <span className="text-[9px] opacity-70">hover ↑</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span>Dock</span>
-          <span className="text-[9px] opacity-70">hover ↓</span>
-        </div>
+        {/* Toggle Button */}
+        <button
+          onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
+          className={`p-1 rounded transition-colors ${
+            showKeyboardShortcuts
+              ? 'bg-lavender-500/20 text-lavender-600 dark:text-lavender-400'
+              : 'hover:bg-black/5 dark:hover:bg-white/10'
+          }`}
+          title={t('shortcuts.toggle', 'Tastaturkürzel anzeigen')}
+        >
+          <Keyboard className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Shortcuts (conditional) */}
+        {showKeyboardShortcuts && (
+          <>
+            <div className="flex items-center gap-1">
+              <span>AI Orb</span>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">⌥</kbd>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Max/Min</span>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">Space</kbd>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Close</span>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">ESC</kbd>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Tiling</span>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">→</kbd>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Stage Manager</span>
+              <span className="text-[9px] opacity-70">hover ↑</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Dock</span>
+              <span className="text-[9px] opacity-70">hover ↓</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Right side - Settings */}
@@ -184,6 +221,10 @@ export function BottomBar() {
 
               {/* Menu Items */}
               <div className="p-1">
+                <DropdownMenuItem onClick={() => openWindow('architecture')}>
+                  <Blocks className="h-4 w-4 mr-2" />
+                  {t('apps.architecture', 'Architektur')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => openWindow('settings')}>
                   <Settings className="h-4 w-4 mr-2" />
                   {t('profile.settings', 'Einstellungen')}

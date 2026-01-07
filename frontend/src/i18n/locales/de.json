@@ -22,6 +22,15 @@
     "active": "Aktiv",
     "inactive": "Inaktiv"
   },
+  "window": {
+    "close": "Schließen",
+    "maximize": "Maximieren",
+    "recordWindow": "Fenster aufnehmen",
+    "stopRecording": "Aufnahme stoppen"
+  },
+  "shortcuts": {
+    "toggle": "Tastaturkürzel anzeigen"
+  },
   "apps": {
     "dashboard": "Dashboard",
     "masterdata": "Stammdaten",
@@ -32,6 +41,8 @@
     "timetracking": "Zeiterfassung",
     "settings": "Einstellungen",
     "imageviewer": "Bildansicht",
+    "videoviewer": "Video Player",
+    "pdfviewer": "PDF Viewer",
     "chat": "Chat",
     "chess": "Schach",
     "go": "Go",
@@ -42,7 +53,7 @@
   },
   "whiteboard": {
     "title": "Whiteboard",
-    "newDiagram": "Neu",
+    "newDiagram": "Neues Diagramm",
     "selectDiagram": "Diagramm wählen...",
     "noDiagrams": "Keine Diagramme",
     "noDiagramSelected": "Kein Diagramm ausgewählt",
@@ -54,7 +65,15 @@
     "unsaved": "Ungespeichert",
     "delete": "Löschen",
     "rename": "Umbenennen",
-    "confirmDelete": "Diagramm wirklich löschen?"
+    "confirmDelete": "Diagramm wirklich löschen?",
+    "allDiagrams": "Alle Diagramme",
+    "newProject": "Neues Projekt",
+    "projectName": "Projektname",
+    "deleteProject": "Projekt löschen",
+    "confirmDeleteProject": "Projekt wirklich löschen? Diagramme werden nicht gelöscht.",
+    "deleteDiagram": "Diagramm löschen",
+    "createWithAI": "Mit AI erstellen",
+    "insertWithAI": "Mit AI einfügen"
   },
   "architecture": {
     "title": "Architektur",

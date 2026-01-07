@@ -4,6 +4,7 @@ import { Search, Download, MoreHorizontal, Pencil, Trash2, X, Check, Send, Arrow
 import { useInvoicesStore } from '@/stores/invoicesStore'
 import { useCustomersStore } from '@/stores/customersStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { Invoice, InvoiceCreate, InvoiceItemCreate } from '@/api/types'
 
 export function InvoicesTab() {
@@ -16,6 +17,7 @@ export function InvoicesTab() {
   const { invoices, isLoading, fetchInvoices, deleteInvoice, markAsPaid, markAsSent } = useInvoicesStore()
   const { customers, fetchCustomers } = useCustomersStore()
   const { showNewForm, clearNewFormTrigger } = useTransactionsStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   useEffect(() => {
     fetchInvoices(statusFilter || '', searchQuery)
@@ -46,7 +48,13 @@ export function InvoicesTab() {
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('de-DE')
 
   const handleDelete = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+    const confirmed = await confirm({
+      title: t('invoices.deleteInvoice', 'Rechnung löschen'),
+      message: t('invoices.confirmDelete', 'Rechnung wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       await deleteInvoice(id)
     }
   }

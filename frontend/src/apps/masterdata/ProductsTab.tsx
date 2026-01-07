@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, MoreHorizontal, Pencil, Trash2, X, ArrowLeft, Euro, Tag } from 'lucide-react'
 import { useMasterDataStore } from '@/stores/masterdataStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 
 interface Product {
   id: number
@@ -22,6 +23,7 @@ export function ProductsTab() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   // Listen for title bar "Neu" button
   useEffect(() => {
@@ -42,8 +44,14 @@ export function ProductsTab() {
     setShowForm(true)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: t('products.deleteProduct', 'Produkt löschen'),
+      message: t('products.confirmDelete', 'Produkt wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       setProducts(products.filter(p => p.id !== id))
     }
   }

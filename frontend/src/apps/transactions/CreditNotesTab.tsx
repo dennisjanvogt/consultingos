@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
 import { useTransactionsStore } from '@/stores/transactionsStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 
 interface CreditNote {
   id: number
@@ -47,6 +48,7 @@ export function CreditNotesTab() {
   const [editingNote, setEditingNote] = useState<CreditNote | null>(null)
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>(initialCreditNotes)
   const { showNewForm, clearNewFormTrigger } = useTransactionsStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   // Listen for title bar "Neu" button
   useEffect(() => {
@@ -79,8 +81,14 @@ export function CreditNotesTab() {
     setShowForm(true)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: t('transactions.deleteCreditNote', 'Gutschrift löschen'),
+      message: t('transactions.confirmDeleteCreditNote', 'Gutschrift wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       setCreditNotes(creditNotes.filter(n => n.id !== id))
     }
   }

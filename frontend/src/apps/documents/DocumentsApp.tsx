@@ -26,6 +26,8 @@ import {
 import { useDocumentsStore } from '@/stores/documentsStore'
 import { useWindowStore } from '@/stores/windowStore'
 import { useImageViewerStore } from '@/stores/imageViewerStore'
+import { useVideoViewerStore } from '@/stores/videoViewerStore'
+import { usePDFViewerStore } from '@/stores/pdfViewerStore'
 import type { Folder as FolderType, Document as DocumentType } from '@/api/types'
 import { type FileCategory, CATEGORY_INFO, getCategoryFromFileType } from './utils/fileCategories'
 
@@ -186,13 +188,25 @@ export function DocumentsApp() {
     setEditingFolder(null)
   }
 
-  // Open image in viewer
+  // Open files in viewers
   const { openWindow } = useWindowStore()
   const { setCurrentImage } = useImageViewerStore()
+  const { setCurrentVideo } = useVideoViewerStore()
+  const { setCurrentPDF } = usePDFViewerStore()
 
   const handleOpenImage = (doc: DocumentType) => {
     setCurrentImage(doc)
     openWindow('imageviewer')
+  }
+
+  const handleOpenVideo = (doc: DocumentType) => {
+    setCurrentVideo(doc)
+    openWindow('videoviewer')
+  }
+
+  const handleOpenPDF = (doc: DocumentType) => {
+    setCurrentPDF(doc)
+    openWindow('pdfviewer')
   }
 
   // File upload drag & drop
@@ -517,6 +531,8 @@ export function DocumentsApp() {
                       document={doc}
                       onDelete={() => handleDeleteDocument(doc.id, doc.name)}
                       onOpenImage={handleOpenImage}
+                      onOpenVideo={handleOpenVideo}
+                      onOpenPDF={handleOpenPDF}
                     />
                   ))}
                 </div>
@@ -592,6 +608,8 @@ export function DocumentsApp() {
                       document={doc}
                       onDelete={() => handleDeleteDocument(doc.id, doc.name)}
                       onOpenImage={handleOpenImage}
+                      onOpenVideo={handleOpenVideo}
+                      onOpenPDF={handleOpenPDF}
                     />
                   ))}
                 </div>
@@ -877,14 +895,18 @@ function FolderCard({ folder, onClick, onEdit, onDelete, onDrop, onToggleSidebar
 }
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico']
+const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', 'wmv', 'flv']
+const PDF_EXTENSION = 'pdf'
 
 interface DocumentCardProps {
   document: DocumentType
   onDelete: () => void
   onOpenImage: (doc: DocumentType) => void
+  onOpenVideo: (doc: DocumentType) => void
+  onOpenPDF: (doc: DocumentType) => void
 }
 
-function DocumentCard({ document, onDelete, onOpenImage }: DocumentCardProps) {
+function DocumentCard({ document, onDelete, onOpenImage, onOpenVideo, onOpenPDF }: DocumentCardProps) {
   const { t: _t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
 
@@ -893,7 +915,10 @@ function DocumentCard({ document, onDelete, onOpenImage }: DocumentCardProps) {
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const isImage = IMAGE_EXTENSIONS.includes(document.file_type?.toLowerCase() || '')
+  const fileType = document.file_type?.toLowerCase() || ''
+  const isImage = IMAGE_EXTENSIONS.includes(fileType)
+  const isVideo = VIDEO_EXTENSIONS.includes(fileType)
+  const isPDF = fileType === PDF_EXTENSION
   const imageUrl = document.file_url.startsWith('http')
     ? document.file_url
     : `${MEDIA_BASE_URL}${document.file_url}`
@@ -905,6 +930,10 @@ function DocumentCard({ document, onDelete, onOpenImage }: DocumentCardProps) {
   const handleDoubleClick = () => {
     if (isImage) {
       onOpenImage(document)
+    } else if (isVideo) {
+      onOpenVideo(document)
+    } else if (isPDF) {
+      onOpenPDF(document)
     } else {
       handleDownload()
     }
@@ -1122,9 +1151,11 @@ interface DocumentRowProps {
   document: DocumentType
   onDelete: () => void
   onOpenImage: (doc: DocumentType) => void
+  onOpenVideo: (doc: DocumentType) => void
+  onOpenPDF: (doc: DocumentType) => void
 }
 
-function DocumentRow({ document, onDelete, onOpenImage }: DocumentRowProps) {
+function DocumentRow({ document, onDelete, onOpenImage, onOpenVideo, onOpenPDF }: DocumentRowProps) {
   const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
 
@@ -1133,7 +1164,10 @@ function DocumentRow({ document, onDelete, onOpenImage }: DocumentRowProps) {
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const isImage = IMAGE_EXTENSIONS.includes(document.file_type?.toLowerCase() || '')
+  const fileType = document.file_type?.toLowerCase() || ''
+  const isImage = IMAGE_EXTENSIONS.includes(fileType)
+  const isVideo = VIDEO_EXTENSIONS.includes(fileType)
+  const isPDF = fileType === PDF_EXTENSION
   const imageUrl = document.file_url.startsWith('http')
     ? document.file_url
     : `${MEDIA_BASE_URL}${document.file_url}`
@@ -1145,6 +1179,10 @@ function DocumentRow({ document, onDelete, onOpenImage }: DocumentRowProps) {
   const handleDoubleClick = () => {
     if (isImage) {
       onOpenImage(document)
+    } else if (isVideo) {
+      onOpenVideo(document)
+    } else if (isPDF) {
+      onOpenPDF(document)
     } else {
       handleDownload()
     }

@@ -13,6 +13,7 @@ import {
   Github,
 } from 'lucide-react'
 import { api } from '@/api/client'
+import { useConfirmStore } from '@/stores/confirmStore'
 
 interface AdminUser {
   id: number
@@ -35,6 +36,7 @@ export function AdminApp() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const confirm = useConfirmStore((state) => state.confirm)
 
   // Fetch users
   const fetchUsers = async () => {
@@ -75,7 +77,13 @@ export function AdminApp() {
   }
 
   const handleReject = async (userId: number) => {
-    if (!confirm('User wirklich ablehnen und loeschen?')) return
+    const confirmed = await confirm({
+      title: 'User ablehnen',
+      message: 'User wirklich ablehnen und löschen?',
+      confirmLabel: 'Ablehnen',
+      variant: 'danger',
+    })
+    if (!confirmed) return
     setActionLoading(userId)
     try {
       await api.post('/auth/admin/reject', { user_id: userId })
@@ -100,7 +108,13 @@ export function AdminApp() {
   }
 
   const handleDelete = async (userId: number) => {
-    if (!confirm('User wirklich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden.')) return
+    const confirmed = await confirm({
+      title: 'User löschen',
+      message: 'User wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+      confirmLabel: 'Löschen',
+      variant: 'danger',
+    })
+    if (!confirmed) return
     setActionLoading(userId)
     try {
       await api.post('/auth/admin/delete-user', { user_id: userId })

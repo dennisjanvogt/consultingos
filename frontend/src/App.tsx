@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/shell/ThemeProvider'
 import { LoginScreen } from '@/apps/auth/LoginScreen'
 import { GitHubCallback } from '@/apps/auth/GitHubCallback'
 import { MeetingJoinPage } from '@/apps/calendar/MeetingJoinPage'
+import ConfirmDialog from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/stores/authStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import '@/i18n/config'
@@ -45,6 +46,7 @@ function App() {
           <Route path="*" element={<MainApp />} />
         </Routes>
       </BrowserRouter>
+      <ConfirmDialog />
     </ThemeProvider>
   )
 }

@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap, Filter } from 'lucide-react'
+import { Sparkles, Calendar, LayoutGrid, Clock, Play, Pause, Square, Timer, ChevronDown, Bot, Image, Check, Grid3X3, Coffee, Focus, Zap, Filter, Video, Circle, Mic, MicOff, Monitor, AppWindow, FolderOpen } from 'lucide-react'
 import { useWindowStore } from '@/stores/windowStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useTimeTrackingStore } from '@/stores/timetrackingStore'
 import { useAIStore, groupModelsByProvider, type AIModel } from '@/stores/aiStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
+import { useRecordingStore } from '@/stores/recordingStore'
 import {
   Popover,
   PopoverContent,
@@ -85,6 +86,30 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
   const [pomodoroRemaining, setPomodoroRemaining] = useState(0)
   const [pomodoroPopoverOpen, setPomodoroPopoverOpen] = useState(false)
 
+  // Recording state
+  const {
+    isRecording,
+    isPaused: isRecordingPaused,
+    startTime: recordingStartTime,
+    isUploading,
+    source: recordingSource,
+    quality: recordingQuality,
+    audioEnabled,
+    lastRecordingId,
+    lastRecordingName,
+    targetWindowId,
+    setSource: setRecordingSource,
+    setQuality: setRecordingQuality,
+    setAudioEnabled,
+    startRecording,
+    startWindowRecording,
+    pauseRecording,
+    resumeRecording,
+    stopRecording,
+  } = useRecordingStore()
+  const [recordingElapsed, setRecordingElapsed] = useState(0)
+  const [recordingPopoverOpen, setRecordingPopoverOpen] = useState(false)
+
   const pomodoroOptions = [
     { minutes: 15, label: 'Quick', icon: Zap, breakMinutes: 3 },
     { minutes: 25, label: 'Classic', icon: Focus, breakMinutes: 5 },
@@ -141,6 +166,24 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
       Notification.requestPermission()
     }
   }, [])
+
+  // Recording elapsed time effect
+  useEffect(() => {
+    if (!isRecording || !recordingStartTime) {
+      setRecordingElapsed(0)
+      return
+    }
+
+    const updateRecordingElapsed = () => {
+      if (!isRecordingPaused && recordingStartTime) {
+        setRecordingElapsed(Date.now() - recordingStartTime)
+      }
+    }
+
+    updateRecordingElapsed()
+    const interval = setInterval(updateRecordingElapsed, 1000)
+    return () => clearInterval(interval)
+  }, [isRecording, isRecordingPaused, recordingStartTime])
 
   const {
     chatModel,
@@ -723,6 +766,236 @@ export function MenuBar({ onOpenSpotlight }: MenuBarProps) {
                 <p className="text-xs text-lavender-600 dark:text-lavender-400 opacity-80">
                   Wähle ein Projekt, um den Eintrag zu speichern.
                 </p>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Screen Recording */}
+        <Popover open={recordingPopoverOpen} onOpenChange={setRecordingPopoverOpen}>
+          <PopoverTrigger asChild>
+            <div className="flex items-center gap-1">
+              {isRecording ? (
+                <>
+                  {/* Recording indicator - klickbar für Popover */}
+                  <button
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors ${
+                      isRecordingPaused
+                        ? 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
+                        : 'bg-red-500/20 text-red-600 dark:text-red-400'
+                    }`}
+                  >
+                    <Circle className={`h-3 w-3 fill-current ${!isRecordingPaused ? 'animate-pulse' : ''}`} />
+                    <span className="text-xs font-mono font-medium">{formatElapsedTime(recordingElapsed)}</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </button>
+
+                  {/* Pause/Resume Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      isRecordingPaused ? resumeRecording() : pauseRecording()
+                    }}
+                    className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                    title={isRecordingPaused ? 'Fortsetzen' : 'Pausieren'}
+                  >
+                    {isRecordingPaused ? (
+                      <Play className="h-3.5 w-3.5 text-red-500" />
+                    ) : (
+                      <Pause className="h-3.5 w-3.5 text-red-400" />
+                    )}
+                  </button>
+
+                  {/* Stop Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      stopRecording()
+                      setRecordingPopoverOpen(false)
+                    }}
+                    disabled={isUploading}
+                    className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                    title="Stoppen"
+                  >
+                    <Square className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                  </button>
+                </>
+              ) : (
+                /* Start Recording Button */
+                <button
+                  className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  title="Bildschirmaufnahme"
+                >
+                  <Video className="h-4 w-4 opacity-60" />
+                </button>
+              )}
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3" align="center">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Bildschirmaufnahme</span>
+                {isRecording && (
+                  <span className={`text-lg font-mono font-bold ${
+                    isRecordingPaused ? 'text-gray-500' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {formatElapsedTime(recordingElapsed)}
+                  </span>
+                )}
+              </div>
+
+              {/* Source Selection */}
+              <div>
+                <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Quelle</label>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setRecordingSource('tab')}
+                    disabled={isRecording}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 ${
+                      recordingSource === 'tab'
+                        ? 'bg-red-500/20 text-red-700 dark:text-red-300 ring-1 ring-red-500/30'
+                        : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                    }`}
+                  >
+                    <AppWindow className="h-4 w-4" />
+                    Tab
+                  </button>
+                  <button
+                    onClick={() => setRecordingSource('screen')}
+                    disabled={isRecording}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 ${
+                      recordingSource === 'screen'
+                        ? 'bg-red-500/20 text-red-700 dark:text-red-300 ring-1 ring-red-500/30'
+                        : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                    }`}
+                  >
+                    <Monitor className="h-4 w-4" />
+                    Bildschirm
+                  </button>
+                  <button
+                    onClick={() => setRecordingSource('window')}
+                    disabled={isRecording || windows.filter(w => !w.isMinimized).length === 0}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 ${
+                      recordingSource === 'window'
+                        ? 'bg-red-500/20 text-red-700 dark:text-red-300 ring-1 ring-red-500/30'
+                        : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                    }`}
+                    title={windows.filter(w => !w.isMinimized).length === 0 ? 'Kein Fenster geöffnet' : 'Aktives Fenster aufnehmen'}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                    Fenster
+                  </button>
+                </div>
+              </div>
+
+              {/* Quality Selection */}
+              <div>
+                <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Qualität</label>
+                <select
+                  value={recordingQuality}
+                  onChange={(e) => setRecordingQuality(e.target.value as '720p' | '1080p' | 'original')}
+                  disabled={isRecording}
+                  className="w-full px-2 py-1.5 text-sm border border-black/10 dark:border-white/10 rounded-lg bg-white/50 dark:bg-white/5 focus:outline-none focus:ring-1 focus:ring-red-500/50 disabled:opacity-50"
+                >
+                  <option value="720p">720p (1.5 Mbps)</option>
+                  <option value="1080p">1080p (3 Mbps)</option>
+                  <option value="original">Original (5 Mbps)</option>
+                </select>
+              </div>
+
+              {/* Audio Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {audioEnabled ? (
+                    <Mic className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <MicOff className="h-4 w-4 text-gray-400" />
+                  )}
+                  <span className="text-sm">Mikrofon</span>
+                </div>
+                <button
+                  onClick={() => setAudioEnabled(!audioEnabled)}
+                  disabled={isRecording}
+                  className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${
+                    audioEnabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                      audioEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Start/Stop Buttons */}
+              <div className="flex gap-2">
+                {!isRecording ? (
+                  <button
+                    onClick={() => {
+                      if (recordingSource === 'window') {
+                        // Find the active (topmost non-minimized) window
+                        const activeWindow = windows.find(w => !w.isMinimized)
+                        if (activeWindow) {
+                          startWindowRecording(activeWindow.id)
+                        }
+                      } else {
+                        startRecording()
+                      }
+                      setRecordingPopoverOpen(false)
+                    }}
+                    disabled={recordingSource === 'window' && windows.filter(w => !w.isMinimized).length === 0}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    <Circle className="h-4 w-4 fill-current" />
+                    Aufnahme starten
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => isRecordingPaused ? resumeRecording() : pauseRecording()}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        isRecordingPaused
+                          ? 'bg-red-500 text-white hover:bg-red-600'
+                          : 'bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-500/30'
+                      }`}
+                    >
+                      {isRecordingPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                      {isRecordingPaused ? 'Fortsetzen' : 'Pause'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        stopRecording()
+                        setRecordingPopoverOpen(false)
+                      }}
+                      disabled={isUploading}
+                      className="flex items-center justify-center gap-2 px-3 py-1.5 bg-black/10 dark:bg-white/10 text-sm rounded-lg hover:bg-black/20 dark:hover:bg-white/20 transition-colors disabled:opacity-50"
+                    >
+                      {isUploading ? (
+                        <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                      {isUploading ? 'Speichern...' : 'Stop'}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Last Recording Link */}
+              {lastRecordingId && lastRecordingName && (
+                <div className="pt-2 border-t border-black/10 dark:border-white/10">
+                  <button
+                    onClick={() => {
+                      openWindow('documents')
+                      setRecordingPopoverOpen(false)
+                    }}
+                    className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    <span className="truncate">{lastRecordingName}</span>
+                  </button>
+                </div>
               )}
             </div>
           </PopoverContent>

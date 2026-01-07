@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Search, MoreHorizontal, Pencil, Trash2, X, ArrowLeft, Mail, Phone, MapPin, FileText, Receipt } from 'lucide-react'
 import { useCustomersStore } from '@/stores/customersStore'
 import { useMasterDataStore } from '@/stores/masterdataStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { Customer, CustomerCreate } from '@/api/types'
 
 export function CustomersTab() {
@@ -13,6 +14,7 @@ export function CustomersTab() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const { customers, isLoading, fetchCustomers, deleteCustomer } = useCustomersStore()
   const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   useEffect(() => {
     fetchCustomers()
@@ -39,7 +41,13 @@ export function CustomersTab() {
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+    const confirmed = await confirm({
+      title: t('customers.deleteCustomer', 'Kunde löschen'),
+      message: t('customers.confirmDelete', 'Kunde wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       await deleteCustomer(id)
     }
   }

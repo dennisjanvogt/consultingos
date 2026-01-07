@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, X, Check, Send } from 'lucide-react'
 import { useInvoicesStore } from '@/stores/invoicesStore'
 import { useCustomersStore } from '@/stores/customersStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { Invoice, InvoiceCreate, InvoiceItemCreate } from '@/api/types'
 
 export function InvoicesApp() {
@@ -13,6 +14,7 @@ export function InvoicesApp() {
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
   const { invoices, isLoading, fetchInvoices, deleteInvoice, markAsPaid, markAsSent } = useInvoicesStore()
   const { customers, fetchCustomers } = useCustomersStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   useEffect(() => {
     fetchInvoices(statusFilter || '', searchQuery)
@@ -34,7 +36,13 @@ export function InvoicesApp() {
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('de-DE')
 
   const handleDelete = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+    const confirmed = await confirm({
+      title: t('invoices.deleteInvoice', 'Rechnung löschen'),
+      message: t('invoices.confirmDelete', 'Rechnung wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       await deleteInvoice(id)
     }
   }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, MoreHorizontal, Calendar, Trash2, X } from 'lucide-react'
 import { useKanbanStore } from '@/stores/kanbanStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { KanbanCard, KanbanColumn, KanbanColor, KanbanPriority } from '@/api/types'
 
 const COLUMNS: { id: KanbanColumn; label: string }[] = [
@@ -42,6 +43,7 @@ export function KanbanApp() {
     deleteCard,
     getCardsForColumn,
   } = useKanbanStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   const [editingCard, setEditingCard] = useState<KanbanCard | null>(null)
   const [newCardColumn, setNewCardColumn] = useState<KanbanColumn | null>(null)
@@ -129,7 +131,13 @@ export function KanbanApp() {
   }
 
   const handleDeleteCard = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+    const confirmed = await confirm({
+      title: t('kanban.deleteCard', 'Karte löschen'),
+      message: t('kanban.confirmDelete', 'Karte wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       await deleteCard(id)
       setEditingCard(null)
     }

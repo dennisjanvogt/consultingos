@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useCustomersStore } from '@/stores/customersStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { CalendarEvent } from '@/api/types'
 
 const EVENT_COLORS = [
@@ -52,6 +53,7 @@ export function CalendarApp() {
   }
 
   const { events, fetchEvents, addEvent, updateEvent, deleteEvent, getEventsForDate, selectedEventId, setSelectedEventId, enableMeeting, inviteAttendee, removeInvitation, showEventForm, setShowEventForm } = useCalendarStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   // Fetch events on mount
   useEffect(() => {
@@ -176,7 +178,13 @@ export function CalendarApp() {
   }
 
   const handleDeleteEvent = async (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+    const confirmed = await confirm({
+      title: t('calendar.deleteEvent', 'Termin löschen'),
+      message: t('calendar.confirmDelete', 'Termin wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       await deleteEvent(id)
     }
   }

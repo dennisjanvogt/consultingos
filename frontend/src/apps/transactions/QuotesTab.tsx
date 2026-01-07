@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, MoreHorizontal, Pencil, Trash2, X, FileText, Send, ArrowLeft, Calendar, Building2, Download } from 'lucide-react'
 import { useTransactionsStore } from '@/stores/transactionsStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 
 interface Quote {
   id: number
@@ -55,6 +56,7 @@ export function QuotesTab() {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
   const [quotes, setQuotes] = useState<Quote[]>(initialQuotes)
   const { showNewForm, clearNewFormTrigger } = useTransactionsStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   // Listen for title bar "Neu" button
   useEffect(() => {
@@ -91,8 +93,14 @@ export function QuotesTab() {
     setShowForm(true)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: t('transactions.deleteQuote', 'Angebot löschen'),
+      message: t('transactions.confirmDeleteQuote', 'Angebot wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       setQuotes(quotes.filter(q => q.id !== id))
     }
   }

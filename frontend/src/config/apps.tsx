@@ -15,6 +15,8 @@ import {
   Circle,
   Blocks,
   PenTool,
+  Film,
+  FileType,
 } from 'lucide-react'
 
 // App Components
@@ -27,6 +29,8 @@ import { CalendarApp } from '@/apps/calendar/CalendarApp'
 import { KanbanApp } from '@/apps/kanban/KanbanApp'
 import { TimeTrackingApp } from '@/apps/timetracking/TimeTrackingApp'
 import { ImageViewerApp } from '@/apps/imageviewer/ImageViewerApp'
+import { VideoViewerApp } from '@/apps/videoviewer/VideoViewerApp'
+import { PDFViewerApp } from '@/apps/pdfviewer/PDFViewerApp'
 import { ChatApp } from '@/apps/chat/ChatApp'
 import { ChessApp } from '@/apps/chess/ChessApp'
 import { GoApp } from '@/apps/go/GoApp'
@@ -137,6 +141,26 @@ export const appRegistry: Record<string, AppDefinition> = {
     titleKey: 'apps.imageviewer',
     description: 'Bilder anzeigen und generierte Bilder betrachten',
     defaultSize: { width: 800, height: 600 },
+    category: 'tools',
+    canDisable: true,
+  },
+  videoviewer: {
+    id: 'videoviewer',
+    component: VideoViewerApp,
+    icon: <Film className="h-6 w-6" />,
+    titleKey: 'apps.videoviewer',
+    description: 'Videos abspielen und Bildschirmaufnahmen ansehen',
+    defaultSize: { width: 900, height: 600 },
+    category: 'tools',
+    canDisable: true,
+  },
+  pdfviewer: {
+    id: 'pdfviewer',
+    component: PDFViewerApp,
+    icon: <FileType className="h-6 w-6" />,
+    titleKey: 'apps.pdfviewer',
+    description: 'PDF-Dokumente anzeigen und durchblättern',
+    defaultSize: { width: 800, height: 700 },
     category: 'tools',
     canDisable: true,
   },

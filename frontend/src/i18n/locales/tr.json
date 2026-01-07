@@ -22,6 +22,15 @@
     "active": "Aktif",
     "inactive": "Pasif"
   },
+  "window": {
+    "close": "Kapat",
+    "maximize": "Buyut",
+    "recordWindow": "Pencereyi Kaydet",
+    "stopRecording": "Kaydi Durdur"
+  },
+  "shortcuts": {
+    "toggle": "Klavye Kisayollarini Goster"
+  },
   "apps": {
     "dashboard": "Kontrol Paneli",
     "masterdata": "Ana Veriler",
@@ -32,6 +41,8 @@
     "timetracking": "Zaman Takibi",
     "settings": "Ayarlar",
     "imageviewer": "Resim Goruntuleyici",
+    "videoviewer": "Video Oynatici",
+    "pdfviewer": "PDF Goruntuleyici",
     "chat": "Sohbet",
     "chess": "Satranc",
     "aidashboard": "AI Paneli",
@@ -42,7 +53,7 @@
   },
   "whiteboard": {
     "title": "Beyaz Tahta",
-    "newDiagram": "Yeni",
+    "newDiagram": "Yeni Diyagram",
     "selectDiagram": "Diyagram sec...",
     "noDiagrams": "Diyagram yok",
     "noDiagramSelected": "Diyagram secilmedi",
@@ -54,7 +65,15 @@
     "unsaved": "Kaydedilmedi",
     "delete": "Sil",
     "rename": "Yeniden Adlandir",
-    "confirmDelete": "Bu diyagrami silmek istediginizden emin misiniz?"
+    "confirmDelete": "Bu diyagrami silmek istediginizden emin misiniz?",
+    "allDiagrams": "Tüm Diyagramlar",
+    "newProject": "Yeni Proje",
+    "projectName": "Proje adı",
+    "deleteProject": "Projeyi Sil",
+    "confirmDeleteProject": "Bu projeyi silmek istediginizden emin misiniz? Diyagramlar silinmeyecek.",
+    "deleteDiagram": "Diyagramı Sil",
+    "createWithAI": "AI ile Oluştur",
+    "insertWithAI": "AI ile Ekle"
   },
   "auth": {
     "login": "Giris Yap",

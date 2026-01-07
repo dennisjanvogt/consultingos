@@ -3,11 +3,20 @@ import { ApiError } from '@/api/client'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
+export interface WhiteboardProject {
+  id: number
+  name: string
+  diagram_count: number
+  created_at: string
+  updated_at: string
+}
+
 export interface Diagram {
   id: number
   title: string
   content: Record<string, unknown>
   thumbnail: string
+  project_id: number | null
   created_at: string
   updated_at: string
 }
@@ -16,6 +25,7 @@ export interface DiagramListItem {
   id: number
   title: string
   thumbnail: string
+  project_id: number | null
   created_at: string
   updated_at: string
 }
@@ -23,20 +33,30 @@ export interface DiagramListItem {
 export type WhiteboardView = 'gallery' | 'editor'
 
 interface WhiteboardState {
+  projects: WhiteboardProject[]
   diagrams: DiagramListItem[]
   currentDiagram: Diagram | null
+  currentProjectId: number | null  // null = show all/root, number = inside project
   view: WhiteboardView
   isLoading: boolean
   isSaving: boolean
   hasUnsavedChanges: boolean
   error: string | null
 
-  // Actions
-  fetchDiagrams: () => Promise<void>
+  // Project Actions
+  fetchProjects: () => Promise<void>
+  createProject: (name: string) => Promise<WhiteboardProject | null>
+  renameProject: (id: number, name: string) => Promise<void>
+  deleteProject: (id: number) => Promise<boolean>
+  setCurrentProjectId: (id: number | null) => void
+
+  // Diagram Actions
+  fetchDiagrams: (projectId?: number | null) => Promise<void>
   loadDiagram: (id: number) => Promise<Diagram | null>
-  createDiagram: (title?: string) => Promise<Diagram | null>
+  createDiagram: (title?: string, projectId?: number | null) => Promise<Diagram | null>
   saveDiagram: (id: number, content: Record<string, unknown>, thumbnail?: string) => Promise<void>
   renameDiagram: (id: number, title: string) => Promise<void>
+  moveDiagram: (id: number, projectId: number | null) => Promise<void>
   deleteDiagram: (id: number) => Promise<boolean>
   setCurrentDiagram: (diagram: Diagram | null) => void
   setView: (view: WhiteboardView) => void
@@ -60,18 +80,82 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
+  projects: [],
   diagrams: [],
   currentDiagram: null,
+  currentProjectId: null,
   view: 'gallery',
   isLoading: false,
   isSaving: false,
   hasUnsavedChanges: false,
   error: null,
 
-  fetchDiagrams: async () => {
+  // Project Actions
+  fetchProjects: async () => {
+    try {
+      const projects = await request<WhiteboardProject[]>('/whiteboard/projects')
+      set({ projects })
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to fetch projects'
+      set({ error: message })
+    }
+  },
+
+  createProject: async (name: string) => {
+    try {
+      const project = await request<WhiteboardProject>('/whiteboard/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      set({ projects: [...get().projects, project] })
+      return project
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to create project'
+      set({ error: message })
+      return null
+    }
+  },
+
+  renameProject: async (id: number, name: string) => {
+    try {
+      await request(`/whiteboard/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      set({ projects: get().projects.map(p => p.id === id ? { ...p, name } : p) })
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to rename project'
+      set({ error: message })
+    }
+  },
+
+  deleteProject: async (id: number) => {
+    try {
+      await request(`/whiteboard/projects/${id}`, { method: 'DELETE' })
+      set({
+        projects: get().projects.filter(p => p.id !== id),
+        currentProjectId: get().currentProjectId === id ? null : get().currentProjectId,
+      })
+      return true
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to delete project'
+      set({ error: message })
+      return false
+    }
+  },
+
+  setCurrentProjectId: (id) => set({ currentProjectId: id }),
+
+  // Diagram Actions
+  fetchDiagrams: async (projectId?: number | null) => {
     set({ isLoading: true, error: null })
     try {
-      const diagrams = await request<DiagramListItem[]>('/whiteboard/')
+      const url = projectId !== undefined && projectId !== null
+        ? `/whiteboard/?project_id=${projectId}`
+        : '/whiteboard/'
+      const diagrams = await request<DiagramListItem[]>(url)
       set({ diagrams, isLoading: false })
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to fetch diagrams'
@@ -92,23 +176,37 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
     }
   },
 
-  createDiagram: async (title?: string) => {
+  createDiagram: async (title?: string, projectId?: number | null) => {
     try {
+      const body: Record<string, unknown> = { title: title || 'Untitled' }
+      if (projectId !== undefined && projectId !== null) {
+        body.project_id = projectId
+      }
+
       const diagram = await request<Diagram>('/whiteboard/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title || 'Untitled' }),
+        body: JSON.stringify(body),
       })
       set({
         diagrams: [{
           id: diagram.id,
           title: diagram.title,
           thumbnail: diagram.thumbnail,
+          project_id: diagram.project_id,
           created_at: diagram.created_at,
           updated_at: diagram.updated_at,
         }, ...get().diagrams],
         currentDiagram: diagram,
       })
+      // Update project diagram count
+      if (projectId) {
+        set({
+          projects: get().projects.map(p =>
+            p.id === projectId ? { ...p, diagram_count: p.diagram_count + 1 } : p
+          ),
+        })
+      }
       return diagram
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to create diagram'
@@ -126,7 +224,6 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
         body: JSON.stringify({ content, thumbnail }),
       })
 
-      // Update diagrams list
       set({
         diagrams: get().diagrams.map(d =>
           d.id === id
@@ -144,7 +241,7 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
 
   renameDiagram: async (id: number, title: string) => {
     try {
-      const updated = await request<Diagram>(`/whiteboard/${id}`, {
+      await request(`/whiteboard/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
@@ -162,13 +259,54 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
     }
   },
 
+  moveDiagram: async (id: number, projectId: number | null) => {
+    const oldDiagram = get().diagrams.find(d => d.id === id)
+    const oldProjectId = oldDiagram?.project_id
+
+    try {
+      await request(`/whiteboard/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId ?? 0 }),
+      })
+
+      // Update diagram's project_id
+      set({
+        diagrams: get().diagrams.map(d =>
+          d.id === id ? { ...d, project_id: projectId } : d
+        ),
+      })
+
+      // Update project counts
+      set({
+        projects: get().projects.map(p => {
+          if (p.id === oldProjectId) return { ...p, diagram_count: p.diagram_count - 1 }
+          if (p.id === projectId) return { ...p, diagram_count: p.diagram_count + 1 }
+          return p
+        }),
+      })
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to move diagram'
+      set({ error: message })
+    }
+  },
+
   deleteDiagram: async (id: number) => {
+    const diagram = get().diagrams.find(d => d.id === id)
     try {
       await request(`/whiteboard/${id}`, { method: 'DELETE' })
       set({
         diagrams: get().diagrams.filter(d => d.id !== id),
         currentDiagram: get().currentDiagram?.id === id ? null : get().currentDiagram,
       })
+      // Update project count
+      if (diagram?.project_id) {
+        set({
+          projects: get().projects.map(p =>
+            p.id === diagram.project_id ? { ...p, diagram_count: p.diagram_count - 1 } : p
+          ),
+        })
+      }
       return true
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to delete diagram'

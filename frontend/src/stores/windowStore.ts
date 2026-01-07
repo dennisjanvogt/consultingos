@@ -27,6 +27,7 @@ interface WindowStore {
   stageManagerEnabled: boolean
   showStageThumbnails: boolean
   showDock: boolean
+  showKeyboardShortcuts: boolean
   isSpotlightOpen: boolean
   isOrbOpen: boolean
   openWindow: (appId: AppType) => void
@@ -44,6 +45,7 @@ interface WindowStore {
   toggleStageManager: () => void
   setShowStageThumbnails: (show: boolean) => void
   setShowDock: (show: boolean) => void
+  setShowKeyboardShortcuts: (show: boolean) => void
   centerActiveWindow: () => void
   minimizeByAppId: (appId: AppType) => void
   closeWindowByAppId: (appId: AppType) => void
@@ -84,6 +86,7 @@ export const useWindowStore = create<WindowStore>()(
   stageManagerEnabled: true,
   showStageThumbnails: false,
   showDock: false,
+  showKeyboardShortcuts: true,
   isSpotlightOpen: false,
   isOrbOpen: false,
 
@@ -511,6 +514,10 @@ export const useWindowStore = create<WindowStore>()(
     set({ showDock: show })
   },
 
+  setShowKeyboardShortcuts: (show) => {
+    set({ showKeyboardShortcuts: show })
+  },
+
   centerActiveWindow: () => {
     const { activeWindowId, windows } = get()
     if (!activeWindowId) return
@@ -574,11 +581,15 @@ export const useWindowStore = create<WindowStore>()(
           previousSize: w.previousSize,
         })),
         stageManagerEnabled: state.stageManagerEnabled,
+        showKeyboardShortcuts: state.showKeyboardShortcuts,
       }),
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as { windows?: PersistedWindow[]; stageManagerEnabled?: boolean } | undefined
+        const persisted = persistedState as { windows?: PersistedWindow[]; stageManagerEnabled?: boolean; showKeyboardShortcuts?: boolean } | undefined
         if (!persisted?.windows?.length) {
-          return currentState
+          return {
+            ...currentState,
+            showKeyboardShortcuts: persisted?.showKeyboardShortcuts ?? currentState.showKeyboardShortcuts,
+          }
         }
 
         // IDs und zIndex neu generieren
@@ -599,6 +610,7 @@ export const useWindowStore = create<WindowStore>()(
           nextZIndex: zIndex,
           activeWindowId: restoredWindows.find((w) => !w.isMinimized)?.id || null,
           stageManagerEnabled: persisted.stageManagerEnabled ?? currentState.stageManagerEnabled,
+          showKeyboardShortcuts: persisted.showKeyboardShortcuts ?? currentState.showKeyboardShortcuts,
         }
       },
     }

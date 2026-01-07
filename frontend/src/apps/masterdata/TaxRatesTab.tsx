@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
 import { useMasterDataStore } from '@/stores/masterdataStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 
 interface TaxRate {
   id: number
@@ -22,6 +23,7 @@ export function TaxRatesTab() {
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null)
   const [taxRates, setTaxRates] = useState<TaxRate[]>(initialTaxRates)
   const { showNewForm, clearNewFormTrigger } = useMasterDataStore()
+  const confirm = useConfirmStore(state => state.confirm)
 
   // Listen for title bar "Neu" button
   useEffect(() => {
@@ -36,8 +38,14 @@ export function TaxRatesTab() {
     setShowForm(true)
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm(t('common.confirm') + '?')) {
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: t('masterdata.deleteTaxRate', 'Steuersatz löschen'),
+      message: t('masterdata.confirmDeleteTaxRate', 'Steuersatz wirklich löschen?'),
+      confirmLabel: t('common.delete', 'Löschen'),
+      variant: 'danger',
+    })
+    if (confirmed) {
       setTaxRates(taxRates.filter(r => r.id !== id))
     }
   }
