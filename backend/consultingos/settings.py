@@ -16,7 +16,7 @@ if not SECRET_KEY:
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'consulting.dennis24.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'consulting.dennis24.com', 'dennis24.com']
 
 # Application definition
 INSTALLED_APPS = [
@@ -121,6 +121,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://consulting.dennis24.com',
+    'https://dennis24.com',
 ]
 
 # Custom user model
