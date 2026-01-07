@@ -10,7 +10,8 @@ import { useTransactionsStore } from '@/stores/transactionsStore'
 import { useAIStore } from '@/stores/aiStore'
 import { useChessStore } from '@/stores/chessStore'
 import { useCalendarStore } from '@/stores/calendarStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut } from 'lucide-react'
+import { useWhiteboardStore } from '@/stores/whiteboardStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
@@ -412,6 +413,34 @@ function CalendarTitleBarControls() {
   )
 }
 
+// Whiteboard Title Bar Controls - Save Button with unsaved indicator
+function WhiteboardTitleBarControls() {
+  const { view, hasUnsavedChanges, isSaving } = useWhiteboardStore()
+
+  // Only show in editor view
+  if (view !== 'editor') return null
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        // Trigger save via custom event (component will listen)
+        window.dispatchEvent(new CustomEvent('whiteboard-save'))
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      disabled={isSaving || !hasUnsavedChanges}
+      className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all shadow-sm ${
+        hasUnsavedChanges
+          ? 'bg-gold-600 hover:bg-gold-700 text-white'
+          : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+      }`}
+    >
+      <Save className={`w-3 h-3 ${isSaving ? 'animate-pulse' : ''}`} />
+      {isSaving ? 'Speichert...' : hasUnsavedChanges ? 'Speichern' : 'Gespeichert'}
+    </button>
+  )
+}
+
 // Chess Title Bar Controls
 function ChessTitleBarControls() {
   const { setShowNewGameModal } = useChessStore()
@@ -589,6 +618,9 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'calendar' && (
           <CalendarTitleBarControls />
+        )}
+        {window.appId === 'whiteboard' && (
+          <WhiteboardTitleBarControls />
         )}
         {window.appId === 'chat' && (
           <ChatTitleBarControls />

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw'
-import { Plus, Save, Trash2, Edit3, Check, X, FileText, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Edit3, Check, X, FileText, ArrowLeft } from 'lucide-react'
 import { useWhiteboardStore, type DiagramListItem } from '@/stores/whiteboardStore'
 
 import '@excalidraw/excalidraw/index.css'
@@ -40,6 +40,7 @@ export default function WhiteboardApp() {
     view,
     isLoading,
     isSaving,
+    hasUnsavedChanges,
     fetchDiagrams,
     loadDiagram,
     createDiagram,
@@ -48,6 +49,7 @@ export default function WhiteboardApp() {
     deleteDiagram,
     setCurrentDiagram,
     setView,
+    setHasUnsavedChanges,
   } = useWhiteboardStore()
 
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawAPI>(null)
@@ -56,8 +58,8 @@ export default function WhiteboardApp() {
   )
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const saveTimeoutRef = useRef<number | null>(null)
+  const handleManualSaveRef = useRef<(() => Promise<void>) | null>(null)
 
   // Inject custom styles to hide Excalidraw branding
   useEffect(() => {
@@ -132,7 +134,7 @@ export default function WhiteboardApp() {
         setHasUnsavedChanges(false)
       }, 3000)
     },
-    [currentDiagram, saveDiagram]
+    [currentDiagram, saveDiagram, setHasUnsavedChanges]
   )
 
   // Cleanup timeout on unmount
@@ -143,6 +145,17 @@ export default function WhiteboardApp() {
       }
     }
   }, [])
+
+  // Listen for save event from title bar button
+  useEffect(() => {
+    const handleSaveEvent = () => {
+      if (currentDiagram && excalidrawAPI) {
+        handleManualSaveRef.current?.()
+      }
+    }
+    window.addEventListener('whiteboard-save', handleSaveEvent)
+    return () => window.removeEventListener('whiteboard-save', handleSaveEvent)
+  }, [currentDiagram, excalidrawAPI])
 
   // Manual save
   const handleManualSave = useCallback(async () => {
@@ -191,7 +204,12 @@ export default function WhiteboardApp() {
 
     await saveDiagram(currentDiagram.id, content, thumbnail)
     setHasUnsavedChanges(false)
-  }, [currentDiagram, excalidrawAPI, saveDiagram])
+  }, [currentDiagram, excalidrawAPI, saveDiagram, setHasUnsavedChanges])
+
+  // Keep ref updated for event listener
+  useEffect(() => {
+    handleManualSaveRef.current = handleManualSave
+  }, [handleManualSave])
 
   // Load diagram
   const handleLoadDiagram = async (diagram: DiagramListItem) => {
@@ -345,9 +363,19 @@ export default function WhiteboardApp() {
           {t('common.back', 'Zurück')}
         </button>
 
-        <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+        {/* Delete Button */}
+        <button
+          onClick={handleDeleteDiagram}
+          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 transition-colors"
+          title={t('whiteboard.delete', 'Löschen')}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
 
-        {/* Title / Rename */}
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Title / Rename - Right side */}
         {isRenaming ? (
           <div className="flex items-center gap-1">
             <input
@@ -387,41 +415,6 @@ export default function WhiteboardApp() {
           </button>
         )}
 
-        {/* Save Button */}
-        <button
-          onClick={handleManualSave}
-          disabled={isSaving || !hasUnsavedChanges}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-            hasUnsavedChanges
-              ? 'bg-gold-600 hover:bg-gold-700 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          <Save className="w-4 h-4" />
-          {isSaving ? t('whiteboard.saving', 'Speichert...') : t('whiteboard.save', 'Speichern')}
-        </button>
-
-        {/* Delete Button */}
-        <button
-          onClick={handleDeleteDiagram}
-          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 transition-colors"
-          title={t('whiteboard.delete', 'Löschen')}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-
-        {/* Status indicator */}
-        <div className="flex-1" />
-        {isSaving && (
-          <span className="text-xs text-gray-500 animate-pulse">
-            {t('whiteboard.autoSaving', 'Speichert...')}
-          </span>
-        )}
-        {hasUnsavedChanges && !isSaving && (
-          <span className="text-xs text-gold-600">
-            {t('whiteboard.unsaved', 'Ungespeichert')}
-          </span>
-        )}
       </div>
 
       {/* Excalidraw Canvas */}

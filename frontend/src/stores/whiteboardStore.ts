@@ -28,6 +28,7 @@ interface WhiteboardState {
   view: WhiteboardView
   isLoading: boolean
   isSaving: boolean
+  hasUnsavedChanges: boolean
   error: string | null
 
   // Actions
@@ -39,6 +40,7 @@ interface WhiteboardState {
   deleteDiagram: (id: number) => Promise<boolean>
   setCurrentDiagram: (diagram: Diagram | null) => void
   setView: (view: WhiteboardView) => void
+  setHasUnsavedChanges: (value: boolean) => void
   clearError: () => void
 }
 
@@ -63,6 +65,7 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
   view: 'gallery',
   isLoading: false,
   isSaving: false,
+  hasUnsavedChanges: false,
   error: null,
 
   fetchDiagrams: async () => {
@@ -177,6 +180,8 @@ export const useWhiteboardStore = create<WhiteboardState>((set, get) => ({
   setCurrentDiagram: (diagram) => set({ currentDiagram: diagram }),
 
   setView: (view) => set({ view }),
+
+  setHasUnsavedChanges: (value) => set({ hasUnsavedChanges: value }),
 
   clearError: () => set({ error: null }),
 }))
