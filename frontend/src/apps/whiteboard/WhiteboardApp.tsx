@@ -149,13 +149,11 @@ export default function WhiteboardApp() {
   // Listen for save event from title bar button
   useEffect(() => {
     const handleSaveEvent = () => {
-      if (currentDiagram && excalidrawAPI) {
-        handleManualSaveRef.current?.()
-      }
+      handleManualSaveRef.current?.()
     }
     window.addEventListener('whiteboard-save', handleSaveEvent)
     return () => window.removeEventListener('whiteboard-save', handleSaveEvent)
-  }, [currentDiagram, excalidrawAPI])
+  }, [])
 
   // Manual save
   const handleManualSave = useCallback(async () => {
