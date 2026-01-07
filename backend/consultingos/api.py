@@ -20,6 +20,8 @@ from apps.chess.api import router as chess_router
 from apps.whiteboard.api import router as whiteboard_router
 from apps.notes.api import router as notes_router
 from apps.workflows.api import router as workflows_router
+from apps.knowledgebase.api import router as knowledgebase_router
+from apps.terminal.api import router as terminal_router
 
 # Register routers
 api.add_router('/auth/', users_router, tags=['Auth'])
@@ -35,3 +37,5 @@ api.add_router('/chess/', chess_router, tags=['Chess'])
 api.add_router('/whiteboard/', whiteboard_router, tags=['Whiteboard'])
 api.add_router('/notes/', notes_router, tags=['Notes'])
 api.add_router('/workflows/', workflows_router, tags=['Workflows'])
+api.add_router('/knowledgebase/', knowledgebase_router, tags=['Knowledgebase'])
+api.add_router('/terminal/', terminal_router, tags=['Terminal'])

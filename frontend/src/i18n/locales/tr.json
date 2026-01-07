@@ -57,7 +57,44 @@
     "architecture": "Mimari",
     "whiteboard": "Beyaz Tahta",
     "notes": "Notlar",
-    "workflows": "Is Akislari"
+    "workflows": "Is Akislari",
+    "knowledgebase": "Bilgi Bankasi",
+    "game2048": "2048",
+    "snake": "Snake",
+    "tetris": "Tetris",
+    "pinball": "Pinball",
+    "terminal": "Terminal"
+  },
+  "knowledgebase": {
+    "newExpert": "Yeni Uzman",
+    "editExpert": "Uzmani Duzenle",
+    "selectExpert": "Bir uzman secin",
+    "orCreate": "veya yeni bir tane olusturun",
+    "noExperts": "Henuz uzman yok",
+    "confirmDelete": "Bu uzman silinsin mi?",
+    "documents": "Belgeler",
+    "docs": "Belge",
+    "documentsTab": "Belgeler",
+    "chatTab": "Sohbet",
+    "icon": "Simge",
+    "name": "Isim",
+    "namePlaceholder": "orn. Pazarlama Stratejisi",
+    "description": "Aciklama",
+    "descriptionPlaceholder": "Kisa aciklama...",
+    "systemPrompt": "Sistem Istemi",
+    "systemPromptHint": "Uzmanin davranisini tanimlar",
+    "noDocuments": "Henuz belge yok",
+    "uploadHint": "PDF veya TXT yukleyin",
+    "uploading": "Yukleniyor...",
+    "confirmDeleteDoc": "Bu belge silinsin mi?",
+    "pages": "Sayfa",
+    "noIndexedDocs": "Once belge yukleyin",
+    "needDocsForChat": "Sohbet icin indeksli belgeler gerekli",
+    "newChat": "Yeni Sohbet",
+    "noConversations": "Konusma yok",
+    "confirmDeleteConv": "Bu konusma silinsin mi?",
+    "startChat": "Bir soru sorun...",
+    "askPlaceholder": "Sorunuzu girin..."
   },
   "whiteboard": {
     "title": "Beyaz Tahta",
@@ -179,6 +216,7 @@
       "core": "Temel",
       "productivity": "Uretkenlik",
       "tools": "Araclar",
+      "games": "Oyunlar",
       "admin": "Yonetim"
     }
   },
@@ -608,5 +646,16 @@
     "categories": "Kategoriler",
     "progressByCategory": "Kategoriye Gore Ilerleme",
     "noActiveWorkflows": "Aktif is akisi yok"
+  },
+  "appOverview": {
+    "search": "Uygulama ara...",
+    "noApps": "Uygulama bulunamadi",
+    "closeHint": "kapatmak icin"
+  },
+  "terminal": {
+    "connected": "Bagli",
+    "disconnected": "Bagli degil",
+    "clear": "Temizle",
+    "reconnect": "Yeniden baglan"
   }
 }

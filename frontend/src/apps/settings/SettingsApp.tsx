@@ -95,7 +95,7 @@ export function SettingsApp() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-6 overflow-auto flex justify-center">
         {activeTab === 'profile' && user && <ProfileSettings user={user} />}
         {activeTab === 'company' && <CompanySettings settings={settings} />}
         {activeTab === 'banking' && <BankingSettings settings={settings} />}
@@ -157,7 +157,7 @@ function ProfileSettings({ user }: ProfileSettingsProps) {
     : user.username.slice(0, 2).toUpperCase()
 
   return (
-    <div className="max-w-lg">
+    <div className="w-full max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6">
         {t('settings.profile', 'Profil')}
       </h2>
@@ -347,7 +347,7 @@ function CompanySettings({ settings }: SettingsProps) {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="w-full max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('settings.company')}</h2>
 
       <div className="space-y-4">
@@ -425,7 +425,7 @@ function BankingSettings({ settings }: SettingsProps) {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="w-full max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('settings.banking')}</h2>
 
       <div className="space-y-4">
@@ -489,7 +489,7 @@ function InvoiceSettings({ settings }: SettingsProps) {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="w-full max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('settings.invoiceSettings')}</h2>
 
       <div className="space-y-4">
@@ -557,7 +557,7 @@ function AppearanceSettings({ theme, setTheme, language, setLanguage }: Appearan
   const { t } = useTranslation()
 
   return (
-    <div className="max-w-md">
+    <div className="w-full max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('settings.appearance')}</h2>
 
       <div className="space-y-6">
@@ -755,7 +755,7 @@ function APIKeysSettings() {
 
   if (isLoading) {
     return (
-      <div className="max-w-lg">
+      <div className="w-full max-w-2xl">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6">
           {t('settings.apiKeys', 'API Keys')}
         </h2>
@@ -765,7 +765,7 @@ function APIKeysSettings() {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="w-full max-w-2xl">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
         {t('settings.apiKeys', 'API Keys')}
       </h2>

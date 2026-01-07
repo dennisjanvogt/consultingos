@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'apps.whiteboard',
     'apps.notes',
     'apps.workflows',
+    'apps.knowledgebase',
 ]
 
 MIDDLEWARE = [

@@ -5,6 +5,7 @@ import { WindowManager } from './WindowManager'
 import { MenuBar } from './MenuBar'
 import { Spotlight } from './Spotlight'
 import { AIOrb } from './AIOrb'
+import { AppOverview } from './AppOverview'
 import { useWindowStore } from '@/stores/windowStore'
 import { useMasterDataStore } from '@/stores/masterdataStore'
 import { useTransactionsStore } from '@/stores/transactionsStore'
@@ -15,6 +16,8 @@ export function Desktop() {
   const tileAllWindows = useWindowStore((state) => state.tileAllWindows)
   const isSpotlightOpen = useWindowStore((state) => state.isSpotlightOpen)
   const setSpotlightOpen = useWindowStore((state) => state.setSpotlightOpen)
+  const isAppOverviewOpen = useWindowStore((state) => state.isAppOverviewOpen)
+  const setAppOverviewOpen = useWindowStore((state) => state.setAppOverviewOpen)
 
 
   // Stabile Callbacks für MenuBar und Spotlight
@@ -31,10 +34,10 @@ export function Desktop() {
                       target.isContentEditable
 
       // ESC - Aktives Fenster schließen oder Settings öffnen wenn keine App offen
-      // Spotlight hat eigenen ESC-Handler, der zuerst greift
+      // Spotlight/AppOverview haben eigene ESC-Handler, die zuerst greifen
       // Skip if a modal/preview is open (marked with data-modal-open)
       const hasOpenModal = document.querySelector('[data-modal-open="true"]')
-      if (e.key === 'Escape' && !isInput && !hasOpenModal && !isSpotlightOpen) {
+      if (e.key === 'Escape' && !isInput && !hasOpenModal && !isSpotlightOpen && !isAppOverviewOpen) {
         const windowState = useWindowStore.getState()
         const visibleWindows = windowState.windows.filter(w => !w.isMinimized)
 
@@ -84,7 +87,7 @@ export function Desktop() {
       // Space - Maximize active window (global, unabhängig von Focus)
       if ((e.key === ' ' || e.code === 'Space') && !isInput) {
         const windowState = useWindowStore.getState()
-        if (windowState.activeWindowId && !isSpotlightOpen) {
+        if (windowState.activeWindowId && !isSpotlightOpen && !isAppOverviewOpen) {
           e.preventDefault()
           e.stopPropagation()
           windowState.maximizeWindow(windowState.activeWindowId)
@@ -102,7 +105,7 @@ export function Desktop() {
       }
 
       // Arrow Right - Stage Manager aus + Alle Fenster tilen/untilen
-      if (e.key === 'ArrowRight' && !isSpotlightOpen) {
+      if (e.key === 'ArrowRight' && !isSpotlightOpen && !isAppOverviewOpen) {
         e.preventDefault()
         const windowState = useWindowStore.getState()
         // Stage Manager deaktivieren falls aktiv
@@ -110,6 +113,12 @@ export function Desktop() {
           windowState.toggleStageManager()
         }
         tileAllWindows()
+      }
+
+      // Meta/Command key - Toggle App Overview (GNOME-style)
+      if (e.key === 'Meta' && !e.repeat && !isSpotlightOpen) {
+        e.preventDefault()
+        setAppOverviewOpen(!isAppOverviewOpen)
       }
     }
 
@@ -131,7 +140,7 @@ export function Desktop() {
       window.removeEventListener('keyup', handleKeyUp, true)
     }
     // Alt/Orb handlers use getState() for fresh values
-  }, [isSpotlightOpen, tileAllWindows])
+  }, [isSpotlightOpen, isAppOverviewOpen, tileAllWindows, setAppOverviewOpen])
 
   return (
     <div className="desktop-bg h-screen w-screen flex flex-col overflow-hidden">
@@ -177,6 +186,9 @@ export function Desktop() {
 
       {/* Spotlight AI Assistant */}
       <Spotlight isOpen={isSpotlightOpen} onClose={closeSpotlight} />
+
+      {/* App Overview (GNOME-style) */}
+      <AppOverview />
     </div>
   )
 }

@@ -14,6 +14,7 @@ import { analysisTools } from './analysis.tools'
 import { inlineWidgetTools } from './inline-widget.tools'
 import { notesTools } from './notes.tools'
 import { workflowTools } from './workflow.tools'
+import { knowledgebaseTools } from './knowledgebase.tools'
 
 /**
  * Tool Registry - Auto-discovery of all registered tools
@@ -35,6 +36,7 @@ export const toolRegistry: AITool[] = [
   ...inlineWidgetTools,
   ...notesTools,
   ...workflowTools,
+  ...knowledgebaseTools,
 ]
 
 /**
@@ -177,6 +179,7 @@ export const getToolStats = () => ({
     inlineWidgets: inlineWidgetTools.length,
     notes: notesTools.length,
     workflows: workflowTools.length,
+    knowledgebase: knowledgebaseTools.length,
   }
 })
 
@@ -193,6 +196,7 @@ export const getToolsByCategory = (): Record<string, { name: string; description
   'Zeiterfassung': timetrackingTools.map(t => ({ name: t.name, description: t.description })),
   'Notizen': notesTools.map(t => ({ name: t.name, description: t.description })),
   'Workflows': workflowTools.map(t => ({ name: t.name, description: t.description })),
+  'Wissensdatenbank': knowledgebaseTools.map(t => ({ name: t.name, description: t.description })),
   'Bilder': aiTools.map(t => ({ name: t.name, description: t.description })),
   'AI Dashboard': dashboardTools.map(t => ({ name: t.name, description: t.description })),
   'Web Suche': searchTools.map(t => ({ name: t.name, description: t.description })),

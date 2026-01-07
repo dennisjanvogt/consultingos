@@ -19,6 +19,11 @@ import {
   FileType,
   StickyNote,
   GitMerge,
+  BookOpen,
+  Grid2X2,
+  Gamepad2,
+  Disc,
+  Terminal,
 } from 'lucide-react'
 
 // App Components
@@ -42,6 +47,12 @@ import { ArchitectureApp } from '@/apps/architecture/ArchitectureApp'
 import WhiteboardApp from '@/apps/whiteboard/WhiteboardApp'
 import { NotesApp } from '@/apps/notes/NotesApp'
 import { WorkflowsApp } from '@/apps/workflows/WorkflowsApp'
+import { KnowledgebaseApp } from '@/apps/knowledgebase/KnowledgebaseApp'
+import { Game2048App } from '@/apps/game2048/Game2048App'
+import { SnakeApp } from '@/apps/snake/SnakeApp'
+import { TetrisApp } from '@/apps/tetris/TetrisApp'
+import { PinballApp } from '@/apps/pinball/PinballApp'
+import { TerminalApp } from '@/apps/terminal/TerminalApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
@@ -237,7 +248,7 @@ export const appRegistry: Record<string, AppDefinition> = {
     titleKey: 'apps.whiteboard',
     description: 'Whiteboard: Architektur-Diagramme zeichnen und skizzieren',
     defaultSize: { width: 1000, height: 700 },
-    category: 'tools',
+    category: 'productivity',
     canDisable: true,
   },
   notes: {
@@ -259,6 +270,67 @@ export const appRegistry: Record<string, AppDefinition> = {
     defaultSize: { width: 1000, height: 700 },
     category: 'productivity',
     canDisable: true,
+  },
+  knowledgebase: {
+    id: 'knowledgebase',
+    component: KnowledgebaseApp,
+    icon: <BookOpen className="h-6 w-6" />,
+    titleKey: 'apps.knowledgebase',
+    description: 'Wissensdatenbank: PDF/TXT hochladen, Experten erstellen und RAG-Chat führen',
+    defaultSize: { width: 1000, height: 700 },
+    category: 'productivity',
+    canDisable: true,
+  },
+  game2048: {
+    id: 'game2048',
+    component: Game2048App,
+    icon: <Grid2X2 className="h-6 w-6" />,
+    titleKey: 'apps.game2048',
+    description: '2048: Zahlen-Puzzle mit Tile-Sliding',
+    defaultSize: { width: 500, height: 650 },
+    category: 'games',
+    canDisable: true,
+  },
+  snake: {
+    id: 'snake',
+    component: SnakeApp,
+    icon: <Gamepad2 className="h-6 w-6" />,
+    titleKey: 'apps.snake',
+    description: 'Snake: Klassisches Arcade-Spiel',
+    defaultSize: { width: 550, height: 650 },
+    category: 'games',
+    canDisable: true,
+  },
+  tetris: {
+    id: 'tetris',
+    component: TetrisApp,
+    icon: <Blocks className="h-6 w-6" />,
+    titleKey: 'apps.tetris',
+    description: 'Tetris: Tetromino-Puzzle mit Linien-Clearing',
+    defaultSize: { width: 550, height: 700 },
+    category: 'games',
+    canDisable: true,
+  },
+  pinball: {
+    id: 'pinball',
+    component: PinballApp,
+    icon: <Disc className="h-6 w-6" />,
+    titleKey: 'apps.pinball',
+    description: 'Pinball: Flipper-Arcade mit Bumpers und Targets',
+    defaultSize: { width: 700, height: 800 },
+    category: 'games',
+    canDisable: true,
+  },
+  terminal: {
+    id: 'terminal',
+    component: TerminalApp,
+    icon: <Terminal className="h-6 w-6" />,
+    titleKey: 'apps.terminal',
+    description: 'Terminal: Server-Shell für Administratoren',
+    defaultSize: { width: 800, height: 500 },
+    category: 'admin',
+    canDisable: true,
+    adminOnly: true,
   },
 }
 
@@ -291,13 +363,19 @@ export const defaultDockOrder = [
   'kanban',
   'notes',
   'workflows',
+  'knowledgebase',
   'chat',
   'timetracking',
   'whiteboard',
   'chess',
   'go',
+  'game2048',
+  'snake',
+  'tetris',
+  'pinball',
   'settings',
   'admin',
+  'terminal',
 ]
 
 // Default enabled Apps (alle außer imageviewer - wird nur bei Bedarf geöffnet)
@@ -310,13 +388,19 @@ export const defaultEnabledApps = [
   'kanban',
   'notes',
   'workflows',
+  'knowledgebase',
   'chat',
   'timetracking',
   'whiteboard',
   'chess',
   'go',
+  'game2048',
+  'snake',
+  'tetris',
+  'pinball',
   'settings',
   'admin',
+  'terminal',
 ]
 
 // AppType als Union für TypeScript Kompatibilität

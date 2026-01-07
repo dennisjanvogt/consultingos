@@ -655,3 +655,92 @@ export interface WorkflowStats {
   by_category: WorkflowCategoryStats[]
   overdue_steps: number
 }
+
+// Knowledgebase types
+export type ExpertDocumentStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export interface Expert {
+  id: number
+  name: string
+  icon: string
+  description: string
+  system_prompt: string
+  is_indexed: boolean
+  document_count: number
+  chunk_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpertCreate {
+  name: string
+  icon?: string
+  description?: string
+  system_prompt?: string
+}
+
+export interface ExpertUpdate {
+  name?: string
+  icon?: string
+  description?: string
+  system_prompt?: string
+}
+
+export interface ExpertDocument {
+  id: number
+  expert_id: number
+  name: string
+  file_url: string
+  file_type: string
+  file_size: number
+  status: ExpertDocumentStatus
+  error_message: string
+  page_count: number
+  chunk_count: number
+  created_at: string
+}
+
+export interface ExpertConversation {
+  id: number
+  expert_id: number
+  title: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpertConversationCreate {
+  title?: string
+}
+
+export interface SourceChunk {
+  document_name: string
+  page_number: number | null
+  content_preview: string
+  similarity?: number  // 0-1 relevance score
+}
+
+export interface ExpertMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  source_chunks: SourceChunk[]
+  created_at: string
+}
+
+export interface ExpertChatRequest {
+  message: string
+}
+
+export interface ExpertChatResponse {
+  message: ExpertMessage
+  sources: SourceChunk[]
+}
+
+export interface ExpertQueryRequest {
+  question: string
+}
+
+export interface ExpertQueryResponse {
+  answer: string
+  sources: SourceChunk[]
+}

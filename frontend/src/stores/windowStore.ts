@@ -30,6 +30,7 @@ interface WindowStore {
   showKeyboardShortcuts: boolean
   isSpotlightOpen: boolean
   isOrbOpen: boolean
+  isAppOverviewOpen: boolean
   openWindow: (appId: AppType) => void
   closeWindow: (id: string) => void
   minimizeWindow: (id: string) => void
@@ -51,6 +52,7 @@ interface WindowStore {
   closeWindowByAppId: (appId: AppType) => void
   setSpotlightOpen: (open: boolean) => void
   setOrbOpen: (open: boolean) => void
+  setAppOverviewOpen: (open: boolean) => void
 }
 
 // App titles und sizes kommen jetzt aus der zentralen Registry (src/config/apps.tsx)
@@ -89,6 +91,7 @@ export const useWindowStore = create<WindowStore>()(
   showKeyboardShortcuts: true,
   isSpotlightOpen: false,
   isOrbOpen: false,
+  isAppOverviewOpen: false,
 
   openWindow: (appId) => {
     const { windows, nextZIndex } = get()
@@ -564,6 +567,10 @@ export const useWindowStore = create<WindowStore>()(
 
   setOrbOpen: (open) => {
     set({ isOrbOpen: open })
+  },
+
+  setAppOverviewOpen: (open) => {
+    set({ isAppOverviewOpen: open })
   },
     }),
     {

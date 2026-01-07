@@ -67,7 +67,7 @@ export function AppsTab() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full max-w-4xl">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
           {t('settings.apps')}
@@ -133,8 +133,8 @@ export function AppsTab() {
                 {t(`settings.category.${category}`)}
               </h3>
 
-              {/* Apps Grid - 2 columns */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Apps Grid - 3 columns */}
+              <div className="grid grid-cols-3 gap-2">
                 {apps.map((app) => (
                   <AppCard
                     key={app.id}

@@ -3,6 +3,9 @@ import { useTheme } from './ThemeProvider'
 import { useAuthStore } from '@/stores/authStore'
 import { useWindowStore } from '@/stores/windowStore'
 import { Globe, Sun, Moon, Monitor, LogOut, Settings, ShieldCheck, Blocks, Keyboard } from 'lucide-react'
+
+// Platform detection for keyboard shortcuts
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,8 +95,12 @@ export function BottomBar() {
         {showKeyboardShortcuts && (
           <>
             <div className="flex items-center gap-1">
+              <span>Apps</span>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">{isMac ? '⌘' : 'Win'}</kbd>
+            </div>
+            <div className="flex items-center gap-1">
               <span>AI Orb</span>
-              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">⌥</kbd>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">{isMac ? '⌥' : 'Alt'}</kbd>
             </div>
             <div className="flex items-center gap-1">
               <span>Max/Min</span>
@@ -101,7 +108,7 @@ export function BottomBar() {
             </div>
             <div className="flex items-center gap-1">
               <span>Close</span>
-              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">ESC</kbd>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">Esc</kbd>
             </div>
             <div className="flex items-center gap-1">
               <span>Tiling</span>
