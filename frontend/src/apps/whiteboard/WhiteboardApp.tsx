@@ -106,15 +106,20 @@ export default function WhiteboardApp() {
           files,
         }
 
-        // Generate thumbnail
+        // Generate thumbnail (larger size, zoomed out, respect dark mode)
         let thumbnail = ''
         try {
           if (elements.length > 0) {
+            const isDark = document.documentElement.classList.contains('dark')
             const blob = await exportToBlob({
               elements: elements as never[],
-              appState: { exportBackground: true, viewBackgroundColor: appState.viewBackgroundColor },
+              appState: {
+                exportBackground: true,
+                viewBackgroundColor: isDark ? '#1f2937' : '#ffffff',
+              },
               files,
-              maxWidthOrHeight: 200,
+              maxWidthOrHeight: 1000,
+              exportPadding: 400,
             })
             thumbnail = await blobToBase64(blob)
           }
@@ -162,15 +167,20 @@ export default function WhiteboardApp() {
       files,
     }
 
-    // Generate thumbnail
+    // Generate thumbnail (larger size, zoomed out, respect dark mode)
     let thumbnail = ''
     try {
       if (elements.length > 0) {
+        const isDark = document.documentElement.classList.contains('dark')
         const blob = await exportToBlob({
           elements,
-          appState: { exportBackground: true, viewBackgroundColor: appState.viewBackgroundColor },
+          appState: {
+            exportBackground: true,
+            viewBackgroundColor: isDark ? '#1f2937' : '#ffffff',
+          },
           files,
-          maxWidthOrHeight: 200,
+          maxWidthOrHeight: 1000,
+          exportPadding: 400,
         })
         thumbnail = await blobToBase64(blob)
       }
