@@ -28,6 +28,12 @@
     "recordWindow": "Record Window",
     "stopRecording": "Stop Recording"
   },
+  "dock": {
+    "disableApp": "Disable app",
+    "disableAppTitle": "Disable app?",
+    "disableAppMessage": "Do you really want to disable \"{{name}}\"? You can re-enable it in the settings.",
+    "disable": "Disable"
+  },
   "shortcuts": {
     "toggle": "Show Keyboard Shortcuts"
   },
@@ -182,6 +188,8 @@
     "system": "System",
     "apps": "Apps",
     "appsDescription": "Enable apps and arrange them in the dock",
+    "enableAll": "Enable all",
+    "disableAll": "Disable all",
     "category": {
       "core": "Core",
       "productivity": "Productivity",

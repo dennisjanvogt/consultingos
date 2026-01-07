@@ -28,6 +28,12 @@
     "recordWindow": "Fenster aufnehmen",
     "stopRecording": "Aufnahme stoppen"
   },
+  "dock": {
+    "disableApp": "App deaktivieren",
+    "disableAppTitle": "App deaktivieren?",
+    "disableAppMessage": "Möchtest du \"{{name}}\" wirklich deaktivieren? Du kannst sie in den Einstellungen wieder aktivieren.",
+    "disable": "Deaktivieren"
+  },
   "shortcuts": {
     "toggle": "Tastaturkürzel anzeigen"
   },
@@ -182,6 +188,8 @@
     "system": "System",
     "apps": "Apps",
     "appsDescription": "Aktiviere Apps und ordne sie im Dock an",
+    "enableAll": "Alle aktivieren",
+    "disableAll": "Alle deaktivieren",
     "category": {
       "core": "Kern",
       "productivity": "Produktivität",

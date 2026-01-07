@@ -38,7 +38,7 @@ class ChessMoveSchema(Schema):
 
 class ChessGameSchema(Schema):
     id: int
-    white_player: UserSchema
+    white_player: Optional[UserSchema]
     black_player: Optional[UserSchema]
     is_ai_game: bool
     ai_difficulty: int

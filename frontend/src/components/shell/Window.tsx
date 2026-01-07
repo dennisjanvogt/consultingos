@@ -1,5 +1,6 @@
 import { motion, useDragControls, useMotionValue } from 'framer-motion'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { type Window as WindowType, useWindowStore } from '@/stores/windowStore'
 import { useKanbanStore } from '@/stores/kanbanStore'
@@ -14,6 +15,7 @@ import { useWhiteboardStore } from '@/stores/whiteboardStore'
 import { useRecordingStore } from '@/stores/recordingStore'
 import { useNotesStore } from '@/stores/notesStore'
 import { useWorkflowStore } from '@/stores/workflowStore'
+import { useGoStore } from '@/stores/goStore'
 import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
@@ -525,6 +527,25 @@ function ChessTitleBarControls() {
   )
 }
 
+// Go Title Bar Controls
+function GoTitleBarControls() {
+  const { setShowNewGameModal } = useGoStore()
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        setShowNewGameModal(true)
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-yellow-600 hover:bg-yellow-700 text-white transition-all shadow-sm"
+    >
+      <Plus className="w-3 h-3" />
+      Neues Spiel
+    </button>
+  )
+}
+
 function SettingsTitleBarControls() {
   const { t } = useTranslation()
   const { logout } = useAuthStore()
@@ -545,7 +566,7 @@ function SettingsTitleBarControls() {
       </button>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
+      {showLogoutConfirm && createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setShowLogoutConfirm(false)}
@@ -584,7 +605,8 @@ function SettingsTitleBarControls() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
@@ -610,7 +632,7 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
   return (
     <>
       {/* Window Controls - Modern Style */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 relative z-10">
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -659,7 +681,7 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
       </span>
 
       {/* Right side - App-specific controls */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 relative z-10">
         {window.appId === 'kanban' && (
           <div className="flex items-center gap-0.5 bg-black/5 dark:bg-white/5 rounded-md p-0.5">
             {KANBAN_BOARDS.map((board) => (
@@ -722,6 +744,9 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'chess' && (
           <ChessTitleBarControls />
+        )}
+        {window.appId === 'go' && (
+          <GoTitleBarControls />
         )}
         {window.appId === 'settings' && (
           <SettingsTitleBarControls />

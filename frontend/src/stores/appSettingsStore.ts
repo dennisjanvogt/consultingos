@@ -34,6 +34,8 @@ interface AppSettingsState {
   toggleApp: (appId: string) => Promise<void>
   reorderDock: (newOrder: string[]) => Promise<void>
   isAppEnabled: (appId: string) => boolean
+  enableAllApps: (allAppIds: string[]) => Promise<void>
+  disableAllApps: (requiredAppIds: string[]) => Promise<void>
 }
 
 export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
@@ -122,5 +124,48 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
 
   isAppEnabled: (appId: string) => {
     return get().settings.enabled_apps.includes(appId)
+  },
+
+  enableAllApps: async (allAppIds: string[]) => {
+    const { settings, updateSettings } = get()
+
+    // Add all apps that aren't already in dock_order
+    const newDockOrder = [...settings.dock_order]
+    allAppIds.forEach(appId => {
+      if (!newDockOrder.includes(appId)) {
+        newDockOrder.push(appId)
+      }
+    })
+
+    // Optimistic update
+    set({
+      settings: {
+        ...settings,
+        enabled_apps: allAppIds,
+        dock_order: newDockOrder,
+      },
+    })
+
+    // Sync with backend
+    await updateSettings({ enabled_apps: allAppIds, dock_order: newDockOrder })
+  },
+
+  disableAllApps: async (requiredAppIds: string[]) => {
+    const { settings, updateSettings } = get()
+
+    // Keep only required apps (canDisable: false)
+    const newDockOrder = settings.dock_order.filter(id => requiredAppIds.includes(id))
+
+    // Optimistic update
+    set({
+      settings: {
+        ...settings,
+        enabled_apps: requiredAppIds,
+        dock_order: newDockOrder,
+      },
+    })
+
+    // Sync with backend
+    await updateSettings({ enabled_apps: requiredAppIds, dock_order: newDockOrder })
   },
 }))

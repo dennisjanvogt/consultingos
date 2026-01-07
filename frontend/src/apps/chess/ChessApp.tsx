@@ -21,6 +21,18 @@ import type { ChessGame, ChessInvitation } from '@/api/types'
 type ViewMode = 'list' | 'game'
 type GameFilter = 'active' | 'finished' | 'all'
 
+// Convert AI difficulty level (1-20) to approximate Elo rating
+const difficultyToElo = (level: number): number => {
+  // Stockfish levels roughly map to these Elo ranges
+  const eloMap: Record<number, number> = {
+    1: 800, 2: 900, 3: 1000, 4: 1100, 5: 1200,
+    6: 1300, 7: 1400, 8: 1500, 9: 1600, 10: 1700,
+    11: 1800, 12: 1900, 13: 2000, 14: 2100, 15: 2200,
+    16: 2300, 17: 2400, 18: 2500, 19: 2600, 20: 2700,
+  }
+  return eloMap[level] || 1500
+}
+
 export function ChessApp() {
   const { t } = useTranslation()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -248,7 +260,7 @@ export function ChessApp() {
                     )}
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                       {game.is_ai_game
-                        ? t('chess.vsAI', { level: game.ai_difficulty })
+                        ? `vs KI (${difficultyToElo(game.ai_difficulty || 10)} Elo)`
                         : `vs ${
                             game.white_player?.username === 'me'
                               ? game.black_player?.username
@@ -379,11 +391,12 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
   }
 
   const getDifficultyLabel = (level: number): string => {
-    if (level <= 1) return t('chess.beginner')
-    if (level <= 5) return t('chess.easy')
-    if (level <= 10) return t('chess.medium')
-    if (level <= 15) return t('chess.hard')
-    return t('chess.master')
+    const elo = difficultyToElo(level)
+    if (level <= 3) return `${elo} Elo (${t('chess.beginner')})`
+    if (level <= 7) return `${elo} Elo (${t('chess.easy')})`
+    if (level <= 12) return `${elo} Elo (${t('chess.medium')})`
+    if (level <= 17) return `${elo} Elo (${t('chess.hard')})`
+    return `${elo} Elo (${t('chess.master')})`
   }
 
   return (
@@ -442,8 +455,8 @@ function NewGameModal({ onClose, onCreate, onShowInviteModal }: NewGameModalProp
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>{t('chess.easy')}</span>
-                <span>{t('chess.hard')}</span>
+                <span>800 Elo</span>
+                <span>2700 Elo</span>
               </div>
             </div>
           )}
@@ -607,9 +620,9 @@ function GameView({
   }, [game.moves])
 
   return (
-    <div className="flex-1 flex">
+    <div className="flex-1 flex h-full overflow-hidden">
       {/* Main Board Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
         <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <button
@@ -632,7 +645,7 @@ function GameView({
             {game.is_ai_game && (
               <span className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
                 <Cpu className="w-3.5 h-3.5" />
-                {t('chess.aiLevel')} {game.ai_difficulty}
+                {difficultyToElo(game.ai_difficulty || 10)} Elo
               </span>
             )}
           </div>
@@ -674,7 +687,7 @@ function GameView({
       </div>
 
       {/* Side Panel - Game Info */}
-      <div className="w-56 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="w-56 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 h-full overflow-hidden">
         <GameInfo
           game={game}
           playerColor={playerColor}

@@ -28,6 +28,12 @@
     "recordWindow": "Pencereyi Kaydet",
     "stopRecording": "Kaydi Durdur"
   },
+  "dock": {
+    "disableApp": "Uygulamayi devre disi birak",
+    "disableAppTitle": "Uygulama devre disi birakilsin mi?",
+    "disableAppMessage": "\"{{name}}\" uygulamasini devre disi birakmak istiyor musunuz? Ayarlardan tekrar etkinlestirebilirsiniz.",
+    "disable": "Devre disi birak"
+  },
   "shortcuts": {
     "toggle": "Klavye Kisayollarini Goster"
   },
@@ -167,6 +173,8 @@
     "system": "Sistem",
     "apps": "Uygulamalar",
     "appsDescription": "Uygulamalari etkinlestirin ve dock'ta duzenleyin",
+    "enableAll": "Tumunu etkinlestir",
+    "disableAll": "Tumunu devre disi birak",
     "category": {
       "core": "Temel",
       "productivity": "Uretkenlik",

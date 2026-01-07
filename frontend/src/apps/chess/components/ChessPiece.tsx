@@ -6,24 +6,19 @@ interface ChessPieceProps {
   isDragging?: boolean
 }
 
-// Unicode chess pieces
+// Unicode chess pieces - using filled characters for both colors
+const FILLED_PIECES: Record<PieceSymbol, string> = {
+  k: '\u265A', // Filled King
+  q: '\u265B', // Filled Queen
+  r: '\u265C', // Filled Rook
+  b: '\u265D', // Filled Bishop
+  n: '\u265E', // Filled Knight
+  p: '\u265F', // Filled Pawn
+}
+
 const PIECE_UNICODE: Record<Color, Record<PieceSymbol, string>> = {
-  w: {
-    k: '\u2654', // White King
-    q: '\u2655', // White Queen
-    r: '\u2656', // White Rook
-    b: '\u2657', // White Bishop
-    n: '\u2658', // White Knight
-    p: '\u2659', // White Pawn
-  },
-  b: {
-    k: '\u265A', // Black King
-    q: '\u265B', // Black Queen
-    r: '\u265C', // Black Rook
-    b: '\u265D', // Black Bishop
-    n: '\u265E', // Black Knight
-    p: '\u265F', // Black Pawn
-  },
+  w: FILLED_PIECES,
+  b: FILLED_PIECES,
 }
 
 export function ChessPiece({ piece, color, isDragging }: ChessPieceProps) {

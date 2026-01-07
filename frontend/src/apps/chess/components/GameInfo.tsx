@@ -3,6 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { Clock, Flag, Handshake } from 'lucide-react'
 import type { ChessGame, ChessMove } from '@/api/types'
 
+// Convert AI difficulty level (1-20) to approximate Elo rating
+const difficultyToElo = (level: number): number => {
+  const eloMap: Record<number, number> = {
+    1: 800, 2: 900, 3: 1000, 4: 1100, 5: 1200,
+    6: 1300, 7: 1400, 8: 1500, 9: 1600, 10: 1700,
+    11: 1800, 12: 1900, 13: 2000, 14: 2100, 15: 2200,
+    16: 2300, 17: 2400, 18: 2500, 19: 2600, 20: 2700,
+  }
+  return eloMap[level] || 1500
+}
+
 interface GameInfoProps {
   game: ChessGame
   playerColor: 'white' | 'black'
@@ -29,7 +40,7 @@ export function GameInfo({
 
   const getPlayerName = (color: 'white' | 'black'): string => {
     if (game.is_ai_game) {
-      return color === playerColor ? t('chess.you') : t('chess.vsAI', { level: game.ai_difficulty }).replace('vs ', '')
+      return color === playerColor ? t('chess.you') : `KI (${difficultyToElo(game.ai_difficulty || 10)} Elo)`
     }
     const player = color === 'white' ? game.white_player : game.black_player
     return player?.username || t('chess.waiting')

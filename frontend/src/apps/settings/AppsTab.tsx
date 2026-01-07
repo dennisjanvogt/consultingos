@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, X } from 'lucide-react'
+import { Search, X, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useAppSettingsStore } from '@/stores/appSettingsStore'
 import { appRegistry, type AppDefinition } from '@/config/apps'
 
@@ -8,7 +8,7 @@ const categoryOrder = ['core', 'productivity', 'tools', 'games', 'admin']
 
 export function AppsTab() {
   const { t } = useTranslation()
-  const { settings, fetchSettings, toggleApp, isAppEnabled } = useAppSettingsStore()
+  const { settings, fetchSettings, toggleApp, isAppEnabled, enableAllApps, disableAllApps } = useAppSettingsStore()
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
@@ -54,11 +54,41 @@ export function AppsTab() {
 
   const isSearching = searchQuery.trim().length > 0
 
+  // Get all app IDs and required (non-disableable) app IDs
+  const allAppIds = useMemo(() => allApps.map(app => app.id), [allApps])
+  const requiredAppIds = useMemo(() => allApps.filter(app => !app.canDisable).map(app => app.id), [allApps])
+
+  const handleEnableAll = () => {
+    enableAllApps(allAppIds)
+  }
+
+  const handleDisableAll = () => {
+    disableAllApps(requiredAppIds)
+  }
+
   return (
     <div className="max-w-2xl">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
-        {t('settings.apps')}
-      </h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+          {t('settings.apps')}
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={handleEnableAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
+          >
+            <ToggleRight className="w-3.5 h-3.5" />
+            {t('settings.enableAll')}
+          </button>
+          <button
+            onClick={handleDisableAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            <ToggleLeft className="w-3.5 h-3.5" />
+            {t('settings.disableAll')}
+          </button>
+        </div>
+      </div>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         {t('settings.appsDescription')}
       </p>

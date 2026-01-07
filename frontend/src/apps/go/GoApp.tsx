@@ -4,6 +4,7 @@ import { Plus, ArrowLeft, Save, Trash2, Trophy, Bot, Loader2, ChevronRight, Cpu 
 import { GoBoard } from './components/GoBoard'
 import { GoGameInfo } from './components/GoGameInfo'
 import { useGoAI } from './hooks/useGoAI'
+import { useGoStore } from '@/stores/goStore'
 
 export type StoneColor = 'black' | 'white' | null
 export type BoardSize = 9 | 13 | 19
@@ -282,7 +283,7 @@ export function GoApp() {
   const [gameState, setGameState] = useState<GoGameState>(() => createInitialState(9))
   const [playerColor, setPlayerColor] = useState<'black' | 'white'>('black')
   const [aiDifficulty, setAiDifficulty] = useState(5)
-  const [showNewGameModal, setShowNewGameModal] = useState(false)
+  const { showNewGameModal, setShowNewGameModal } = useGoStore()
   const [savedGames, setSavedGames] = useState<SavedGame[]>([])
   const [currentGameId, setCurrentGameId] = useState<string | null>(null)
   const [stats, setStats] = useState<GoStats>({ played: 0, wins: 0, losses: 0 })
@@ -503,17 +504,6 @@ export function GoApp() {
               <div className="text-gray-500">{t('go.losses')}</div>
             </div>
           </div>
-        </div>
-
-        {/* New Game Button */}
-        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => setShowNewGameModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors font-medium text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            {t('go.newGame')}
-          </button>
         </div>
 
         {/* Game Filter Tabs */}
