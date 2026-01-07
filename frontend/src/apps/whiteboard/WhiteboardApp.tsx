@@ -1,14 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw'
-import { Plus, Save, Trash2, Edit3, Check, X, FileText, ChevronDown } from 'lucide-react'
+import { Plus, Save, Trash2, Edit3, Check, X, FileText, ArrowLeft } from 'lucide-react'
 import { useWhiteboardStore, type DiagramListItem } from '@/stores/whiteboardStore'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 import '@excalidraw/excalidraw/index.css'
 
@@ -58,6 +52,7 @@ export default function WhiteboardApp() {
   const [isDarkMode, setIsDarkMode] = useState(
     document.documentElement.classList.contains('dark')
   )
+  const [view, setView] = useState<'gallery' | 'editor'>('gallery')
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -194,6 +189,26 @@ export default function WhiteboardApp() {
     }
     await loadDiagram(diagram.id)
     setHasUnsavedChanges(false)
+    setView('editor')
+  }
+
+  // Create new diagram and open editor
+  const handleCreate = async () => {
+    if (hasUnsavedChanges) {
+      await handleManualSave()
+    }
+    await createDiagram()
+    setView('editor')
+  }
+
+  // Go back to gallery
+  const handleBackToGallery = async () => {
+    if (hasUnsavedChanges) {
+      await handleManualSave()
+    }
+    setCurrentDiagram(null)
+    setView('gallery')
+    setHasUnsavedChanges(false)
   }
 
   // Delete diagram
@@ -205,6 +220,7 @@ export default function WhiteboardApp() {
     if (success) {
       setCurrentDiagram(null)
       setHasUnsavedChanges(false)
+      setView('gallery')
     }
   }
 
@@ -235,127 +251,153 @@ export default function WhiteboardApp() {
     )
   }
 
+  // Gallery View
+  if (view === 'gallery') {
+    return (
+      <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+        {/* Gallery Content */}
+        <div className="flex-1 overflow-auto p-6">
+          {diagrams.length === 0 && !isLoading ? (
+            // Empty state
+            <div className="h-full flex flex-col items-center justify-center text-gray-500">
+              <FileText className="w-16 h-16 mb-4 opacity-30" />
+              <p className="text-lg mb-4">{t('whiteboard.noDiagrams', 'Keine Diagramme')}</p>
+              <button
+                onClick={handleCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-lavender-500 hover:bg-lavender-600 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                {t('whiteboard.createFirst', 'Erstes Diagramm erstellen')}
+              </button>
+            </div>
+          ) : (
+            // Gallery grid
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {diagrams.map((diagram) => (
+                <button
+                  key={diagram.id}
+                  onClick={() => handleLoadDiagram(diagram)}
+                  className="group flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 hover:border-lavender-400 dark:hover:border-lavender-500 hover:shadow-lg transition-all overflow-hidden bg-white dark:bg-gray-800 text-left"
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-[4/3] bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    {diagram.thumbnail ? (
+                      <img
+                        src={diagram.thumbnail}
+                        alt=""
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div className="p-3">
+                    <p className="font-medium text-sm truncate text-gray-900 dark:text-gray-100">
+                      {diagram.title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {new Date(diagram.updated_at).toLocaleDateString('de-DE')}
+                    </p>
+                  </div>
+                </button>
+              ))}
+
+              {/* Create New Card */}
+              <button
+                onClick={handleCreate}
+                className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-lavender-400 dark:hover:border-lavender-500 hover:bg-lavender-50 dark:hover:bg-lavender-900/10 transition-all aspect-[4/3] text-gray-400 dark:text-gray-500 hover:text-lavender-600 dark:hover:text-lavender-400"
+              >
+                <Plus className="w-10 h-10 mb-2" />
+                <span className="text-sm font-medium">{t('whiteboard.newDiagram', 'Neu')}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Editor View
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-900">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        {/* Diagram Selector */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors min-w-[200px]">
-              <FileText className="w-4 h-4 text-gray-500" />
-              <span className="flex-1 text-left truncate">
-                {currentDiagram?.title || t('whiteboard.selectDiagram', 'Diagramm wählen...')}
-              </span>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 max-h-[300px] overflow-y-auto">
-            {diagrams.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500">
-                {t('whiteboard.noDiagrams', 'Keine Diagramme')}
-              </div>
-            ) : (
-              diagrams.map((diagram) => (
-                <DropdownMenuItem
-                  key={diagram.id}
-                  onClick={() => handleLoadDiagram(diagram)}
-                  className={`flex items-center gap-2 ${
-                    currentDiagram?.id === diagram.id ? 'bg-lavender-50 dark:bg-lavender-900/20' : ''
-                  }`}
-                >
-                  {diagram.thumbnail ? (
-                    <img
-                      src={diagram.thumbnail}
-                      alt=""
-                      className="w-8 h-8 rounded object-cover bg-gray-100"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{diagram.title}</div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(diagram.updated_at).toLocaleDateString('de-DE')}
-                    </div>
-                  </div>
-                  {currentDiagram?.id === diagram.id && (
-                    <Check className="w-4 h-4 text-lavender-500" />
-                  )}
-                </DropdownMenuItem>
-              ))
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Back Button */}
+        <button
+          onClick={handleBackToGallery}
+          className="flex items-center gap-1 px-2 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t('common.back', 'Zurück')}
+        </button>
 
-        {/* Current Diagram Actions */}
-        {currentDiagram && (
-          <>
-            <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
-            {/* Title / Rename */}
-            {isRenaming ? (
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleConfirmRename()
-                    if (e.key === 'Escape') handleCancelRename()
-                  }}
-                  className="px-2 py-1 text-sm border border-lavender-500 rounded focus:outline-none focus:ring-1 focus:ring-lavender-500 bg-white dark:bg-gray-700"
-                  autoFocus
-                />
-                <button
-                  onClick={handleConfirmRename}
-                  className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600"
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleCancelRename}
-                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleStartRename}
-                className="flex items-center gap-1 px-2 py-1 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title={t('whiteboard.rename', 'Umbenennen')}
-              >
-                <Edit3 className="w-3.5 h-3.5 text-gray-500" />
-              </button>
-            )}
-
-            {/* Save Button */}
+        {/* Title / Rename */}
+        {isRenaming ? (
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleConfirmRename()
+                if (e.key === 'Escape') handleCancelRename()
+              }}
+              className="px-2 py-1 text-sm border border-lavender-500 rounded focus:outline-none focus:ring-1 focus:ring-lavender-500 bg-white dark:bg-gray-700"
+              autoFocus
+            />
             <button
-              onClick={handleManualSave}
-              disabled={isSaving || !hasUnsavedChanges}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                hasUnsavedChanges
-                  ? 'bg-gold-600 hover:bg-gold-700 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-              }`}
+              onClick={handleConfirmRename}
+              className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600"
             >
-              <Save className="w-4 h-4" />
-              {isSaving ? t('whiteboard.saving', 'Speichert...') : t('whiteboard.save', 'Speichern')}
+              <Check className="w-4 h-4" />
             </button>
-
-            {/* Delete Button */}
             <button
-              onClick={handleDeleteDiagram}
-              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 transition-colors"
-              title={t('whiteboard.delete', 'Löschen')}
+              onClick={handleCancelRename}
+              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600"
             >
-              <Trash2 className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
-          </>
+          </div>
+        ) : (
+          <button
+            onClick={handleStartRename}
+            className="flex items-center gap-1.5 px-2 py-1 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title={t('whiteboard.rename', 'Umbenennen')}
+          >
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              {currentDiagram?.title}
+            </span>
+            <Edit3 className="w-3.5 h-3.5 text-gray-400" />
+          </button>
         )}
+
+        {/* Save Button */}
+        <button
+          onClick={handleManualSave}
+          disabled={isSaving || !hasUnsavedChanges}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            hasUnsavedChanges
+              ? 'bg-gold-600 hover:bg-gold-700 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          <Save className="w-4 h-4" />
+          {isSaving ? t('whiteboard.saving', 'Speichert...') : t('whiteboard.save', 'Speichern')}
+        </button>
+
+        {/* Delete Button */}
+        <button
+          onClick={handleDeleteDiagram}
+          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 transition-colors"
+          title={t('whiteboard.delete', 'Löschen')}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
 
         {/* Status indicator */}
         <div className="flex-1" />
@@ -373,7 +415,7 @@ export default function WhiteboardApp() {
 
       {/* Excalidraw Canvas */}
       <div className="flex-1 relative">
-        {currentDiagram ? (
+        {currentDiagram && (
           <Excalidraw
             excalidrawAPI={(api) => setExcalidrawAPI(api)}
             initialData={{
@@ -401,18 +443,6 @@ export default function WhiteboardApp() {
               welcomeScreen: false,
             }}
           />
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center text-gray-500">
-            <FileText className="w-16 h-16 mb-4 opacity-30" />
-            <p className="text-lg mb-4">{t('whiteboard.noDiagramSelected', 'Kein Diagramm ausgewählt')}</p>
-            <button
-              onClick={() => createDiagram()}
-              className="flex items-center gap-2 px-4 py-2 bg-lavender-500 hover:bg-lavender-600 text-white rounded-lg transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              {t('whiteboard.createFirst', 'Erstes Diagramm erstellen')}
-            </button>
-          </div>
         )}
       </div>
     </div>
