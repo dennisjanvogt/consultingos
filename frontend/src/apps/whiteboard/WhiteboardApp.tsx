@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw'
-import { Plus, Trash2, Edit3, Check, X, FileText, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Edit3, Check, X, FileText, ArrowLeft, Library } from 'lucide-react'
 import { useWhiteboardStore, type DiagramListItem } from '@/stores/whiteboardStore'
+import { architectureLibraryItems } from './architectureLibrary'
 
 import '@excalidraw/excalidraw/index.css'
 
@@ -83,13 +84,17 @@ export default function WhiteboardApp() {
     fetchDiagrams()
   }, [fetchDiagrams])
 
-  // Auto-save with debounce
+  // Auto-save with debounce - use ref to avoid re-creating callback
   const handleChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (elements: readonly any[], appState: any, files: any) => {
-      if (!currentDiagram) return
+      const diagram = useWhiteboardStore.getState().currentDiagram
+      if (!diagram) return
 
-      setHasUnsavedChanges(true)
+      // Only update if not already marked as unsaved (prevents re-render loop)
+      if (!useWhiteboardStore.getState().hasUnsavedChanges) {
+        useWhiteboardStore.getState().setHasUnsavedChanges(true)
+      }
 
       // Clear previous timeout
       if (saveTimeoutRef.current) {
@@ -130,11 +135,11 @@ export default function WhiteboardApp() {
           // Thumbnail generation failed, continue without it
         }
 
-        await saveDiagram(currentDiagram.id, content, thumbnail)
-        setHasUnsavedChanges(false)
+        await saveDiagram(diagram.id, content, thumbnail)
+        useWhiteboardStore.getState().setHasUnsavedChanges(false)
       }, 3000)
     },
-    [currentDiagram, saveDiagram, setHasUnsavedChanges]
+    [saveDiagram]
   )
 
   // Cleanup timeout on unmount
@@ -208,6 +213,25 @@ export default function WhiteboardApp() {
   useEffect(() => {
     handleManualSaveRef.current = handleManualSave
   }, [handleManualSave])
+
+  // Load architecture library when API is ready
+  useEffect(() => {
+    if (!excalidrawAPI) return
+
+    excalidrawAPI.updateLibrary({
+      libraryItems: architectureLibraryItems,
+      merge: true,
+      openLibraryMenu: false,
+      defaultStatus: 'published',
+    })
+  }, [excalidrawAPI])
+
+  // Open library panel
+  const handleOpenLibrary = useCallback(() => {
+    if (!excalidrawAPI) return
+    // Toggle library sidebar
+    excalidrawAPI.setOpenDialog({ name: 'library' })
+  }, [excalidrawAPI])
 
   // Load diagram
   const handleLoadDiagram = async (diagram: DiagramListItem) => {
@@ -359,6 +383,16 @@ export default function WhiteboardApp() {
         >
           <ArrowLeft className="w-4 h-4" />
           {t('common.back', 'Zurück')}
+        </button>
+
+        {/* Library Button */}
+        <button
+          onClick={handleOpenLibrary}
+          className="flex items-center gap-1.5 px-2 py-1.5 text-sm rounded-lg hover:bg-lavender-100 dark:hover:bg-lavender-900/30 text-gray-600 dark:text-gray-400 hover:text-lavender-600 dark:hover:text-lavender-400 transition-colors"
+          title={t('whiteboard.library', 'Bibliothek')}
+        >
+          <Library className="w-4 h-4" />
+          <span className="hidden sm:inline">{t('whiteboard.library', 'Bibliothek')}</span>
         </button>
 
         {/* Delete Button */}

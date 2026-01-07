@@ -283,6 +283,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         <div
           className="h-8 flex items-center justify-between px-3 glass-header cursor-move select-none shrink-0"
           onPointerDown={(e) => { if (!isResizing) dragControls.start(e) }}
+          onDoubleClick={() => maximizeWindow(window.id)}
         >
           <TitleBarContent
             window={window}
@@ -354,6 +355,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         onPointerDown={(e) => {
           if (!isResizing && !window.isMaximized) dragControls.start(e)
         }}
+        onDoubleClick={() => maximizeWindow(window.id)}
       >
         <TitleBarContent
           window={window}
