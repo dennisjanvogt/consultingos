@@ -110,6 +110,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
     deleteConversation,
     addMessage: addMessageToStore,
     clearCurrentConversation,
+    hasValidApiKey,
   } = useAIStore()
 
   // Start speech recognition
@@ -671,6 +672,25 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
               </div>
             )}
 
+            {/* API Key Warning */}
+            {!hasValidApiKey() && (
+              <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200/50 dark:border-amber-800/50">
+                <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>API-Key fehlt.</span>
+                  <button
+                    onClick={() => {
+                      openWindow('settings')
+                      onClose()
+                    }}
+                    className="underline hover:no-underline"
+                  >
+                    Einstellungen öffnen
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Input Area */}
             <form onSubmit={handleSubmit}>
               <div className="flex items-center gap-3 p-3 border-b border-gray-200/50 dark:border-gray-700/50">
@@ -687,7 +707,7 @@ export function Spotlight({ isOpen, onClose }: SpotlightProps) {
                   onKeyDown={handleKeyDown}
                   placeholder={isRecording ? "Sprich jetzt..." : "Frag mich etwas... (⌥ für Spracheingabe)"}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 outline-none"
-                  disabled={isLoading || isRecording}
+                  disabled={isLoading || isRecording || !hasValidApiKey()}
                 />
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />

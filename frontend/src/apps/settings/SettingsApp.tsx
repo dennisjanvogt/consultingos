@@ -4,7 +4,8 @@ import { useTheme } from '@/components/shell/ThemeProvider'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useConfirmStore } from '@/stores/confirmStore'
-import { Building2, CreditCard, Receipt, Palette, LayoutGrid, User as UserIcon, ShieldCheck, Key, Eye, EyeOff, Trash2, Check } from 'lucide-react'
+import { useAIStore } from '@/stores/aiStore'
+import { Building2, CreditCard, Receipt, Palette, LayoutGrid, User as UserIcon, ShieldCheck, Key, Eye, EyeOff, Trash2, Check, AlertCircle } from 'lucide-react'
 import { AppsTab } from './AppsTab'
 import type { User } from '@/api/types'
 
@@ -649,7 +650,6 @@ function APIKeysSettings() {
   const confirm = useConfirmStore((state) => state.confirm)
   const [hasKey, setHasKey] = useState(false)
   const [keyPreview, setKeyPreview] = useState<string | null>(null)
-  const [hasServerFallback, setHasServerFallback] = useState(false)
   const [newKey, setNewKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -671,7 +671,6 @@ function APIKeysSettings() {
         const data = await response.json()
         setHasKey(data.has_openrouter_key)
         setKeyPreview(data.key_preview)
-        setHasServerFallback(data.has_server_fallback)
       }
     } catch (err) {
       console.error('Failed to fetch API key status:', err)
@@ -707,6 +706,8 @@ function APIKeysSettings() {
         setNewKey('')
         setShowKey(false)
         fetchKeyStatus()
+        // Update AI store with the new key
+        useAIStore.getState().fetchUserApiKey()
         setTimeout(() => setSuccess(null), 3000)
       } else {
         setError(data.error || t('settings.apiKeyError', 'Failed to save API key'))
@@ -741,6 +742,8 @@ function APIKeysSettings() {
       if (response.ok) {
         setSuccess(t('settings.apiKeyDeleted', 'API Key deleted'))
         fetchKeyStatus()
+        // Clear the key from AI store
+        useAIStore.getState().clearUserApiKey()
         setTimeout(() => setSuccess(null), 3000)
       } else {
         const data = await response.json()
@@ -810,19 +813,19 @@ function APIKeysSettings() {
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
-        ) : hasServerFallback ? (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        ) : (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm text-blue-700 dark:text-blue-300">
-                {t('settings.serverKeyActive', 'Server-Key aktiv')}
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm text-amber-700 dark:text-amber-300">
+                {t('settings.noApiKey', 'Kein API-Key hinterlegt')}
               </span>
             </div>
-            <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">
-              {t('settings.serverKeyHint', 'KI-Funktionen nutzen den Server-Key. Optional kannst du deinen eigenen Key hinterlegen.')}
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">
+              {t('settings.noApiKeyHint', 'Für KI-Funktionen wird ein eigener OpenRouter API-Key benötigt.')}
             </p>
           </div>
-        ) : null}
+        )}
 
         {/* Input for new key */}
         <div className="space-y-3">

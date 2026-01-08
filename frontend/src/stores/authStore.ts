@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { api, ApiError } from '@/api/client'
 import type { User } from '@/api/types'
+import { useAIStore } from '@/stores/aiStore'
 
 interface GitHubCallbackResponse {
   user: User | null
@@ -41,6 +42,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // Ignore logout errors
     }
+    // Clear API key on logout
+    useAIStore.getState().clearUserApiKey()
     set({ user: null, isAuthenticated: false, isPending: false })
   },
 
@@ -49,8 +52,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const user = await api.get<User>('/auth/me')
       set({ user, isAuthenticated: true, isLoading: false })
+      // Fetch user's API key after successful auth
+      useAIStore.getState().fetchUserApiKey()
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false })
+      // Clear API key when not authenticated
+      useAIStore.getState().clearUserApiKey()
     }
   },
 
@@ -90,6 +97,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           isPending: false,
           isLoading: false
         })
+        // Fetch user's API key after successful login
+        useAIStore.getState().fetchUserApiKey()
         return { success: true, pending: false }
       }
 

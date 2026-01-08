@@ -3,8 +3,10 @@ import { getToolDefinitions, getToolStats, getFilteredToolDefinitions, getToolDe
 import { getAppsForAI } from '@/config/apps'
 import type { AIHelper } from '@/api/types'
 
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+// Get the API key from the user's stored key
+const getApiKey = () => useAIStore.getState().userApiKey || ''
 
 // Get the current chat model from the store
 const getChatModel = () => useAIStore.getState().chatModel
@@ -229,7 +231,7 @@ export async function sendMessageStream(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${getApiKey()}`,
         'HTTP-Referer': window.location.origin,
         'X-Title': 'ConsultingOS'
       },
@@ -344,7 +346,7 @@ export async function sendMessage(messages: Message[], options?: SendMessageOpti
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Authorization': `Bearer ${getApiKey()}`,
       'HTTP-Referer': window.location.origin,
       'X-Title': 'ConsultingOS'
     },

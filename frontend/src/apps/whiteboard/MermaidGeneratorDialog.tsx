@@ -3,9 +3,12 @@ import { createPortal } from 'react-dom'
 import { X, Sparkles, Loader2, AlertCircle, Code2, Wand2 } from 'lucide-react'
 import { parseMermaidToExcalidraw } from '@excalidraw/mermaid-to-excalidraw'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
+import { useAIStore } from '@/stores/aiStore'
 
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+// Get the API key from the user's stored key
+const getApiKey = () => useAIStore.getState().userApiKey || ''
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawElementType = any
@@ -83,7 +86,7 @@ export function MermaidGeneratorDialog({ open, onClose, onGenerated, mode }: Mer
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Authorization': `Bearer ${getApiKey()}`,
           'HTTP-Referer': window.location.origin,
           'X-Title': 'ConsultingOS'
         },

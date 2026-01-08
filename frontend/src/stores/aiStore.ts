@@ -23,7 +23,13 @@ interface APIKeyStatus {
   keyPreview?: string
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+
 interface AIState {
+  // User's decrypted API key (kept in memory only, not persisted)
+  userApiKey: string | null
+  fetchUserApiKey: () => Promise<string | null>
+  clearUserApiKey: () => void
   // Model selection
   chatModel: string
   imageModel: string
@@ -171,6 +177,29 @@ const convertModel = (model: OpenRouterModel): AIModel => {
 export const useAIStore = create<AIState>()(
   persist(
     (set, get) => ({
+      // User API Key (in memory only, not persisted)
+      userApiKey: null,
+
+      fetchUserApiKey: async () => {
+        try {
+          const response = await fetch(`${API_URL}/auth/api-key/decrypt`, {
+            credentials: 'include',
+          })
+          if (!response.ok) {
+            set({ userApiKey: null })
+            return null
+          }
+          const data = await response.json()
+          set({ userApiKey: data.key })
+          return data.key
+        } catch {
+          set({ userApiKey: null })
+          return null
+        }
+      },
+
+      clearUserApiKey: () => set({ userApiKey: null }),
+
       // Model selection state
       chatModel: 'google/gemini-2.0-flash-001',
       imageModel: 'google/gemini-2.0-flash-001:image-generation',
@@ -210,8 +239,8 @@ export const useAIStore = create<AIState>()(
       },
 
       hasValidApiKey: () => {
-        const status = get().apiKeyStatus
-        return status ? (status.hasUserKey || status.hasServerKey) : false
+        // Only user's own key is valid (no server fallback)
+        return get().userApiKey !== null
       },
 
       // Analysis Mode state

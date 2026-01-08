@@ -474,3 +474,21 @@ def delete_api_key(request: HttpRequest):
     request.user.clear_openrouter_key()
 
     return 200, {'message': 'API key removed'}
+
+
+class DecryptedKeySchema(Schema):
+    key: str
+
+
+@router.get('/api-key/decrypt', response={200: DecryptedKeySchema, 401: ErrorSchema, 404: ErrorSchema})
+def get_decrypted_api_key(request: HttpRequest):
+    """Get the decrypted OpenRouter API key for the authenticated user.
+    This endpoint is used by the frontend to make direct requests to OpenRouter.
+    The key is only returned over HTTPS and should not be logged."""
+    if not request.user.is_authenticated:
+        return 401, {'error': 'Not authenticated'}
+
+    if not request.user.has_openrouter_key():
+        return 404, {'error': 'No API key configured'}
+
+    return 200, {'key': request.user.get_openrouter_key()}

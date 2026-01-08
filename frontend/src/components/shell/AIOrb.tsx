@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWindowStore } from '@/stores/windowStore'
+import { useAIStore } from '@/stores/aiStore'
 import { sendMessage, type Message, type ToolCall } from '@/services/aiAgent'
 import { executeTool } from '@/services/tools'
 import { getAppsForAI } from '@/config/apps'
@@ -83,6 +84,7 @@ interface SpeechRecognitionInstance extends EventTarget {
 
 export function AIOrb() {
   const { isOrbOpen, isOrbMuted, openWindow, closeWindowByAppId } = useWindowStore()
+  const { hasValidApiKey } = useAIStore()
 
   // Orb states
   const [isListening, setIsListening] = useState(false)
@@ -232,6 +234,12 @@ export function AIOrb() {
 
   // Start listening
   const startListening = useCallback(() => {
+    // Check for API key first
+    if (!hasValidApiKey()) {
+      speak('Bitte API-Schlüssel in den Einstellungen hinterlegen.')
+      return
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognitionAPI) {
@@ -289,7 +297,7 @@ export function AIOrb() {
       console.error('Speech recognition failed:', error)
       setIsListening(false)
     }
-  }, [speak])
+  }, [speak, hasValidApiKey])
 
   // Handle orb open/close - Push-to-talk behavior
   useEffect(() => {
