@@ -97,7 +97,7 @@ export function AppOverview() {
       // App is already in dock - ask to remove
       const confirmed = await confirm({
         title: t('appOverview.removeFromDock', 'Aus Dock entfernen'),
-        message: t('appOverview.removeFromDockMessage', `Möchtest du "${appName}" aus dem Dock entfernen?`),
+        message: t('appOverview.removeFromDockMessage', { name: appName }),
         confirmLabel: t('common.delete', 'Entfernen'),
         variant: 'warning',
       })
@@ -108,7 +108,7 @@ export function AppOverview() {
       // App is not in dock - ask to add
       const confirmed = await confirm({
         title: t('appOverview.addToDock', 'Zum Dock hinzufügen'),
-        message: t('appOverview.addToDockMessage', `Möchtest du "${appName}" zum Dock hinzufügen?`),
+        message: t('appOverview.addToDockMessage', { name: appName }),
         confirmLabel: t('appOverview.add', 'Hinzufügen'),
         variant: 'default',
       })
