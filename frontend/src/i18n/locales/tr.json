@@ -59,6 +59,7 @@
     "notes": "Notlar",
     "workflows": "Is Akislari",
     "knowledgebase": "Bilgi Bankasi",
+    "vault": "Vault",
     "game2048": "2048",
     "snake": "Snake",
     "tetris": "Tetris",
@@ -95,6 +96,26 @@
     "confirmDeleteConv": "Bu konusma silinsin mi?",
     "startChat": "Bir soru sorun...",
     "askPlaceholder": "Sorunuzu girin..."
+  },
+  "vault": {
+    "search": "Ara...",
+    "favorites": "Favoriler",
+    "pages": "Sayfalar",
+    "tags": "Etiketler",
+    "searchResults": "Arama Sonuclari",
+    "noResults": "Sonuc yok",
+    "noPages": "Henuz sayfa yok",
+    "newPage": "Yeni Sayfa",
+    "deletePage": "Sayfayi Sil",
+    "confirmDelete": "Bu sayfayi silmek istediginizden emin misiniz? Tum alt sayfalar da silinecektir.",
+    "selectPage": "Bir sayfa secin",
+    "orCreate": "veya yeni bir tane olusturun",
+    "untitled": "Baslıksız",
+    "backlinks": "Geri Baglantilar",
+    "graph": "Graf",
+    "graphDescription": "Sayfa baglantilarinin gorsellestirmesi",
+    "clickToNavigate": "Sayfaya gitmek icin bir dugume tiklayin",
+    "changeIcon": "Simgeyi degistir"
   },
   "whiteboard": {
     "title": "Beyaz Tahta",
@@ -650,7 +671,12 @@
   "appOverview": {
     "search": "Uygulama ara...",
     "noApps": "Uygulama bulunamadi",
-    "closeHint": "kapatmak icin"
+    "closeHint": "kapatmak icin",
+    "addToDock": "Dock'a Ekle",
+    "addToDockMessage": "\"{{name}}\" uygulamasini Dock'a eklemek istiyor musunuz?",
+    "add": "Ekle",
+    "removeFromDock": "Dock'tan Kaldir",
+    "removeFromDockMessage": "\"{{name}}\" uygulamasini Dock'tan kaldirmak istiyor musunuz?"
   },
   "terminal": {
     "connected": "Bagli",

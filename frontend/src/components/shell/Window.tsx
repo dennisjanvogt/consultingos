@@ -18,7 +18,8 @@ import { useWorkflowStore } from '@/stores/workflowStore'
 import { useGoStore } from '@/stores/goStore'
 import { useKnowledgebaseStore } from '@/stores/knowledgebaseStore'
 import { useAdminStore } from '@/stores/adminStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3, Clock, Users } from 'lucide-react'
+import { useVaultStore } from '@/stores/vaultStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3, Clock, Users, Network } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
@@ -503,6 +504,47 @@ function AdminTitleBarControls() {
   )
 }
 
+// Vault Title Bar Controls
+function VaultTitleBarControls() {
+  const { t } = useTranslation()
+  const { viewMode, setViewMode } = useVaultStore()
+
+  return (
+    <div className="flex items-center gap-0.5 bg-black/5 dark:bg-white/5 rounded-md p-0.5">
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setViewMode('pages')
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+          viewMode === 'pages'
+            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+        }`}
+      >
+        <List className="w-3 h-3" />
+        {t('vault.pages', 'Pages')}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setViewMode('graph')
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+          viewMode === 'graph'
+            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+        }`}
+      >
+        <Network className="w-3 h-3" />
+        {t('vault.graph', 'Graph')}
+      </button>
+    </div>
+  )
+}
+
 // Workflows Title Bar Controls
 function WorkflowsTitleBarControls() {
   const { t } = useTranslation()
@@ -824,6 +866,9 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'admin' && (
           <AdminTitleBarControls />
+        )}
+        {window.appId === 'vault' && (
+          <VaultTitleBarControls />
         )}
       </div>
     </>

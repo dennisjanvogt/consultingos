@@ -59,6 +59,7 @@
     "notes": "Notes",
     "workflows": "Workflows",
     "knowledgebase": "Knowledge Base",
+    "vault": "Vault",
     "game2048": "2048",
     "snake": "Snake",
     "tetris": "Tetris",
@@ -120,6 +121,26 @@
     "confirmDeleteConv": "Really delete this conversation?",
     "startChat": "Ask a question...",
     "askPlaceholder": "Enter your question..."
+  },
+  "vault": {
+    "search": "Search...",
+    "favorites": "Favorites",
+    "pages": "Pages",
+    "tags": "Tags",
+    "searchResults": "Search Results",
+    "noResults": "No results",
+    "noPages": "No pages yet",
+    "newPage": "New Page",
+    "deletePage": "Delete Page",
+    "confirmDelete": "Do you really want to delete this page? All subpages will also be deleted.",
+    "selectPage": "Select a page",
+    "orCreate": "or create a new one",
+    "untitled": "Untitled",
+    "backlinks": "Backlinks",
+    "graph": "Graph",
+    "graphDescription": "Visualization of page connections",
+    "clickToNavigate": "Click a node to navigate to the page",
+    "changeIcon": "Change icon"
   },
   "whiteboard": {
     "title": "Whiteboard",
@@ -769,7 +790,12 @@
   "appOverview": {
     "search": "Search apps...",
     "noApps": "No apps found",
-    "closeHint": "to close"
+    "closeHint": "to close",
+    "addToDock": "Add to Dock",
+    "addToDockMessage": "Do you want to add \"{{name}}\" to the Dock?",
+    "add": "Add",
+    "removeFromDock": "Remove from Dock",
+    "removeFromDockMessage": "Do you want to remove \"{{name}}\" from the Dock?"
   },
   "terminal": {
     "connected": "Connected",

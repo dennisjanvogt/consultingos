@@ -24,6 +24,7 @@ import {
   Gamepad2,
   Disc,
   Terminal,
+  BookMarked,
 } from 'lucide-react'
 
 // App Components
@@ -53,6 +54,7 @@ import { SnakeApp } from '@/apps/snake/SnakeApp'
 import { TetrisApp } from '@/apps/tetris/TetrisApp'
 import { PinballApp } from '@/apps/pinball/PinballApp'
 import { TerminalApp } from '@/apps/terminal/TerminalApp'
+import { VaultApp } from '@/apps/vault/VaultApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
@@ -281,6 +283,16 @@ export const appRegistry: Record<string, AppDefinition> = {
     category: 'productivity',
     canDisable: true,
   },
+  vault: {
+    id: 'vault',
+    component: VaultApp,
+    icon: <BookMarked className="h-6 w-6" />,
+    titleKey: 'apps.vault',
+    description: 'Vault: Notion-ähnlicher Block-Editor mit bidirektionalen Links und hierarchischen Seiten',
+    defaultSize: { width: 1100, height: 750 },
+    category: 'productivity',
+    canDisable: true,
+  },
   game2048: {
     id: 'game2048',
     component: Game2048App,
@@ -362,6 +374,7 @@ export const defaultDockOrder = [
   'calendar',
   'kanban',
   'notes',
+  'vault',
   'workflows',
   'knowledgebase',
   'chat',
@@ -387,6 +400,7 @@ export const defaultEnabledApps = [
   'calendar',
   'kanban',
   'notes',
+  'vault',
   'workflows',
   'knowledgebase',
   'chat',

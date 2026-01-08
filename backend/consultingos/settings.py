@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.notes',
     'apps.workflows',
     'apps.knowledgebase',
+    'apps.vault',
 ]
 
 MIDDLEWARE = [

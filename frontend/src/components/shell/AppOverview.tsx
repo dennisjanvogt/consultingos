@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, X } from 'lucide-react'
+import { Search, X, Plus, Check } from 'lucide-react'
 import { useWindowStore } from '@/stores/windowStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useAppSettingsStore } from '@/stores/appSettingsStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import { appRegistry, type AppCategory } from '@/config/apps'
 
 const categoryOrder: AppCategory[] = ['core', 'productivity', 'tools', 'games', 'admin']
@@ -13,6 +15,8 @@ export function AppOverview() {
   const setOpen = useWindowStore((state) => state.setAppOverviewOpen)
   const openWindow = useWindowStore((state) => state.openWindow)
   const user = useAuthStore((state) => state.user)
+  const { isAppEnabled, toggleApp } = useAppSettingsStore()
+  const confirm = useConfirmStore((state) => state.confirm)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Get all apps that the user has access to
@@ -83,6 +87,37 @@ export function AppOverview() {
     setOpen(false)
   }
 
+  const handleAppRightClick = async (e: React.MouseEvent, appId: string, appName: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const enabled = isAppEnabled(appId)
+
+    if (enabled) {
+      // App is already in dock - ask to remove
+      const confirmed = await confirm({
+        title: t('appOverview.removeFromDock', 'Aus Dock entfernen'),
+        message: t('appOverview.removeFromDockMessage', `Möchtest du "${appName}" aus dem Dock entfernen?`),
+        confirmLabel: t('common.delete', 'Entfernen'),
+        variant: 'warning',
+      })
+      if (confirmed) {
+        await toggleApp(appId)
+      }
+    } else {
+      // App is not in dock - ask to add
+      const confirmed = await confirm({
+        title: t('appOverview.addToDock', 'Zum Dock hinzufügen'),
+        message: t('appOverview.addToDockMessage', `Möchtest du "${appName}" zum Dock hinzufügen?`),
+        confirmLabel: t('appOverview.add', 'Hinzufügen'),
+        variant: 'default',
+      })
+      if (confirmed) {
+        await toggleApp(appId)
+      }
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -132,23 +167,33 @@ export function AppOverview() {
 
                   {/* Apps Grid */}
                   <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3">
-                    {apps.map((app) => (
-                      <button
-                        key={app.id}
-                        onClick={() => handleAppClick(app.id)}
-                        className="group flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                      >
-                        {/* App Icon */}
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
-                          {app.icon}
-                        </div>
+                    {apps.map((app) => {
+                      const enabled = isAppEnabled(app.id)
+                      return (
+                        <button
+                          key={app.id}
+                          onClick={() => handleAppClick(app.id)}
+                          onContextMenu={(e) => handleAppRightClick(e, app.id, t(app.titleKey))}
+                          className="group flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        >
+                          {/* App Icon */}
+                          <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
+                            {app.icon}
+                            {/* Dock indicator */}
+                            {enabled && (
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                <Check className="w-2.5 h-2.5 text-white" />
+                              </div>
+                            )}
+                          </div>
 
-                        {/* App Name */}
-                        <span className="text-xs text-gray-300 text-center line-clamp-2 group-hover:text-white transition-colors">
-                          {t(app.titleKey)}
-                        </span>
-                      </button>
-                    ))}
+                          {/* App Name */}
+                          <span className="text-xs text-gray-300 text-center line-clamp-2 group-hover:text-white transition-colors">
+                            {t(app.titleKey)}
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               ))}

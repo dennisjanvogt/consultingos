@@ -59,6 +59,7 @@
     "notes": "Notizen",
     "workflows": "Workflows",
     "knowledgebase": "Wissensdatenbank",
+    "vault": "Vault",
     "game2048": "2048",
     "snake": "Snake",
     "tetris": "Tetris",
@@ -120,6 +121,26 @@
     "confirmDeleteConv": "Konversation wirklich löschen?",
     "startChat": "Stelle eine Frage...",
     "askPlaceholder": "Frage eingeben..."
+  },
+  "vault": {
+    "search": "Suchen...",
+    "favorites": "Favoriten",
+    "pages": "Seiten",
+    "tags": "Tags",
+    "searchResults": "Suchergebnisse",
+    "noResults": "Keine Ergebnisse",
+    "noPages": "Keine Seiten vorhanden",
+    "newPage": "Neue Seite",
+    "deletePage": "Seite löschen",
+    "confirmDelete": "Möchtest du diese Seite wirklich löschen? Alle Unterseiten werden ebenfalls gelöscht.",
+    "selectPage": "Wähle eine Seite",
+    "orCreate": "oder erstelle eine neue",
+    "untitled": "Untitled",
+    "backlinks": "Backlinks",
+    "graph": "Graph",
+    "graphDescription": "Visualisierung der Seiten-Verbindungen",
+    "clickToNavigate": "Klicke auf einen Knoten um zur Seite zu springen",
+    "changeIcon": "Icon ändern"
   },
   "whiteboard": {
     "title": "Whiteboard",
@@ -769,7 +790,12 @@
   "appOverview": {
     "search": "Apps durchsuchen...",
     "noApps": "Keine Apps gefunden",
-    "closeHint": "zum Schließen"
+    "closeHint": "zum Schließen",
+    "addToDock": "Zum Dock hinzufügen",
+    "addToDockMessage": "Möchtest du \"{{name}}\" zum Dock hinzufügen?",
+    "add": "Hinzufügen",
+    "removeFromDock": "Aus Dock entfernen",
+    "removeFromDockMessage": "Möchtest du \"{{name}}\" aus dem Dock entfernen?"
   },
   "terminal": {
     "connected": "Verbunden",
