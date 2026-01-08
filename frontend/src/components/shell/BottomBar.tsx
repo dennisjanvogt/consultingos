@@ -96,7 +96,7 @@ export function BottomBar() {
           <>
             <div className="flex items-center gap-1">
               <span>Apps</span>
-              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">{isMac ? '⌘' : 'Win'}</kbd>
+              <kbd className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded text-[9px] font-mono">{isMac ? '⌘' : 'AltGr'}</kbd>
             </div>
             <div className="flex items-center gap-1">
               <span>AI Orb</span>
