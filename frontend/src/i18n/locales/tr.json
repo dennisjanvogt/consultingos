@@ -64,7 +64,8 @@
     "snake": "Snake",
     "tetris": "Tetris",
     "pinball": "Pinball",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "videoeditor": "Video Editörü"
   },
   "knowledgebase": {
     "newExpert": "Yeni Uzman",
@@ -116,6 +117,35 @@
     "graphDescription": "Sayfa baglantilarinin gorsellestirmesi",
     "clickToNavigate": "Sayfaya gitmek icin bir dugume tiklayin",
     "changeIcon": "Simgeyi degistir"
+  },
+  "videoeditor": {
+    "projects": "Projeler",
+    "newProject": "Yeni Proje",
+    "noProjects": "Henüz proje yok",
+    "createFirst": "İlk projenizi oluşturun",
+    "projectName": "Proje adı",
+    "media": "Medya",
+    "import": "İçe Aktar",
+    "dropMedia": "Medyayı buraya bırakın",
+    "inspector": "Özellikler",
+    "selectClip": "Bir klip seçin",
+    "addTracks": "Başlamak için track ekleyin",
+    "export": "Dışa Aktar",
+    "selectTool": "Seç (S)",
+    "cutTool": "Kes (C)",
+    "textTool": "Metin (T)",
+    "clipName": "Ad",
+    "opacity": "Opaklık",
+    "volume": "Ses",
+    "position": "Konum",
+    "scale": "Ölçek",
+    "rotation": "Döndürme",
+    "effects": "Efektler",
+    "keyframes": "Anahtar Kareler",
+    "brightness": "Parlaklık",
+    "contrast": "Kontrast",
+    "saturation": "Doygunluk",
+    "blur": "Bulanıklık"
   },
   "whiteboard": {
     "title": "Beyaz Tahta",

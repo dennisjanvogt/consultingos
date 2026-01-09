@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.workflows',
     'apps.knowledgebase',
     'apps.vault',
+    'apps.videoeditor',
 ]
 
 MIDDLEWARE = [
