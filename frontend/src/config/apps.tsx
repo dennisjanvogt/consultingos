@@ -25,6 +25,8 @@ import {
   Disc,
   Terminal,
   BookMarked,
+  Clapperboard,
+  Palette,
 } from 'lucide-react'
 
 // App Components
@@ -55,6 +57,8 @@ import { TetrisApp } from '@/apps/tetris/TetrisApp'
 import { PinballApp } from '@/apps/pinball/PinballApp'
 import { TerminalApp } from '@/apps/terminal/TerminalApp'
 import { VaultApp } from '@/apps/vault/VaultApp'
+import { VideoEditorApp } from '@/apps/videoeditor/VideoEditorApp'
+import { ImageEditorApp } from '@/apps/imageeditor/ImageEditorApp'
 
 export type AppCategory = 'core' | 'productivity' | 'tools' | 'games' | 'admin'
 
@@ -293,6 +297,26 @@ export const appRegistry: Record<string, AppDefinition> = {
     category: 'productivity',
     canDisable: true,
   },
+  videoeditor: {
+    id: 'videoeditor',
+    component: VideoEditorApp,
+    icon: <Clapperboard className="h-6 w-6" />,
+    titleKey: 'apps.videoeditor',
+    description: 'Video Editor: Multi-Track Timeline zum Schneiden, Trimmen und Bearbeiten von Videos',
+    defaultSize: { width: 1200, height: 800 },
+    category: 'tools',
+    canDisable: true,
+  },
+  imageeditor: {
+    id: 'imageeditor',
+    component: ImageEditorApp,
+    icon: <Palette className="h-6 w-6" />,
+    titleKey: 'apps.imageeditor',
+    description: 'Bildbearbeitung mit Layern, Pinseln, Filtern und Export',
+    defaultSize: { width: 1400, height: 900 },
+    category: 'tools',
+    canDisable: true,
+  },
   game2048: {
     id: 'game2048',
     component: Game2048App,
@@ -380,6 +404,8 @@ export const defaultDockOrder = [
   'chat',
   'timetracking',
   'whiteboard',
+  'videoeditor',
+  'imageeditor',
   'chess',
   'go',
   'game2048',
@@ -406,6 +432,8 @@ export const defaultEnabledApps = [
   'chat',
   'timetracking',
   'whiteboard',
+  'videoeditor',
+  'imageeditor',
   'chess',
   'go',
   'game2048',
