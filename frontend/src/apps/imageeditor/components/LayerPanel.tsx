@@ -22,12 +22,15 @@ import {
   Pencil,
   GripVertical,
   Scissors,
+  Crop,
   Wand2,
   X,
   Loader2,
+  Library,
 } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
 import type { BlendMode, LayerType } from '../types'
+import LayerLibraryModal from './LayerLibraryModal'
 
 const BLEND_MODES: { value: BlendMode; label: string }[] = [
   { value: 'normal', label: 'Normal' },
@@ -86,6 +89,17 @@ export function LayerPanel() {
   const [aiEditPrompt, setAiEditPrompt] = useState('')
   const aiEditInputRef = useRef<HTMLInputElement>(null)
 
+  // Save to Library dialog state
+  const [saveToLibraryDialog, setSaveToLibraryDialog] = useState<{ visible: boolean; layerId: string | null }>({
+    visible: false,
+    layerId: null,
+  })
+  const [libraryAssetName, setLibraryAssetName] = useState('')
+  const libraryNameInputRef = useRef<HTMLInputElement>(null)
+
+  // Layer Library modal state
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false)
+
   const {
     currentProject,
     selectedLayerId,
@@ -107,8 +121,10 @@ export function LayerPanel() {
     getSelectedLayer,
     addImageAsLayer,
     trimLayer,
+    cropLayerToBounds,
     editImageWithAI,
     isEditingImage,
+    saveLayerToLibrary,
   } = useImageEditorStore()
 
   const handleImportImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,12 +161,34 @@ export function LayerPanel() {
     }
   }, [aiEditDialog.visible])
 
+  // Focus library name input when dialog opens
+  useEffect(() => {
+    if (saveToLibraryDialog.visible && libraryNameInputRef.current) {
+      // Pre-fill with layer name
+      if (saveToLibraryDialog.layerId && currentProject) {
+        const layer = currentProject.layers.find((l) => l.id === saveToLibraryDialog.layerId)
+        if (layer) {
+          setLibraryAssetName(layer.name)
+        }
+      }
+      setTimeout(() => libraryNameInputRef.current?.select(), 50)
+    }
+  }, [saveToLibraryDialog.visible, saveToLibraryDialog.layerId, currentProject])
+
   // Handle AI edit submission
   const handleAIEditSubmit = async () => {
     if (!aiEditDialog.layerId || !aiEditPrompt.trim()) return
     await editImageWithAI(aiEditDialog.layerId, aiEditPrompt.trim())
     setAiEditDialog({ visible: false, layerId: null })
     setAiEditPrompt('')
+  }
+
+  // Handle save to library submission
+  const handleSaveToLibrary = async () => {
+    if (!saveToLibraryDialog.layerId || !libraryAssetName.trim()) return
+    await saveLayerToLibrary(saveToLibraryDialog.layerId, libraryAssetName.trim())
+    setSaveToLibraryDialog({ visible: false, layerId: null })
+    setLibraryAssetName('')
   }
 
   // Close context menu when clicking outside
@@ -478,6 +516,13 @@ export function LayerPanel() {
           >
             <Trash2 className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setIsLibraryOpen(true)}
+            className="p-1.5 hover:bg-gray-700 rounded text-emerald-400"
+            title={isGerman ? 'Asset-Bibliothek' : 'Asset Library'}
+          >
+            <Library className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Selected Layer Properties */}
@@ -622,7 +667,20 @@ export function LayerPanel() {
                   className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30"
                 >
                   <Scissors className="w-4 h-4" />
-                  {isGerman ? 'Zuschneiden (Auto-Trim)' : 'Auto-Trim'}
+                  {isGerman ? 'Auto-Trim (Transparenz)' : 'Auto-Trim'}
+                </button>
+
+                {/* Crop to bounds - apply current resize as crop */}
+                <button
+                  onClick={() => {
+                    cropLayerToBounds(contextMenu.layerId!)
+                    closeContextMenu()
+                  }}
+                  disabled={targetLayer.locked || targetLayer.type === 'text'}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30"
+                >
+                  <Crop className="w-4 h-4" />
+                  {isGerman ? 'Skalierung anwenden' : 'Apply Scale'}
                 </button>
 
                 {/* AI Edit */}
@@ -636,6 +694,22 @@ export function LayerPanel() {
                 >
                   <Wand2 className="w-4 h-4" />
                   {isGerman ? 'Mit KI bearbeiten' : 'AI Edit'}
+                </button>
+
+                {/* Separator */}
+                <div className="my-1 border-t border-gray-700" />
+
+                {/* Save to Library */}
+                <button
+                  onClick={() => {
+                    setSaveToLibraryDialog({ visible: true, layerId: contextMenu.layerId })
+                    closeContextMenu()
+                  }}
+                  disabled={targetLayer.locked || !targetLayer.imageData}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30 text-emerald-400"
+                >
+                  <Library className="w-4 h-4" />
+                  {isGerman ? 'In Bibliothek speichern' : 'Save to Library'}
                 </button>
 
                 {/* Delete */}
@@ -800,6 +874,79 @@ export function LayerPanel() {
           </div>
         </div>
       )}
+
+      {/* Save to Library Dialog */}
+      {saveToLibraryDialog.visible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-800 rounded-lg shadow-xl w-96 max-w-[90vw]">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div className="flex items-center gap-2 text-emerald-400">
+                <Library className="w-5 h-5" />
+                <h3 className="font-semibold">
+                  {isGerman ? 'In Bibliothek speichern' : 'Save to Library'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setSaveToLibraryDialog({ visible: false, layerId: null })
+                  setLibraryAssetName('')
+                }}
+                className="p-1 hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <label className="block text-sm text-gray-400 mb-2">
+                {isGerman ? 'Name für das Asset:' : 'Name for the asset:'}
+              </label>
+              <input
+                ref={libraryNameInputRef}
+                type="text"
+                value={libraryAssetName}
+                onChange={(e) => setLibraryAssetName(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation()
+                  if (e.key === 'Enter') {
+                    handleSaveToLibrary()
+                  }
+                  if (e.key === 'Escape') {
+                    setSaveToLibraryDialog({ visible: false, layerId: null })
+                    setLibraryAssetName('')
+                  }
+                }}
+                placeholder={isGerman ? 'z.B. "Logo-Variante 1"' : 'e.g. "Logo Variant 1"'}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    setSaveToLibraryDialog({ visible: false, layerId: null })
+                    setLibraryAssetName('')
+                  }}
+                  className="px-4 py-2 text-sm hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  {isGerman ? 'Abbrechen' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleSaveToLibrary}
+                  disabled={!libraryAssetName.trim()}
+                  className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Library className="w-4 h-4" />
+                  {isGerman ? 'Speichern' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Layer Library Modal */}
+      <LayerLibraryModal
+        isOpen={isLibraryOpen}
+        onClose={() => setIsLibraryOpen(false)}
+      />
     </div>
   )
 }

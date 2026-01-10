@@ -9,7 +9,7 @@ from django.http import FileResponse
 from typing import List, Optional
 from datetime import datetime
 
-from .models import Folder, Document, TextStyleFavorite
+from .models import Folder, Document, TextStyleFavorite, LayerAsset
 from .signals import create_default_folders_for_user
 
 router = Router()
@@ -409,4 +409,83 @@ def delete_text_style(request, style_id: int):
     """Delete a text style favorite"""
     style = get_object_or_404(TextStyleFavorite, id=style_id, user=request.user)
     style.delete()
+    return 204, None
+
+
+# Layer Asset Schemas
+class LayerAssetSchema(Schema):
+    id: int
+    name: str
+    imageData: str
+    thumbnail: str
+    width: int
+    height: int
+    category: str
+    createdAt: datetime
+
+    @staticmethod
+    def resolve_imageData(obj):
+        return obj.image_data
+
+    @staticmethod
+    def resolve_createdAt(obj):
+        return obj.created_at
+
+
+class LayerAssetCreateSchema(Schema):
+    name: str
+    imageData: str
+    thumbnail: str = ''
+    width: int = 0
+    height: int = 0
+    category: str = ''
+
+
+class LayerAssetUpdateSchema(Schema):
+    name: Optional[str] = None
+    category: Optional[str] = None
+
+
+# Layer Asset Endpoints
+@router.get('/layer-assets/', response=List[LayerAssetSchema])
+def list_layer_assets(request, category: str = ''):
+    """List all layer assets for the current user"""
+    assets = LayerAsset.objects.filter(user=request.user)
+    if category:
+        assets = assets.filter(category=category)
+    return assets
+
+
+@router.post('/layer-assets/', response={201: LayerAssetSchema, 400: ErrorSchema})
+def create_layer_asset(request, data: LayerAssetCreateSchema):
+    """Create a new layer asset"""
+    asset = LayerAsset.objects.create(
+        user=request.user,
+        name=data.name,
+        image_data=data.imageData,
+        thumbnail=data.thumbnail,
+        width=data.width,
+        height=data.height,
+        category=data.category,
+    )
+    return 201, asset
+
+
+@router.patch('/layer-assets/{asset_id}', response={200: LayerAssetSchema, 404: ErrorSchema})
+def update_layer_asset(request, asset_id: int, data: LayerAssetUpdateSchema):
+    """Update a layer asset (rename or change category)"""
+    asset = get_object_or_404(LayerAsset, id=asset_id, user=request.user)
+    if data.name is not None:
+        asset.name = data.name
+    if data.category is not None:
+        asset.category = data.category
+    asset.save()
+    return asset
+
+
+@router.delete('/layer-assets/{asset_id}', response={204: None, 404: ErrorSchema})
+def delete_layer_asset(request, asset_id: int):
+    """Delete a layer asset"""
+    asset = get_object_or_404(LayerAsset, id=asset_id, user=request.user)
+    asset.delete()
     return 204, None

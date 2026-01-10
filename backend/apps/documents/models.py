@@ -102,3 +102,25 @@ class TextStyleFavorite(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.user.email})"
+
+
+class LayerAsset(models.Model):
+    """Saved layer/graphic asset for the Image Editor library"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='layer_assets')
+    name = models.CharField(max_length=100)
+    # Store the full image as base64 data URL
+    image_data = models.TextField()
+    # Store a smaller thumbnail for preview (base64)
+    thumbnail = models.TextField(blank=True)
+    # Original dimensions
+    width = models.PositiveIntegerField(default=0)
+    height = models.PositiveIntegerField(default=0)
+    # Optional category for organization
+    category = models.CharField(max_length=50, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"

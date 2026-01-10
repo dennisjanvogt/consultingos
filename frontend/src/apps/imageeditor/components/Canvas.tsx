@@ -62,6 +62,15 @@ export function Canvas({ onTextClick }: CanvasProps) {
     layerHeight: number
   } | null>(null)
 
+  // Crop preview state - stores original bounds when cropping in freeTransform mode
+  const [cropPreview, setCropPreview] = useState<{
+    layerId: string
+    originalX: number
+    originalY: number
+    originalWidth: number
+    originalHeight: number
+  } | null>(null)
+
   // Inline text editing state
   const [editingTextLayerId, setEditingTextLayerId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
@@ -103,6 +112,7 @@ export function Canvas({ onTextClick }: CanvasProps) {
     filterMode,
     livePreview,
     fitToViewTrigger,
+    cropLayerToBounds,
   } = useImageEditorStore()
 
   // Generate CSS filter string for live preview
@@ -199,13 +209,17 @@ export function Canvas({ onTextClick }: CanvasProps) {
     // Iterate from top to bottom (last layer = topmost)
     const layers = [...currentProject.layers].reverse()
 
+    // Track first layer that's in bounds but has transparent pixel (fallback)
+    let fallbackLayer: Layer | null = null
+
     for (const layer of layers) {
       if (!layer.visible || layer.locked) continue
 
       // Bounding box check first
-      if (x >= layer.x && x <= layer.x + layer.width &&
-          y >= layer.y && y <= layer.y + layer.height) {
+      const inBounds = x >= layer.x && x <= layer.x + layer.width &&
+          y >= layer.y && y <= layer.y + layer.height
 
+      if (inBounds) {
         // For image layers, check pixel transparency
         if (layer.type === 'image') {
           const layerCanvas = layerCanvasesRef.current.get(layer.id)
@@ -222,8 +236,11 @@ export function Canvas({ onTextClick }: CanvasProps) {
                 const pixel = ctx.getImageData(localX, localY, 1, 1).data
                 const alpha = pixel[3]
 
-                // If pixel is mostly transparent (alpha < 10), skip this layer
+                // If pixel is mostly transparent, save as fallback and continue
                 if (alpha < 10) {
+                  if (!fallbackLayer) {
+                    fallbackLayer = layer
+                  }
                   continue
                 }
               }
@@ -231,11 +248,13 @@ export function Canvas({ onTextClick }: CanvasProps) {
           }
         }
 
-        // Text and shape layers use bounding box only
+        // Found a solid pixel or non-image layer
         return layer
       }
     }
-    return null
+
+    // If no solid pixel found, return the fallback (first layer in bounds)
+    return fallbackLayer
   }, [currentProject])
 
   // Apply pixel-based filters to ImageData
@@ -904,7 +923,41 @@ export function Canvas({ onTextClick }: CanvasProps) {
         renderLayerEffects(ctx, layer, layerCanvas, layerEffects)
       }
 
-      if (needsPixel && activeFilters) {
+      // Check if this layer is being crop-previewed (freeTransform resize in progress)
+      const isCropPreview = cropPreview && cropPreview.layerId === layer.id && isResizingLayer
+
+      if (isCropPreview) {
+        // Crop preview mode: show original image clipped to current bounds
+        // Draw at original scale, offset to show the correct portion
+        const offsetX = layer.x - cropPreview.originalX
+        const offsetY = layer.y - cropPreview.originalY
+
+        // First draw the parts that will be cropped with low opacity
+        ctx.save()
+        ctx.globalAlpha = (layer.opacity / 100) * 0.2
+        ctx.filter = layerFilterStr
+        // Draw full image at original size, offset by the difference
+        ctx.drawImage(
+          layerCanvas,
+          0, 0, layerCanvas.width, layerCanvas.height,
+          -offsetX, -offsetY, cropPreview.originalWidth, cropPreview.originalHeight
+        )
+        ctx.restore()
+
+        // Then draw the kept portion at full opacity with clip
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(0, 0, layer.width, layer.height)
+        ctx.clip()
+        ctx.globalAlpha = layer.opacity / 100
+        ctx.filter = layerFilterStr
+        ctx.drawImage(
+          layerCanvas,
+          0, 0, layerCanvas.width, layerCanvas.height,
+          -offsetX, -offsetY, cropPreview.originalWidth, cropPreview.originalHeight
+        )
+        ctx.restore()
+      } else if (needsPixel && activeFilters) {
         // Need pixel manipulation - use temp canvas
         const tempCanvas = document.createElement('canvas')
         tempCanvas.width = layer.width
@@ -934,7 +987,7 @@ export function Canvas({ onTextClick }: CanvasProps) {
 
       ctx.restore()
     })
-  }, [currentProject, renderTextLayer, livePreview, filterMode, selectedLayerId, filters, buildFilterString, needsPixelManipulation, applyPixelFilters, renderLayerEffects, renderInnerEffects])
+  }, [currentProject, renderTextLayer, livePreview, filterMode, selectedLayerId, filters, buildFilterString, needsPixelManipulation, applyPixelFilters, renderLayerEffects, renderInnerEffects, cropPreview, isResizingLayer])
 
   // Render when project changes or images load
   useEffect(() => {
@@ -1115,7 +1168,19 @@ export function Canvas({ onTextClick }: CanvasProps) {
 
     const handleGlobalMouseUp = () => {
       if (isResizingLayer && selectedLayerId) {
-        pushHistory('Resize Layer')
+        // In freeTransform mode, apply crop after resize
+        if (activeTool === 'freeTransform' && cropPreview && cropPreview.layerId === selectedLayerId) {
+          // Apply the crop to the layer image data with original bounds for true cropping
+          cropLayerToBounds(selectedLayerId, {
+            x: cropPreview.originalX,
+            y: cropPreview.originalY,
+            width: cropPreview.originalWidth,
+            height: cropPreview.originalHeight,
+          })
+          setCropPreview(null)
+        } else {
+          pushHistory('Resize Layer')
+        }
       }
       setIsResizingLayer(false)
       setResizeHandle(null)
@@ -1129,7 +1194,7 @@ export function Canvas({ onTextClick }: CanvasProps) {
       window.removeEventListener('mousemove', handleGlobalMouseMove)
       window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
-  }, [isResizingLayer, resizeStart, resizeHandle, selectedLayerId, currentProject, zoom, setLayerTransform, pushHistory, activeTool])
+  }, [isResizingLayer, resizeStart, resizeHandle, selectedLayerId, currentProject, zoom, setLayerTransform, pushHistory, activeTool, cropPreview, cropLayerToBounds])
 
   // Get canvas coordinates from mouse event
   const getCanvasCoords = useCallback(
@@ -1838,6 +1903,15 @@ export function Canvas({ onTextClick }: CanvasProps) {
           selectLayer(null)
         }
       }
+      // FreeTransform tool - click on empty area to deselect
+      else if (activeTool === 'freeTransform') {
+        const clickedLayer = getLayerAtPosition(coords.x, coords.y)
+        if (clickedLayer) {
+          selectLayer(clickedLayer.id)
+        } else {
+          selectLayer(null)
+        }
+      }
       // Text tool
       else if (activeTool === 'text') {
         onTextClick?.(coords)
@@ -1934,7 +2008,7 @@ export function Canvas({ onTextClick }: CanvasProps) {
       }
 
       // Hover detection for Canva-style selection
-      if (activeTool === 'select' || activeTool === 'move') {
+      if (activeTool === 'select' || activeTool === 'move' || activeTool === 'freeTransform') {
         const coords = getCanvasCoords(e)
         if (coords) {
           const hoveredLayer = getLayerAtPosition(coords.x, coords.y)
@@ -2306,6 +2380,13 @@ export function Canvas({ onTextClick }: CanvasProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onMouseDown={(e) => {
+        // Click on background pattern (outside canvas) should deselect
+        // Only deselect if clicking directly on the container background itself
+        if (e.target === containerRef.current) {
+          selectLayer(null)
+        }
+      }}
     >
       {/* Drop overlay */}
       {isDragOver && (
@@ -2382,7 +2463,7 @@ export function Canvas({ onTextClick }: CanvasProps) {
         })()}
 
         {/* Layer resize handles */}
-        {(activeTool === 'select' || activeTool === 'move') && selectedLayerId && (() => {
+        {(activeTool === 'select' || activeTool === 'move' || activeTool === 'freeTransform') && selectedLayerId && (() => {
           const layer = getSelectedLayer()
           if (!layer) return null
 
@@ -2442,6 +2523,16 @@ export function Canvas({ onTextClick }: CanvasProps) {
                         layerWidth: layer.width,
                         layerHeight: layer.height,
                       })
+                      // In freeTransform mode, start crop preview
+                      if (activeTool === 'freeTransform') {
+                        setCropPreview({
+                          layerId: layer.id,
+                          originalX: layer.x,
+                          originalY: layer.y,
+                          originalWidth: layer.width,
+                          originalHeight: layer.height,
+                        })
+                      }
                     }
                   }}
                 />

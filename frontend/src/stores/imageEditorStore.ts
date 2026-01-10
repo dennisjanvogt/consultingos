@@ -35,6 +35,17 @@ export interface TextStyleFavorite {
   textEffects: TextEffects
   createdAt: string | number
 }
+
+export interface LayerAsset {
+  id: number
+  name: string
+  imageData: string
+  thumbnail: string
+  width: number
+  height: number
+  category: string
+  createdAt: string | number
+}
 import {
   DEFAULT_BRUSH_SETTINGS,
   DEFAULT_ERASER_SETTINGS,
@@ -376,6 +387,9 @@ interface ImageEditorState {
   // Layer trimming
   trimLayer: (layerId: string, effectPadding?: number) => void
 
+  // Layer cropping (crop to current bounds)
+  cropLayerToBounds: (layerId: string, originalBounds?: { x: number; y: number; width: number; height: number }) => void
+
   // Background removal
   isRemovingBackground: boolean
   removeBackground: (layerId: string) => Promise<void>
@@ -410,6 +424,14 @@ interface ImageEditorState {
   applyTextStyleFavorite: (styleId: number) => void
   deleteTextStyleFavorite: (styleId: number) => Promise<void>
   renameTextStyleFavorite: (styleId: number, name: string) => Promise<void>
+
+  // Layer Assets (Library)
+  layerAssets: LayerAsset[]
+  fetchLayerAssets: () => Promise<void>
+  saveLayerToLibrary: (layerId: string, name: string) => Promise<void>
+  insertLayerFromLibrary: (assetId: number) => void
+  deleteLayerAsset: (assetId: number) => Promise<void>
+  renameLayerAsset: (assetId: number, name: string) => Promise<void>
 
   // History
   pushHistory: (name: string) => void
@@ -476,6 +498,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
       isExtendingImage: false,
       extractedColors: [],
       textStyleFavorites: [],
+      layerAssets: [],
 
       // View mode
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -1911,6 +1934,79 @@ export const useImageEditorStore = create<ImageEditorState>()(
               : null,
             isDirty: true,
           }))
+        }
+        img.src = layer.imageData
+      },
+
+      // Crop layer to current bounds (apply resize as actual crop)
+      cropLayerToBounds: (layerId, originalBounds) => {
+        const { currentProject, pushHistory, showToast } = get()
+        if (!currentProject) return
+
+        const layer = currentProject.layers.find((l) => l.id === layerId)
+        if (!layer || !layer.imageData) {
+          showToast('Layer hat keine Bilddaten zum Zuschneiden', 'error')
+          return
+        }
+
+        const img = new Image()
+        img.onload = () => {
+          // Create canvas at the layer's current display size
+          const canvas = document.createElement('canvas')
+          canvas.width = layer.width
+          canvas.height = layer.height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+
+          if (originalBounds) {
+            // True crop: extract portion of original image
+            // Calculate the crop region in the original image coordinates
+            const scaleX = img.width / originalBounds.width
+            const scaleY = img.height / originalBounds.height
+
+            // Offset from original position (how much was cropped from left/top)
+            const offsetX = layer.x - originalBounds.x
+            const offsetY = layer.y - originalBounds.y
+
+            // Source rect in the original image
+            const srcX = offsetX * scaleX
+            const srcY = offsetY * scaleY
+            const srcW = layer.width * scaleX
+            const srcH = layer.height * scaleY
+
+            // Draw the cropped portion
+            ctx.drawImage(
+              img,
+              srcX, srcY, srcW, srcH,  // Source rect (from original image)
+              0, 0, layer.width, layer.height  // Destination (full canvas)
+            )
+          } else {
+            // Scale mode: just scale the image to fit current bounds
+            ctx.drawImage(img, 0, 0, layer.width, layer.height)
+          }
+
+          pushHistory('Crop Layer')
+
+          // Update layer with new image data at current bounds
+          set((state) => ({
+            currentProject: state.currentProject
+              ? {
+                  ...state.currentProject,
+                  layers: state.currentProject.layers.map((l) =>
+                    l.id === layerId
+                      ? {
+                          ...l,
+                          imageData: canvas.toDataURL('image/png'),
+                        }
+                      : l
+                  ),
+                  updatedAt: Date.now(),
+                }
+              : null,
+            isDirty: true,
+          }))
+
+          showToast('Layer zugeschnitten', 'success')
         }
         img.src = layer.imageData
       },
@@ -3849,6 +3945,131 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
         }
       },
 
+      // Layer Assets (Library)
+      fetchLayerAssets: async () => {
+        try {
+          const assets = await api.get<LayerAsset[]>('/documents/layer-assets/')
+          set({ layerAssets: assets })
+        } catch (error) {
+          console.error('Failed to fetch layer assets:', error)
+        }
+      },
+
+      saveLayerToLibrary: async (layerId, name) => {
+        const { currentProject, showToast, fetchLayerAssets } = get()
+        if (!currentProject) return
+
+        const layer = currentProject.layers.find((l) => l.id === layerId)
+        if (!layer || !layer.imageData) {
+          showToast('Layer hat keine Bilddaten', 'error')
+          return
+        }
+
+        try {
+          // Create thumbnail (max 150px)
+          const img = new Image()
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve()
+            img.onerror = reject
+            img.src = layer.imageData!
+          })
+
+          const maxThumbSize = 150
+          const scale = Math.min(maxThumbSize / img.width, maxThumbSize / img.height, 1)
+          const thumbWidth = Math.round(img.width * scale)
+          const thumbHeight = Math.round(img.height * scale)
+
+          const thumbCanvas = document.createElement('canvas')
+          thumbCanvas.width = thumbWidth
+          thumbCanvas.height = thumbHeight
+          const thumbCtx = thumbCanvas.getContext('2d')
+          if (thumbCtx) {
+            thumbCtx.drawImage(img, 0, 0, thumbWidth, thumbHeight)
+          }
+          const thumbnail = thumbCanvas.toDataURL('image/png')
+
+          const assetData = {
+            name: name || `Asset ${get().layerAssets.length + 1}`,
+            imageData: layer.imageData,
+            thumbnail,
+            width: layer.width,
+            height: layer.height,
+            category: '',
+          }
+
+          await api.post('/documents/layer-assets/', assetData)
+          await fetchLayerAssets()
+          showToast(`"${name}" in Bibliothek gespeichert`, 'success')
+        } catch (error) {
+          console.error('Failed to save layer asset:', error)
+          showToast('Fehler beim Speichern in Bibliothek', 'error')
+        }
+      },
+
+      insertLayerFromLibrary: (assetId) => {
+        const { currentProject, layerAssets, showToast, addLayer, pushHistory } = get()
+        if (!currentProject) return
+
+        const asset = layerAssets.find((a) => a.id === assetId)
+        if (!asset) return
+
+        pushHistory('Insert from Library')
+
+        // Create a new layer with the asset's image data
+        const newLayer: Layer = {
+          id: generateId(),
+          name: asset.name,
+          type: 'image',
+          visible: true,
+          locked: false,
+          opacity: 100,
+          blendMode: 'normal',
+          x: Math.round((currentProject.width - asset.width) / 2),
+          y: Math.round((currentProject.height - asset.height) / 2),
+          width: asset.width,
+          height: asset.height,
+          rotation: 0,
+          imageData: asset.imageData,
+        }
+
+        // Add layer directly to avoid the addLayer logic which creates empty layers
+        set((state) => ({
+          currentProject: state.currentProject
+            ? {
+                ...state.currentProject,
+                layers: [...state.currentProject.layers, newLayer],
+                updatedAt: Date.now(),
+              }
+            : null,
+          selectedLayerId: newLayer.id,
+          isDirty: true,
+        }))
+
+        showToast(`"${asset.name}" eingefügt`, 'success')
+      },
+
+      deleteLayerAsset: async (assetId) => {
+        const { showToast, fetchLayerAssets } = get()
+        try {
+          await api.delete(`/documents/layer-assets/${assetId}`)
+          await fetchLayerAssets()
+        } catch (error) {
+          console.error('Failed to delete layer asset:', error)
+          showToast('Fehler beim Löschen', 'error')
+        }
+      },
+
+      renameLayerAsset: async (assetId, name) => {
+        const { showToast, fetchLayerAssets } = get()
+        try {
+          await api.patch(`/documents/layer-assets/${assetId}`, { name })
+          await fetchLayerAssets()
+        } catch (error) {
+          console.error('Failed to rename layer asset:', error)
+          showToast('Fehler beim Umbenennen', 'error')
+        }
+      },
+
       // History
       pushHistory: (name) => {
         const { currentProject, history, historyIndex, maxHistorySize } = get()
@@ -3974,8 +4195,9 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
             // Restore the project from backend
             state.openProject(persistedState.currentProjectId)
           }
-          // Fetch text styles from backend
+          // Fetch text styles and layer assets from backend
           state.fetchTextStyleFavorites()
+          state.fetchLayerAssets()
         }
       },
       storage: {
