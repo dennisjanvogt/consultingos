@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
-import { AlignLeft, AlignCenter, AlignRight, ChevronDown } from 'lucide-react'
+import { AlignLeft, AlignCenter, AlignRight, ChevronDown, Heart, Plus, Trash2, Edit3 } from 'lucide-react'
 
 // Organized font categories
 const FONT_CATEGORIES = [
@@ -215,9 +215,22 @@ function FontPicker({ value, onChange }: { value: string; onChange: (font: strin
 
 export function TextPropertiesPanel() {
   const { i18n } = useTranslation()
-  const { currentProject, selectedLayerId, updateLayerTextProperties } = useImageEditorStore()
+  const {
+    currentProject,
+    selectedLayerId,
+    updateLayerTextProperties,
+    textStyleFavorites,
+    saveTextStyleFavorite,
+    applyTextStyleFavorite,
+    deleteTextStyleFavorite,
+    renameTextStyleFavorite,
+  } = useImageEditorStore()
 
   const isGerman = i18n.language === 'de'
+  const [newStyleName, setNewStyleName] = useState('')
+  const [showSaveInput, setShowSaveInput] = useState(false)
+  const [editingStyleId, setEditingStyleId] = useState<number | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   const selectedLayer = currentProject?.layers.find((l) => l.id === selectedLayerId)
   const isTextLayer = selectedLayer?.type === 'text'
@@ -232,11 +245,136 @@ export function TextPropertiesPanel() {
   const fontWeight = selectedLayer.fontWeight || 400
   const textAlign = selectedLayer.textAlign || 'center'
 
+  const handleSaveStyle = () => {
+    if (newStyleName.trim()) {
+      saveTextStyleFavorite(newStyleName.trim())
+      setNewStyleName('')
+      setShowSaveInput(false)
+    }
+  }
+
+  const handleRenameStyle = (styleId: number) => {
+    if (editingName.trim()) {
+      renameTextStyleFavorite(styleId, editingName.trim())
+      setEditingStyleId(null)
+      setEditingName('')
+    }
+  }
+
   return (
     <div className="p-3 space-y-3">
-      <h3 className="text-xs font-semibold text-gray-400 uppercase">
-        {isGerman ? 'Text-Eigenschaften' : 'Text Properties'}
-      </h3>
+      {/* Text Style Favorites */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5">
+            <Heart className="h-3 w-3" />
+            {isGerman ? 'Gespeicherte Stile' : 'Saved Styles'}
+          </h3>
+          <button
+            onClick={() => setShowSaveInput(!showSaveInput)}
+            className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+            title={isGerman ? 'Aktuellen Stil speichern' : 'Save current style'}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Save Input */}
+        {showSaveInput && (
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={newStyleName}
+              onChange={(e) => setNewStyleName(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') handleSaveStyle()
+                if (e.key === 'Escape') setShowSaveInput(false)
+              }}
+              placeholder={isGerman ? 'Stilname...' : 'Style name...'}
+              className="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveStyle}
+              disabled={!newStyleName.trim()}
+              className="px-2 py-1 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 disabled:text-gray-500 rounded text-xs font-medium transition-colors"
+            >
+              {isGerman ? 'Speichern' : 'Save'}
+            </button>
+          </div>
+        )}
+
+        {/* Favorites List */}
+        {textStyleFavorites.length > 0 ? (
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {textStyleFavorites.map((style) => (
+              <div
+                key={style.id}
+                className="group flex items-center gap-1.5 p-1.5 bg-gray-800/50 hover:bg-gray-800 rounded transition-colors"
+              >
+                {editingStyleId === style.id ? (
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation()
+                      if (e.key === 'Enter') handleRenameStyle(style.id)
+                      if (e.key === 'Escape') {
+                        setEditingStyleId(null)
+                        setEditingName('')
+                      }
+                    }}
+                    onBlur={() => handleRenameStyle(style.id)}
+                    className="flex-1 px-1.5 py-0.5 bg-gray-900 border border-gray-600 rounded text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <button
+                      onClick={() => applyTextStyleFavorite(style.id)}
+                      className="flex-1 text-left text-xs truncate hover:text-violet-300 transition-colors"
+                      title={`${style.fontFamily}, ${style.fontSize}px`}
+                    >
+                      <span style={{ fontFamily: style.fontFamily, fontWeight: style.fontWeight }}>
+                        {style.name}
+                      </span>
+                    </button>
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => {
+                          setEditingStyleId(style.id)
+                          setEditingName(style.name)
+                        }}
+                        className="p-1 hover:bg-gray-700 rounded text-gray-500 hover:text-gray-300"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => deleteTextStyleFavorite(style.id)}
+                        className="p-1 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[10px] text-gray-500 text-center py-1">
+            {isGerman ? 'Keine gespeicherten Stile' : 'No saved styles'}
+          </p>
+        )}
+      </div>
+
+      <div className="border-t border-gray-800 pt-3">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">
+          {isGerman ? 'Text-Eigenschaften' : 'Text Properties'}
+        </h3>
+      </div>
 
       {/* Font Family */}
       <div className="space-y-1">

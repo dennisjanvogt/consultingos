@@ -56,6 +56,14 @@ interface AIState {
   analysisMode: boolean
   setAnalysisMode: (enabled: boolean) => void
 
+  // Model picker filters (persisted)
+  modelFilters: {
+    chat: { newest: boolean; free: boolean; cheap: boolean; established: boolean }
+    image: { newest: boolean; cheap: boolean; established: boolean }
+    analysis: { newest: boolean; free: boolean; cheap: boolean; established: boolean }
+  }
+  setModelFilter: (type: 'chat' | 'image' | 'analysis', filter: string, value: boolean) => void
+
   // Helper management
   helpers: AIHelper[]
   currentHelperId: number | null
@@ -252,6 +260,35 @@ export const useAIStore = create<AIState>()(
       // Analysis Mode state
       analysisMode: false,
       setAnalysisMode: (enabled) => set({ analysisMode: enabled }),
+
+      // Model picker filters
+      modelFilters: {
+        chat: { newest: false, free: false, cheap: false, established: false },
+        image: { newest: false, cheap: false, established: false },
+        analysis: { newest: false, free: false, cheap: false, established: false },
+      },
+      setModelFilter: (type, filter, value) => set((state) => {
+        // Ensure base structure exists with defaults
+        const defaultFilters = {
+          chat: { newest: false, free: false, cheap: false, established: false },
+          image: { newest: false, cheap: false, established: false },
+          analysis: { newest: false, free: false, cheap: false, established: false },
+        }
+        const currentFilters = state.modelFilters || defaultFilters
+        const currentTypeFilters = currentFilters[type] || defaultFilters[type]
+
+        return {
+          modelFilters: {
+            ...defaultFilters,
+            ...currentFilters,
+            [type]: {
+              ...defaultFilters[type],
+              ...currentTypeFilters,
+              [filter]: value,
+            },
+          },
+        }
+      }),
 
       getChatModelInfo: () => get().chatModels.find((m) => m.id === get().chatModel),
       getImageModelInfo: () => get().imageModels.find((m) => m.id === get().imageModel),
@@ -461,13 +498,43 @@ export const useAIStore = create<AIState>()(
     }),
     {
       name: 'ai-settings',
+      version: 2, // Bump version to force migration
       partialize: (state) => ({
         chatModel: state.chatModel,
         imageModel: state.imageModel,
         analysisModel: state.analysisModel,
         currentHelperId: state.currentHelperId,
         analysisMode: state.analysisMode,
+        modelFilters: state.modelFilters,
       }),
+      migrate: (persistedState, version) => {
+        // Migration from version 1 (or no version) to version 2
+        if (version < 2) {
+          const state = persistedState as Record<string, unknown>
+          return {
+            ...state,
+            modelFilters: {
+              chat: { newest: false, free: false, cheap: false, established: false },
+              image: { newest: false, cheap: false, established: false },
+              analysis: { newest: false, free: false, cheap: false, established: false },
+            },
+          }
+        }
+        return persistedState as Record<string, unknown>
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<typeof currentState>
+        return {
+          ...currentState,
+          ...persisted,
+          // Ensure modelFilters has all required keys with defaults
+          modelFilters: {
+            chat: { newest: false, free: false, cheap: false, established: false, ...persisted.modelFilters?.chat },
+            image: { newest: false, cheap: false, established: false, ...persisted.modelFilters?.image },
+            analysis: { newest: false, free: false, cheap: false, established: false, ...persisted.modelFilters?.analysis },
+          },
+        }
+      },
     }
   )
 )

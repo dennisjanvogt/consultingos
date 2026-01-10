@@ -52,6 +52,8 @@ import {
   Lasso,
   Wand2,
   Heart,
+  Sparkles,
+  Shapes,
 } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
 import type { Tool, BlendMode } from './types'
@@ -69,7 +71,6 @@ import { TextPanel } from './components/TextPanel'
 import { ToolDropdown } from './components/ToolDropdown'
 import { ShortcutHelpDialog } from './components/ShortcutHelpDialog'
 import { ToastContainer } from './components/Toast'
-import { Sparkles, Shapes } from 'lucide-react'
 
 // All tool definitions with groups
 const ALL_TOOLS: { id: Tool; icon: React.ReactNode; label: string; shortcut: string; group: string }[] = [

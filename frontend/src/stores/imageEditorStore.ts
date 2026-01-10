@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, subscribeWithSelector } from 'zustand/middleware'
+import { api } from '@/api/client'
 import type {
   ImageProject,
   Layer,
@@ -21,6 +22,19 @@ import type {
   TextEffects,
   LayerEffects,
 } from '@/apps/imageeditor/types'
+
+// Text Style Favorite for saving and reusing text styles
+export interface TextStyleFavorite {
+  id: number  // Backend DB id
+  name: string
+  fontFamily: string
+  fontSize: number
+  fontWeight: number
+  fontColor: string
+  textAlign: 'left' | 'center' | 'right'
+  textEffects: TextEffects
+  createdAt: string | number
+}
 import {
   DEFAULT_BRUSH_SETTINGS,
   DEFAULT_ERASER_SETTINGS,
@@ -43,71 +57,171 @@ const AUTO_SAVE_DELAY = 2000 // 2 seconds after last change
 
 // Generate thumbnail from project layers
 const generateThumbnail = async (project: ImageProject): Promise<string> => {
-  const THUMB_WIDTH = 320
-  const THUMB_HEIGHT = 180
+  try {
+    console.log('Generating thumbnail for project:', project.name)
+    console.log('Layers:', project.layers.map(l => ({
+      id: l.id,
+      type: l.type,
+      text: l.text,
+      hasImageData: !!l.imageData,
+      visible: l.visible,
+      x: l.x,
+      y: l.y,
+      width: l.width,
+      height: l.height,
+      fontColor: l.fontColor,
+      fontSize: l.fontSize
+    })))
 
-  const canvas = document.createElement('canvas')
-  canvas.width = THUMB_WIDTH
-  canvas.height = THUMB_HEIGHT
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return ''
+    const THUMB_WIDTH = 320
+    const THUMB_HEIGHT = 180
 
-  // Calculate scale to fit
-  const scale = Math.min(THUMB_WIDTH / project.width, THUMB_HEIGHT / project.height)
-  const offsetX = (THUMB_WIDTH - project.width * scale) / 2
-  const offsetY = (THUMB_HEIGHT - project.height * scale) / 2
+    const canvas = document.createElement('canvas')
+    canvas.width = THUMB_WIDTH
+    canvas.height = THUMB_HEIGHT
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return ''
 
-  // Fill background
-  ctx.fillStyle = project.backgroundColor || '#ffffff'
-  ctx.fillRect(0, 0, THUMB_WIDTH, THUMB_HEIGHT)
+    // Calculate scale to fit
+    const scale = Math.min(THUMB_WIDTH / project.width, THUMB_HEIGHT / project.height)
+    const offsetX = (THUMB_WIDTH - project.width * scale) / 2
+    const offsetY = (THUMB_HEIGHT - project.height * scale) / 2
 
-  // Draw each visible layer
-  for (const layer of project.layers) {
-    if (!layer.visible) continue
+    // Fill background
+    ctx.fillStyle = project.backgroundColor || '#ffffff'
+    ctx.fillRect(0, 0, THUMB_WIDTH, THUMB_HEIGHT)
 
-    if (layer.imageData) {
-      try {
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const image = new Image()
-          image.onload = () => resolve(image)
-          image.onerror = reject
-          image.src = layer.imageData!
-        })
+    // Draw each visible layer
+    for (const layer of project.layers) {
+      if (!layer.visible) continue
+
+      // IMPORTANT: Check for text layers FIRST - render them dynamically for proper scaling
+      // Text layers may have imageData from editing operations but should render as text
+      if (layer.type === 'text' && layer.text) {
+        console.log('Rendering text layer:', layer.text, 'at', layer.x, layer.y)
 
         ctx.save()
         ctx.globalAlpha = layer.opacity / 100
-        ctx.translate(
-          offsetX + (layer.x + layer.width / 2) * scale,
-          offsetY + (layer.y + layer.height / 2) * scale
-        )
-        ctx.rotate((layer.rotation * Math.PI) / 180)
-        ctx.drawImage(
-          img,
-          (-layer.width / 2) * scale,
-          (-layer.height / 2) * scale,
-          layer.width * scale,
-          layer.height * scale
-        )
-        ctx.restore()
-      } catch {
-        // Skip failed images
-      }
-    } else if (layer.type === 'text' && layer.text) {
-      ctx.save()
-      ctx.globalAlpha = layer.opacity / 100
-      ctx.font = `${(layer.fontSize || 24) * scale}px ${layer.fontFamily || 'Arial'}`
-      ctx.fillStyle = layer.fontColor || '#000000'
-      ctx.textAlign = (layer.textAlign as CanvasTextAlign) || 'left'
-      ctx.fillText(
-        layer.text,
-        offsetX + layer.x * scale,
-        offsetY + (layer.y + (layer.fontSize || 24)) * scale
-      )
-      ctx.restore()
-    }
-  }
+        if (layer.blendMode && layer.blendMode !== 'normal') {
+          ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+        }
 
-  return canvas.toDataURL('image/jpeg', 0.7)
+        const fontSize = (layer.fontSize || 48) * scale
+        const fontWeight = layer.fontWeight || 400
+        const fontFamily = layer.fontFamily || 'Arial'
+        const textAlign = layer.textAlign || 'left'
+        const fontColor = layer.fontColor || '#ffffff'
+
+        // Use safe font stack - fall back to system fonts
+        const safeFont = `${fontWeight} ${fontSize}px ${fontFamily}, Arial, sans-serif`
+        ctx.font = safeFont
+        ctx.textAlign = textAlign as CanvasTextAlign
+        ctx.textBaseline = 'top'
+
+        // Match Canvas.tsx rendering: translate to center, rotate, then offset back
+        const centerX = offsetX + (layer.x + layer.width / 2) * scale
+        const centerY = offsetY + (layer.y + layer.height / 2) * scale
+        ctx.translate(centerX, centerY)
+        ctx.rotate((layer.rotation * Math.PI) / 180)
+        ctx.translate((-layer.width / 2) * scale, (-layer.height / 2) * scale)
+
+        // Calculate text X position based on alignment
+        let textX = 0
+        if (textAlign === 'center') {
+          textX = (layer.width / 2) * scale
+        } else if (textAlign === 'right') {
+          textX = layer.width * scale
+        }
+        const textY = fontSize / 2
+
+        console.log('Text rendering params:', { fontSize, fontColor, textX, textY, centerX, centerY, scale })
+
+        // Apply text effects if present
+        const effects = layer.textEffects
+
+        // Glow effect
+        if (effects?.glow?.enabled) {
+          ctx.save()
+          ctx.shadowColor = effects.glow.color || '#ffffff'
+          ctx.shadowBlur = (effects.glow.intensity || 10) * scale
+          ctx.shadowOffsetX = 0
+          ctx.shadowOffsetY = 0
+          ctx.fillStyle = effects.glow.color || '#ffffff'
+          for (let i = 0; i < 3; i++) {
+            ctx.fillText(layer.text, textX, textY)
+          }
+          ctx.restore()
+        }
+
+        // Shadow effect
+        if (effects?.shadow?.enabled) {
+          ctx.save()
+          ctx.shadowColor = effects.shadow.color || '#000000'
+          ctx.shadowBlur = (effects.shadow.blur || 4) * scale
+          ctx.shadowOffsetX = (effects.shadow.offsetX || 2) * scale
+          ctx.shadowOffsetY = (effects.shadow.offsetY || 2) * scale
+          ctx.fillStyle = fontColor
+          ctx.fillText(layer.text, textX, textY)
+          ctx.restore()
+        }
+
+        // Outline effect
+        if (effects?.outline?.enabled) {
+          ctx.save()
+          ctx.strokeStyle = effects.outline.color || '#000000'
+          ctx.lineWidth = (effects.outline.width || 2) * scale * 2
+          ctx.lineJoin = 'round'
+          ctx.strokeText(layer.text, textX, textY)
+          ctx.restore()
+        }
+
+        // Main text
+        ctx.fillStyle = fontColor
+        ctx.fillText(layer.text, textX, textY)
+        console.log('Text drawn with color:', fontColor)
+        ctx.restore()
+      }
+      // For layers with imageData (images, shapes, etc.) - but NOT text layers
+      else if (layer.imageData) {
+        try {
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = new Image()
+            image.onload = () => resolve(image)
+            image.onerror = reject
+            image.src = layer.imageData!
+          })
+
+          ctx.save()
+          ctx.globalAlpha = layer.opacity / 100
+          if (layer.blendMode && layer.blendMode !== 'normal') {
+            ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+          }
+          ctx.translate(
+            offsetX + (layer.x + layer.width / 2) * scale,
+            offsetY + (layer.y + layer.height / 2) * scale
+          )
+          ctx.rotate((layer.rotation * Math.PI) / 180)
+          ctx.drawImage(
+            img,
+            (-layer.width / 2) * scale,
+            (-layer.height / 2) * scale,
+            layer.width * scale,
+            layer.height * scale
+          )
+          ctx.restore()
+        } catch {
+          // Skip failed images
+        }
+      }
+    }
+
+    const result = canvas.toDataURL('image/jpeg', 0.7)
+    console.log('Thumbnail generated, length:', result.length)
+    return result
+  } catch (error) {
+    console.error('Failed to generate thumbnail:', error)
+    return ''
+  }
 }
 
 interface ImageEditorState {
@@ -289,6 +403,14 @@ interface ImageEditorState {
   extendImageToFit: (layerId: string, useAI?: boolean) => Promise<void>
   isExtendingImage: boolean
 
+  // Text Style Favorites
+  textStyleFavorites: TextStyleFavorite[]
+  fetchTextStyleFavorites: () => Promise<void>
+  saveTextStyleFavorite: (name: string) => Promise<void>
+  applyTextStyleFavorite: (styleId: number) => void
+  deleteTextStyleFavorite: (styleId: number) => Promise<void>
+  renameTextStyleFavorite: (styleId: number, name: string) => Promise<void>
+
   // History
   pushHistory: (name: string) => void
   undo: () => void
@@ -353,6 +475,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
       isExtractingColors: false,
       isExtendingImage: false,
       extractedColors: [],
+      textStyleFavorites: [],
 
       // View mode
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -3618,6 +3741,114 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
         }
       },
 
+      // Text Style Favorites
+      fetchTextStyleFavorites: async () => {
+        try {
+          const styles = await api.get<TextStyleFavorite[]>('/documents/text-styles/')
+          set({ textStyleFavorites: styles })
+        } catch (error) {
+          console.error('Failed to fetch text styles:', error)
+        }
+      },
+
+      saveTextStyleFavorite: async (name) => {
+        const { currentProject, selectedLayerId, showToast, fetchTextStyleFavorites } = get()
+        if (!currentProject) return
+
+        const layer = currentProject.layers.find((l) => l.id === selectedLayerId)
+        if (!layer || layer.type !== 'text') {
+          showToast('Kein Text-Layer ausgewählt', 'error')
+          return
+        }
+
+        try {
+          const styleData = {
+            name: name || `Style ${get().textStyleFavorites.length + 1}`,
+            fontFamily: layer.fontFamily || 'SF Pro Display',
+            fontSize: layer.fontSize || 48,
+            fontWeight: layer.fontWeight || 400,
+            fontColor: layer.fontColor || '#ffffff',
+            textAlign: layer.textAlign || 'center',
+            textEffects: layer.textEffects || {
+              shadow: { enabled: false, offsetX: 4, offsetY: 4, blur: 8, color: '#000000' },
+              outline: { enabled: false, width: 2, color: '#000000' },
+              glow: { enabled: false, color: '#ff00ff', intensity: 20 },
+              curve: 0,
+            },
+          }
+
+          await api.post('/documents/text-styles/', styleData)
+          await fetchTextStyleFavorites()
+          showToast(`Style "${name}" gespeichert`, 'success')
+        } catch (error) {
+          console.error('Failed to save text style:', error)
+          showToast('Fehler beim Speichern des Stils', 'error')
+        }
+      },
+
+      applyTextStyleFavorite: (styleId) => {
+        const { currentProject, selectedLayerId, textStyleFavorites, showToast, pushHistory } = get()
+        if (!currentProject || !selectedLayerId) return
+
+        const layer = currentProject.layers.find((l) => l.id === selectedLayerId)
+        if (!layer || layer.type !== 'text') {
+          showToast('Kein Text-Layer ausgewählt', 'error')
+          return
+        }
+
+        const style = textStyleFavorites.find((s) => s.id === styleId)
+        if (!style) return
+
+        pushHistory('Apply Text Style')
+
+        set((state) => ({
+          currentProject: state.currentProject
+            ? {
+                ...state.currentProject,
+                layers: state.currentProject.layers.map((l) =>
+                  l.id === selectedLayerId
+                    ? {
+                        ...l,
+                        fontFamily: style.fontFamily,
+                        fontSize: style.fontSize,
+                        fontWeight: style.fontWeight,
+                        fontColor: style.fontColor,
+                        textAlign: style.textAlign,
+                        textEffects: { ...style.textEffects },
+                      }
+                    : l
+                ),
+                updatedAt: Date.now(),
+              }
+            : null,
+          isDirty: true,
+        }))
+
+        showToast(`Style "${style.name}" angewendet`, 'success')
+      },
+
+      deleteTextStyleFavorite: async (styleId) => {
+        const { showToast, fetchTextStyleFavorites } = get()
+        try {
+          await api.delete(`/documents/text-styles/${styleId}`)
+          await fetchTextStyleFavorites()
+        } catch (error) {
+          console.error('Failed to delete text style:', error)
+          showToast('Fehler beim Löschen des Stils', 'error')
+        }
+      },
+
+      renameTextStyleFavorite: async (styleId, name) => {
+        const { showToast, fetchTextStyleFavorites } = get()
+        try {
+          await api.patch(`/documents/text-styles/${styleId}`, { name })
+          await fetchTextStyleFavorites()
+        } catch (error) {
+          console.error('Failed to rename text style:', error)
+          showToast('Fehler beim Umbenennen des Stils', 'error')
+        }
+      },
+
       // History
       pushHistory: (name) => {
         const { currentProject, history, historyIndex, maxHistorySize } = get()
@@ -3733,6 +3964,7 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
         gridSize: state.gridSize,
         snapToGrid: state.snapToGrid,
         filterMode: state.filterMode,
+        // Note: textStyleFavorites removed - now stored in backend database
       }),
       onRehydrateStorage: () => (state) => {
         // After rehydration, restore the current project from backend if there was one open
@@ -3742,6 +3974,8 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
             // Restore the project from backend
             state.openProject(persistedState.currentProjectId)
           }
+          // Fetch text styles from backend
+          state.fetchTextStyleFavorites()
         }
       },
       storage: {

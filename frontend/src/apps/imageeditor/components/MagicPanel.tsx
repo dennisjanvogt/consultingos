@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
-import { useAIStore, groupModelsByProvider } from '@/stores/aiStore'
+import { useAIStore } from '@/stores/aiStore'
 import { DEFAULT_LAYER_EFFECTS } from '../types'
 import type { LayerEffects } from '../types'
+import { ModelPickerButton } from '@/components/ModelPickerButton'
 import {
   Sparkles,
   Wand2,
@@ -19,7 +20,6 @@ import {
   Copy,
   Layers,
   BrainCircuit,
-  Settings2,
   Expand,
 } from 'lucide-react'
 
@@ -98,24 +98,15 @@ export function MagicPanel() {
     updateLayerEffects,
   } = useImageEditorStore()
 
-  const {
-    analysisModel,
-    setAnalysisModel,
-    imageModel,
-    setImageModel,
-    getVisionModels,
-    imageModels,
-    chatModels,
-    fetchModels,
-    isLoadingModels,
-  } = useAIStore()
+  const { fetchModels } = useAIStore()
 
   // Load models on mount
   useEffect(() => {
     fetchModels()
   }, [fetchModels])
 
-  const [expandedSection, setExpandedSection] = useState<string | null>('magic')
+  // Allow multiple sections to be expanded, with secondary sections collapsed by default
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [customGradient, setCustomGradient] = useState({
     startColor: '#ff0000',
     endColor: '#0000ff',
@@ -140,11 +131,6 @@ export function MagicPanel() {
     selectedLayer.width < currentProject.width || selectedLayer.height < currentProject.height
   )
 
-  // Get vision-capable models for analysis
-  const visionModels = getVisionModels()
-  const groupedVisionModels = groupModelsByProvider(visionModels)
-  const groupedImageModels = groupModelsByProvider(imageModels)
-
   const updateEffect = (updates: Partial<LayerEffects>) => {
     if (!selectedLayerId) return
     updateLayerEffects(selectedLayerId, {
@@ -154,8 +140,18 @@ export function MagicPanel() {
   }
 
   const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section)
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      if (next.has(section)) {
+        next.delete(section)
+      } else {
+        next.add(section)
+      }
+      return next
+    })
   }
+
+  const isSectionExpanded = (section: string) => expandedSections.has(section)
 
   const handleGenerateImage = () => {
     if (aiPrompt.trim()) {
@@ -178,335 +174,190 @@ export function MagicPanel() {
   }
 
   return (
-    <div className="p-3 space-y-3">
-      <h3 className="text-xs font-semibold text-gray-400 uppercase">
-        {isGerman ? 'KI & Magie' : 'AI & Magic'}
-      </h3>
+    <div className="p-3 space-y-4">
+      {/* ===== ALWAYS VISIBLE SECTIONS ===== */}
 
-      {/* AI Image Generation Section */}
+      {/* AI Image Generation - Always visible */}
       <div className="space-y-2">
-        <button
-          onClick={() => toggleSection('ai-generate')}
-          className="flex items-center gap-2 w-full text-left text-sm font-medium"
-        >
-          {expandedSection === 'ai-generate' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <div className="flex items-center gap-2 text-sm font-medium">
           <Image className="h-4 w-4 text-emerald-400" />
           {isGerman ? 'KI Bildgenerierung' : 'AI Image Generation'}
+        </div>
+        <textarea
+          value={aiPrompt}
+          onChange={(e) => setAiPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleGenerateImage()
+            }
+          }}
+          placeholder={isGerman ? 'Beschreibe das Bild...' : 'Describe the image...'}
+          className="w-full h-16 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+        />
+        <button
+          onClick={handleGenerateImage}
+          disabled={!aiPrompt.trim() || isGeneratingImage}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            aiPrompt.trim() && !isGeneratingImage
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
+              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {isGeneratingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />}
+          {isGerman ? 'Generieren' : 'Generate'}
         </button>
-
-        {expandedSection === 'ai-generate' && (
-          <div className="pl-6 space-y-2">
-            <textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                // Prevent global keyboard shortcuts from capturing spacebar and other keys
-                e.stopPropagation()
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleGenerateImage()
-                }
-              }}
-              placeholder={isGerman ? 'Beschreibe das Bild...' : 'Describe the image...'}
-              className="w-full h-20 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
-            />
-            <button
-              onClick={handleGenerateImage}
-              disabled={!aiPrompt.trim() || isGeneratingImage}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                aiPrompt.trim() && !isGeneratingImage
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isGeneratingImage ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Image className="h-4 w-4" />
-              )}
-              {isGerman ? 'Bild generieren' : 'Generate Image'}
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Context-Aware Layer Editing Section */}
+      {/* Divider */}
+      <div className="border-t border-gray-800" />
+
+      {/* One-Click Magic - Always visible */}
       <div className="space-y-2">
-        <button
-          onClick={() => toggleSection('context-edit')}
-          className="flex items-center gap-2 w-full text-left text-sm font-medium"
-        >
-          {expandedSection === 'context-edit' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <BrainCircuit className="h-4 w-4 text-purple-400" />
-          {isGerman ? 'Kontextbasierte Bearbeitung' : 'Context-Aware Editing'}
-        </button>
-
-        {expandedSection === 'context-edit' && (
-          <div className="pl-6 space-y-3">
-            {/* Info */}
-            <p className="text-[10px] text-gray-500">
-              {isGerman
-                ? 'Analysiert das Gesamtbild und die ausgewählte Ebene, um eine passende neue Ebene zu generieren.'
-                : 'Analyzes the full image and selected layer to generate a matching new layer.'}
-            </p>
-
-            {/* Model Settings */}
-            <div className="space-y-2 p-2 bg-gray-800/50 rounded-lg">
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <Settings2 className="h-3 w-3" />
-                {isGerman ? 'Modell-Einstellungen' : 'Model Settings'}
-              </div>
-
-              {/* Analysis Model */}
-              <div className="space-y-1">
-                <label className="text-[10px] text-gray-500">
-                  {isGerman ? 'Analyse-LLM (Vision)' : 'Analysis LLM (Vision)'}
-                </label>
-                <select
-                  value={analysisModel}
-                  onChange={(e) => setAnalysisModel(e.target.value)}
-                  disabled={isLoadingModels}
-                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
-                >
-                  {isLoadingModels ? (
-                    <option>{isGerman ? 'Lade Modelle...' : 'Loading models...'}</option>
-                  ) : visionModels.length === 0 ? (
-                    <option>{isGerman ? 'Keine Vision-Modelle' : 'No vision models'}</option>
-                  ) : (
-                    Object.entries(groupedVisionModels).map(([provider, models]) => (
-                      <optgroup key={provider} label={provider}>
-                        {models.slice(0, 10).map((model) => (
-                          <option key={model.id} value={model.id}>
-                            {model.name} {model.isFree && '(Free)'}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              {/* Image Generation Model */}
-              <div className="space-y-1">
-                <label className="text-[10px] text-gray-500">
-                  {isGerman ? 'Bildgenerierung' : 'Image Generation'}
-                </label>
-                <select
-                  value={imageModel}
-                  onChange={(e) => setImageModel(e.target.value)}
-                  disabled={isLoadingModels}
-                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
-                >
-                  {isLoadingModels ? (
-                    <option>{isGerman ? 'Lade Modelle...' : 'Loading models...'}</option>
-                  ) : imageModels.length === 0 ? (
-                    <option>{isGerman ? 'Keine Bild-Modelle' : 'No image models'}</option>
-                  ) : (
-                    Object.entries(groupedImageModels).map(([provider, models]) => (
-                      <optgroup key={provider} label={provider}>
-                        {models.map((model) => (
-                          <option key={model.id} value={model.id}>
-                            {model.name} {model.isFree && '(Free)'}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))
-                  )}
-                </select>
-              </div>
-            </div>
-
-            {/* Layer Selection Info */}
-            {selectedLayer ? (
-              <div className="flex items-center gap-2 p-2 bg-gray-800/30 rounded text-xs">
-                <Layers className="h-3.5 w-3.5 text-gray-400" />
-                <span className="text-gray-400">{isGerman ? 'Ebene:' : 'Layer:'}</span>
-                <span className="text-white truncate">{selectedLayer.name}</span>
-              </div>
-            ) : (
-              <p className="text-xs text-amber-500/80 text-center">
-                {isGerman ? 'Wähle eine Ebene mit Bild aus' : 'Select a layer with image'}
-              </p>
-            )}
-
-            {/* Instruction Input */}
-            <textarea
-              value={contextInstruction}
-              onChange={(e) => setContextInstruction(e.target.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleContextEdit()
-                }
-              }}
-              placeholder={isGerman
-                ? 'z.B. "Passe den Hintergrund an die Person an" oder "Mache die Beleuchtung konsistent"'
-                : 'e.g. "Match the background to the person" or "Make the lighting consistent"'}
-              className="w-full h-16 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
-            />
-
-            {/* Generate Button */}
-            <button
-              onClick={handleContextEdit}
-              disabled={!contextInstruction.trim() || !hasImageData || isEditingLayerWithContext || isGeneratingImage}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                contextInstruction.trim() && hasImageData && !isEditingLayerWithContext && !isGeneratingImage
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isEditingLayerWithContext || isGeneratingImage ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {isEditingLayerWithContext
-                    ? (isGerman ? 'Analysiere...' : 'Analyzing...')
-                    : (isGerman ? 'Generiere...' : 'Generating...')}
-                </>
-              ) : (
-                <>
-                  <BrainCircuit className="h-4 w-4" />
-                  {isGerman ? 'Neue Ebene generieren' : 'Generate New Layer'}
-                </>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* One-Click Magic Section */}
-      <div className="space-y-2">
-        <button
-          onClick={() => toggleSection('magic')}
-          className="flex items-center gap-2 w-full text-left text-sm font-medium"
-        >
-          {expandedSection === 'magic' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <div className="flex items-center gap-2 text-sm font-medium">
           <Wand2 className="h-4 w-4 text-violet-400" />
           {isGerman ? 'Ein-Klick Magie' : 'One-Click Magic'}
-        </button>
-
-        {expandedSection === 'magic' && (
-          <div className="pl-6 space-y-2">
-            {/* Auto-Enhance Button */}
-            <button
-              onClick={() => selectedLayerId && autoEnhance(selectedLayerId)}
-              disabled={!hasImageData || isAutoEnhancing}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                hasImageData && !isAutoEnhancing
-                  ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isAutoEnhancing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              {isGerman ? 'Auto-Verbessern' : 'Auto-Enhance'}
-            </button>
-
-            {/* Remove Background Button */}
-            <button
-              onClick={() => selectedLayerId && removeBackground(selectedLayerId)}
-              disabled={!hasImageData || isRemovingBackground}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                hasImageData && !isRemovingBackground
-                  ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isRemovingBackground ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Wand2 className="h-4 w-4" />
-              )}
-              {isGerman ? 'Hintergrund entfernen' : 'Remove Background'}
-            </button>
-
-            {!hasImageData && (
-              <p className="text-xs text-gray-500 text-center">
-                {isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image'}
-              </p>
-            )}
-          </div>
-        )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => selectedLayerId && autoEnhance(selectedLayerId)}
+            disabled={!hasImageData || isAutoEnhancing}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              hasImageData && !isAutoEnhancing
+                ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white'
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {isAutoEnhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {isGerman ? 'Verbessern' : 'Enhance'}
+          </button>
+          <button
+            onClick={() => selectedLayerId && removeBackground(selectedLayerId)}
+            disabled={!hasImageData || isRemovingBackground}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              hasImageData && !isRemovingBackground
+                ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {isRemovingBackground ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+            {isGerman ? 'Freistellen' : 'Remove BG'}
+          </button>
+        </div>
       </div>
 
-      {/* Extend Image Section */}
+      {/* Extend Image - Always visible when needed */}
+      {needsExtension && (
+        <>
+          <div className="border-t border-gray-800" />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Expand className="h-4 w-4 text-sky-400" />
+              {isGerman ? 'Bild auf Canvas erweitern' : 'Extend to Canvas'}
+            </div>
+            <div className="text-[10px] text-gray-500">
+              {selectedLayer?.width}x{selectedLayer?.height} → {currentProject?.width}x{currentProject?.height}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => selectedLayerId && extendImageToFit(selectedLayerId, false)}
+                disabled={isExtendingImage}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  !isExtendingImage ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isExtendingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Expand className="h-3.5 w-3.5" />}
+                {isGerman ? 'Schnell' : 'Quick'}
+              </button>
+              <button
+                onClick={() => selectedLayerId && extendImageToFit(selectedLayerId, true)}
+                disabled={isExtendingImage || isGeneratingImage}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  !isExtendingImage && !isGeneratingImage
+                    ? 'bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-500 hover:to-cyan-500 text-white'
+                    : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isExtendingImage || isGeneratingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BrainCircuit className="h-3.5 w-3.5" />}
+                {isGerman ? 'KI' : 'AI'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Divider */}
+      <div className="border-t border-gray-800" />
+
+      {/* Context-Aware Layer Editing - Always visible */}
       <div className="space-y-2">
-        <button
-          onClick={() => toggleSection('extend')}
-          className="flex items-center gap-2 w-full text-left text-sm font-medium"
-        >
-          {expandedSection === 'extend' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <Expand className="h-4 w-4 text-sky-400" />
-          {isGerman ? 'Bild erweitern' : 'Extend Image'}
-        </button>
-
-        {expandedSection === 'extend' && (
-          <div className="pl-6 space-y-2">
-            {/* Info about current sizes */}
-            {selectedLayer && currentProject && (
-              <div className="text-[10px] text-gray-500 space-y-0.5">
-                <div>{isGerman ? 'Ebene' : 'Layer'}: {selectedLayer.width}x{selectedLayer.height}px</div>
-                <div>{isGerman ? 'Leinwand' : 'Canvas'}: {currentProject.width}x{currentProject.height}px</div>
-              </div>
-            )}
-
-            {needsExtension ? (
-              <>
-                {/* Local Extension Button */}
-                <button
-                  onClick={() => selectedLayerId && extendImageToFit(selectedLayerId, false)}
-                  disabled={isExtendingImage}
-                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    !isExtendingImage
-                      ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {isExtendingImage ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Expand className="h-4 w-4" />
-                  )}
-                  {isGerman ? 'Schnell erweitern' : 'Quick Extend'}
-                </button>
-                <p className="text-[10px] text-gray-500 text-center">
-                  {isGerman ? 'Analysiert Ränder, füllt mit Farbverlauf' : 'Analyzes edges, fills with gradient'}
-                </p>
-
-                {/* AI Extension Button */}
-                <button
-                  onClick={() => selectedLayerId && extendImageToFit(selectedLayerId, true)}
-                  disabled={isExtendingImage || isGeneratingImage}
-                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    !isExtendingImage && !isGeneratingImage
-                      ? 'bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-500 hover:to-cyan-500 text-white'
-                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {isExtendingImage || isGeneratingImage ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BrainCircuit className="h-4 w-4" />
-                  )}
-                  {isGerman ? 'KI-Erweiterung' : 'AI Extend'}
-                </button>
-                <p className="text-[10px] text-gray-500 text-center">
-                  {isGerman ? 'Generiert passenden Inhalt (kostet Credits)' : 'Generates matching content (costs credits)'}
-                </p>
-              </>
-            ) : (
-              <p className="text-xs text-gray-500 text-center py-2">
-                {hasImageData
-                  ? (isGerman ? 'Bild ist bereits groß genug' : 'Image is already large enough')
-                  : (isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image')}
-              </p>
-            )}
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <BrainCircuit className="h-4 w-4 text-purple-400" />
+          {isGerman ? 'Kontextbasierte Bearbeitung' : 'Context-Aware Edit'}
+        </div>
+        {selectedLayer ? (
+          <div className="flex items-center gap-2 p-1.5 bg-gray-800/30 rounded text-xs">
+            <Layers className="h-3.5 w-3.5 text-gray-400" />
+            <span className="text-white truncate flex-1">{selectedLayer.name}</span>
+            <span className="text-[10px] text-gray-500">{selectedLayer.width}x{selectedLayer.height}</span>
           </div>
+        ) : (
+          <p className="text-xs text-amber-500/80">{isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image'}</p>
         )}
+        <textarea
+          value={contextInstruction}
+          onChange={(e) => setContextInstruction(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleContextEdit()
+            }
+          }}
+          placeholder={isGerman ? 'z.B. "Passe Hintergrund an die Person an" oder "Erweitere die Szene nach links"' : 'e.g. "Match background to person" or "Extend scene to the left"'}
+          className="w-full h-14 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+        />
+        <button
+          onClick={handleContextEdit}
+          disabled={!contextInstruction.trim() || !hasImageData || isEditingLayerWithContext || isGeneratingImage}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            contextInstruction.trim() && hasImageData && !isEditingLayerWithContext && !isGeneratingImage
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
+              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {isEditingLayerWithContext || isGeneratingImage ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {isEditingLayerWithContext ? (isGerman ? 'Analysiere...' : 'Analyzing...') : (isGerman ? 'Generiere...' : 'Generating...')}
+            </>
+          ) : (
+            <>
+              <BrainCircuit className="h-3.5 w-3.5" />
+              {isGerman ? 'Neue Ebene generieren' : 'Generate New Layer'}
+            </>
+          )}
+        </button>
       </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-800" />
+
+      {/* Analysis Model Selection */}
+      <div className="space-y-1.5">
+        <label className="text-xs text-gray-500 flex items-center gap-1.5">
+          <BrainCircuit className="h-3 w-3" />
+          {isGerman ? 'Analyse-Modell (Vision)' : 'Analysis Model (Vision)'}
+        </label>
+        <ModelPickerButton
+          type="analysis"
+          compact
+          className="w-full bg-gray-800 border border-gray-700 rounded justify-start"
+        />
+      </div>
+
+      {/* ===== COLLAPSIBLE SECTIONS ===== */}
 
       {/* Layer Effects Section */}
       <div className="space-y-2">
@@ -514,12 +365,12 @@ export function MagicPanel() {
           onClick={() => toggleSection('layer-effects')}
           className="flex items-center gap-2 w-full text-left text-sm font-medium"
         >
-          {expandedSection === 'layer-effects' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isSectionExpanded('layer-effects') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <Layers className="h-4 w-4 text-orange-400" />
           {isGerman ? 'Layer-Effekte' : 'Layer Effects'}
         </button>
 
-        {expandedSection === 'layer-effects' && (
+        {isSectionExpanded('layer-effects') && (
           <div className="pl-6 space-y-3">
             {!isImageOrShapeLayer ? (
               <p className="text-xs text-gray-500 text-center">
@@ -808,12 +659,12 @@ export function MagicPanel() {
           onClick={() => toggleSection('ai-filters')}
           className="flex items-center gap-2 w-full text-left text-sm font-medium"
         >
-          {expandedSection === 'ai-filters' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isSectionExpanded('ai-filters') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <Film className="h-4 w-4 text-amber-400" />
           {isGerman ? 'KI Filter' : 'AI Filters'}
         </button>
 
-        {expandedSection === 'ai-filters' && (
+        {isSectionExpanded('ai-filters') && (
           <div className="pl-6 space-y-2">
             <div className="grid grid-cols-5 gap-1.5">
               {AI_FILTERS.map((filter) => (
@@ -855,12 +706,12 @@ export function MagicPanel() {
           onClick={() => toggleSection('upscale')}
           className="flex items-center gap-2 w-full text-left text-sm font-medium"
         >
-          {expandedSection === 'upscale' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isSectionExpanded('upscale') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <ZoomIn className="h-4 w-4 text-blue-400" />
           {isGerman ? 'Bild vergrößern' : 'Upscale Image'}
         </button>
 
-        {expandedSection === 'upscale' && (
+        {isSectionExpanded('upscale') && (
           <div className="pl-6 space-y-2">
             <div className="grid grid-cols-3 gap-2">
               {[1.5, 2, 4].map((scale) => (
@@ -898,12 +749,12 @@ export function MagicPanel() {
           onClick={() => toggleSection('colors')}
           className="flex items-center gap-2 w-full text-left text-sm font-medium"
         >
-          {expandedSection === 'colors' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isSectionExpanded('colors') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <Pipette className="h-4 w-4 text-rose-400" />
           {isGerman ? 'Farbpalette extrahieren' : 'Extract Colors'}
         </button>
 
-        {expandedSection === 'colors' && (
+        {isSectionExpanded('colors') && (
           <div className="pl-6 space-y-2">
             <button
               onClick={() => selectedLayerId && extractColorPalette(selectedLayerId)}
@@ -961,12 +812,12 @@ export function MagicPanel() {
           onClick={() => toggleSection('gradients')}
           className="flex items-center gap-2 w-full text-left text-sm font-medium"
         >
-          {expandedSection === 'gradients' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isSectionExpanded('gradients') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <Palette className="h-4 w-4 text-pink-400" />
           {isGerman ? 'Verlauf-Hintergründe' : 'Gradient Backgrounds'}
         </button>
 
-        {expandedSection === 'gradients' && (
+        {isSectionExpanded('gradients') && (
           <div className="pl-6 space-y-3">
             {/* Preset Gradients */}
             <div className="grid grid-cols-4 gap-1.5">
@@ -1041,12 +892,12 @@ export function MagicPanel() {
           onClick={() => toggleSection('patterns')}
           className="flex items-center gap-2 w-full text-left text-sm font-medium"
         >
-          {expandedSection === 'patterns' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isSectionExpanded('patterns') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <Grid3X3 className="h-4 w-4 text-cyan-400" />
           {isGerman ? 'Muster-Hintergründe' : 'Pattern Backgrounds'}
         </button>
 
-        {expandedSection === 'patterns' && (
+        {isSectionExpanded('patterns') && (
           <div className="pl-6 space-y-3">
             {/* Preset Patterns */}
             <div className="grid grid-cols-5 gap-1.5">

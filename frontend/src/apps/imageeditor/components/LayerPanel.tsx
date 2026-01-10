@@ -343,13 +343,8 @@ export function LayerPanel() {
 
             {/* Thumbnail */}
             <div className="w-10 h-10 bg-gray-800 rounded overflow-hidden flex items-center justify-center border border-gray-700">
-              {layer.imageData ? (
-                <img
-                  src={layer.imageData}
-                  alt={layer.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : layer.type === 'text' && layer.text ? (
+              {/* Text layers should show text preview, not imageData */}
+              {layer.type === 'text' && layer.text ? (
                 <span
                   className="text-[8px] leading-none text-center truncate px-0.5"
                   style={{
@@ -360,6 +355,12 @@ export function LayerPanel() {
                 >
                   {layer.text.slice(0, 5)}
                 </span>
+              ) : layer.imageData ? (
+                <img
+                  src={layer.imageData}
+                  alt={layer.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <span className="text-gray-500">{getLayerIcon(layer.type)}</span>
               )}

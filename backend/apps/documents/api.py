@@ -9,7 +9,7 @@ from django.http import FileResponse
 from typing import List, Optional
 from datetime import datetime
 
-from .models import Folder, Document
+from .models import Folder, Document, TextStyleFavorite
 from .signals import create_default_folders_for_user
 
 router = Router()
@@ -307,3 +307,106 @@ def download_as_mp4(request, document_id: int):
         return 400, {'error': 'Konvertierung Timeout'}
     except FileNotFoundError:
         return 400, {'error': 'ffmpeg nicht installiert'}
+
+
+# Text Style Favorite Schemas
+class TextEffectsSchema(Schema):
+    shadow: Optional[dict] = None
+    outline: Optional[dict] = None
+    glow: Optional[dict] = None
+    curve: Optional[int] = 0
+
+
+class TextStyleFavoriteSchema(Schema):
+    id: int
+    name: str
+    fontFamily: str
+    fontSize: int
+    fontWeight: int
+    fontColor: str
+    textAlign: str
+    textEffects: dict
+    createdAt: datetime
+
+    @staticmethod
+    def resolve_fontFamily(obj):
+        return obj.font_family
+
+    @staticmethod
+    def resolve_fontSize(obj):
+        return obj.font_size
+
+    @staticmethod
+    def resolve_fontWeight(obj):
+        return obj.font_weight
+
+    @staticmethod
+    def resolve_fontColor(obj):
+        return obj.font_color
+
+    @staticmethod
+    def resolve_textAlign(obj):
+        return obj.text_align
+
+    @staticmethod
+    def resolve_textEffects(obj):
+        return obj.text_effects
+
+    @staticmethod
+    def resolve_createdAt(obj):
+        return obj.created_at
+
+
+class TextStyleFavoriteCreateSchema(Schema):
+    name: str
+    fontFamily: str = 'SF Pro Display'
+    fontSize: int = 48
+    fontWeight: int = 400
+    fontColor: str = '#ffffff'
+    textAlign: str = 'center'
+    textEffects: dict = {}
+
+
+class TextStyleFavoriteUpdateSchema(Schema):
+    name: Optional[str] = None
+
+
+# Text Style Favorite Endpoints
+@router.get('/text-styles/', response=List[TextStyleFavoriteSchema])
+def list_text_styles(request):
+    """List all text style favorites for the current user"""
+    return TextStyleFavorite.objects.filter(user=request.user)
+
+
+@router.post('/text-styles/', response={201: TextStyleFavoriteSchema, 400: ErrorSchema})
+def create_text_style(request, data: TextStyleFavoriteCreateSchema):
+    """Create a new text style favorite"""
+    style = TextStyleFavorite.objects.create(
+        user=request.user,
+        name=data.name,
+        font_family=data.fontFamily,
+        font_size=data.fontSize,
+        font_weight=data.fontWeight,
+        font_color=data.fontColor,
+        text_align=data.textAlign,
+        text_effects=data.textEffects,
+    )
+    return 201, style
+
+
+@router.patch('/text-styles/{style_id}', response={200: TextStyleFavoriteSchema, 404: ErrorSchema})
+def update_text_style(request, style_id: int, data: TextStyleFavoriteUpdateSchema):
+    """Update a text style favorite (rename)"""
+    style = get_object_or_404(TextStyleFavorite, id=style_id, user=request.user)
+    if data.name is not None:
+        style.name = data.name
+        style.save()
+    return style
+
+
+@router.delete('/text-styles/{style_id}', response={204: None, 404: ErrorSchema})
+def delete_text_style(request, style_id: int):
+    """Delete a text style favorite"""
+    style = get_object_or_404(TextStyleFavorite, id=style_id, user=request.user)
+    style.delete()
+    return 204, None

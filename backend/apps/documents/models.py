@@ -83,3 +83,22 @@ class Document(models.Model):
                     self.duration = duration
                     # Save again with duration (avoid recursion by using update)
                     Document.objects.filter(pk=self.pk).update(duration=duration)
+
+
+class TextStyleFavorite(models.Model):
+    """Text style preset for the Image Editor"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='text_style_favorites')
+    name = models.CharField(max_length=100)
+    font_family = models.CharField(max_length=100, default='SF Pro Display')
+    font_size = models.PositiveIntegerField(default=48)
+    font_weight = models.PositiveIntegerField(default=400)
+    font_color = models.CharField(max_length=20, default='#ffffff')
+    text_align = models.CharField(max_length=10, default='center')  # left, center, right
+    text_effects = models.JSONField(default=dict)  # Store shadow, outline, glow, curve settings
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
