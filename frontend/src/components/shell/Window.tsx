@@ -66,6 +66,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
     tileWindow,
     untileWindow,
     maximizeWindow,
+    toggleFullscreen,
     focusWindow,
     updateWindowPosition,
     updateWindowSize,
@@ -186,8 +187,8 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
     e.preventDefault()
     e.stopPropagation()
 
-    // Don't resize if maximized or tiled
-    if (window.isMaximized || window.isTiled) return
+    // Don't resize if maximized, tiled, or fullscreen
+    if (window.isMaximized || window.isTiled || window.isFullscreen) return
 
     // Capture pointer for smooth tracking even when mouse leaves element
     const target = e.currentTarget as HTMLElement
@@ -228,7 +229,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   }, []) // No deps - cleanup uses refs
 
   // Check if resize is allowed
-  const canResize = !window.isMaximized && !window.isTiled
+  const canResize = !window.isMaximized && !window.isTiled && !window.isFullscreen
 
   // Thumbnail-Modus: Nur visuelles Rendering ohne Interaktion
   if (isThumbnail) {
@@ -310,30 +311,49 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
     )
   }
 
-  // Normales Fenster (draggable) - handles both maximized and normal states
+  // Normales Fenster (draggable) - handles both maximized, fullscreen, and normal states
   // Using a single return to prevent component remounting on maximize/minimize
-  return (
-    <motion.div
-      layout
-      layoutId={`window-${window.id}`}
-      data-window-id={window.id}
-      className={`absolute glass overflow-hidden window-shadow flex flex-col outline-none ${
-        window.isMaximized ? 'rounded-none' : 'rounded-xl'
-      } ${isActive ? 'ring-1 ring-white/20' : ''}`}
-      style={window.isMaximized ? {
+
+  // Determine window style based on state
+  const getWindowStyle = () => {
+    if (window.isFullscreen) {
+      return {
+        position: 'fixed' as const,
+        left: 0,
+        top: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999, // Above everything including menubar and dock
+      }
+    }
+    if (window.isMaximized) {
+      return {
         left: 0,
         top: 0,
         width: '100%',
         height: '100%',
         zIndex: window.zIndex,
-      } : {
-        x,
-        y,
-        width,
-        height,
-        zIndex: window.zIndex,
-        willChange: isDragging ? 'transform' : isResizing ? 'width, height' : 'auto',
-      }}
+      }
+    }
+    return {
+      x,
+      y,
+      width,
+      height,
+      zIndex: window.zIndex,
+      willChange: isDragging ? 'transform' : isResizing ? 'width, height' : 'auto',
+    }
+  }
+
+  return (
+    <motion.div
+      layout
+      layoutId={`window-${window.id}`}
+      data-window-id={window.id}
+      className={`${window.isFullscreen ? 'fixed' : 'absolute'} glass overflow-hidden window-shadow flex flex-col outline-none ${
+        window.isMaximized || window.isFullscreen ? 'rounded-none' : 'rounded-xl'
+      } ${isActive ? 'ring-1 ring-white/20' : ''}`}
+      style={getWindowStyle()}
       tabIndex={0}
       onKeyDown={handleWindowKeyDown}
       initial={false}
@@ -346,7 +366,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         layout: { type: 'spring', stiffness: 180, damping: 28, mass: 1 }
       }}
       onMouseDown={() => focusWindow(window.id)}
-      drag={!isResizing && !window.isMaximized}
+      drag={!isResizing && !window.isMaximized && !window.isFullscreen}
       dragControls={dragControls}
       dragListener={false}
       dragMomentum={false}
@@ -354,16 +374,16 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Resize Handles - hidden when maximized */}
-      {!window.isMaximized && <ResizeHandles onResizeStart={handleResizeStart} canResize={canResize} />}
+      {/* Resize Handles - hidden when maximized or fullscreen */}
+      {!window.isMaximized && !window.isFullscreen && <ResizeHandles onResizeStart={handleResizeStart} canResize={canResize} />}
 
       {/* Title Bar - drag handle */}
       <div
         className={`h-8 flex items-center justify-between px-3 glass-header select-none shrink-0 ${
-          window.isMaximized ? '' : 'cursor-move'
+          window.isMaximized || window.isFullscreen ? '' : 'cursor-move'
         }`}
         onPointerDown={(e) => {
-          if (!isResizing && !window.isMaximized) dragControls.start(e)
+          if (!isResizing && !window.isMaximized && !window.isFullscreen) dragControls.start(e)
         }}
         onDoubleClick={() => maximizeWindow(window.id)}
       >
@@ -371,7 +391,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
           window={window}
           onClose={() => closeWindow(window.id)}
           onTile={() => tileWindow(window.id)}
-          onMaximize={() => maximizeWindow(window.id)}
+          onMaximize={() => toggleFullscreen(window.id)}
         />
       </div>
 

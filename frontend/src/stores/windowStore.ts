@@ -10,6 +10,7 @@ export interface Window {
   title: string
   isMinimized: boolean
   isMaximized: boolean
+  isFullscreen: boolean // Ultra-fullscreen mode - covers everything
   isTiled: boolean
   tiledAt?: number // Timestamp wann getiled wurde (für Max-4 Limit)
   position: { x: number; y: number }
@@ -41,6 +42,7 @@ interface WindowStore {
   untileAllWindows: () => void
   recalculateTiledPositions: () => void
   maximizeWindow: (id: string) => void
+  toggleFullscreen: (id: string) => void
   focusWindow: (id: string) => void
   updateWindowPosition: (id: string, position: { x: number; y: number }) => void
   updateWindowSize: (id: string, size: { width: number; height: number }) => void
@@ -75,6 +77,7 @@ interface PersistedWindow {
   appId: AppType
   isMinimized: boolean
   isMaximized: boolean
+  isFullscreen: boolean
   isTiled: boolean
   position: { x: number; y: number }
   size: { width: number; height: number }
@@ -146,6 +149,7 @@ export const useWindowStore = create<WindowStore>()(
       title: getAppTitle(appId),
       isMinimized: false,
       isMaximized: false,
+      isFullscreen: false,
       isTiled: shouldAutoTile,
       tiledAt: shouldAutoTile ? Date.now() : undefined,
       position: {
@@ -480,6 +484,36 @@ export const useWindowStore = create<WindowStore>()(
     }))
   },
 
+  toggleFullscreen: (id) => {
+    set((state) => ({
+      windows: state.windows.map((w) => {
+        if (w.id !== id) return w
+
+        if (w.isFullscreen) {
+          // Exit fullscreen: restore previous position/size
+          return {
+            ...w,
+            isFullscreen: false,
+            position: w.previousPosition || w.position,
+            size: w.previousSize || w.size,
+            previousPosition: undefined,
+            previousSize: undefined,
+          }
+        } else {
+          // Enter fullscreen: save current position/size
+          return {
+            ...w,
+            isFullscreen: true,
+            isMaximized: false,
+            isTiled: false,
+            previousPosition: w.previousPosition || { ...w.position },
+            previousSize: w.previousSize || { ...w.size },
+          }
+        }
+      }),
+    }))
+  },
+
   focusWindow: (id) => {
     set((state) => ({
       windows: state.windows.map((w) =>
@@ -593,6 +627,7 @@ export const useWindowStore = create<WindowStore>()(
           appId: w.appId,
           isMinimized: w.isMinimized,
           isMaximized: w.isMaximized,
+          isFullscreen: w.isFullscreen,
           isTiled: w.isTiled,
           position: w.position,
           size: w.size,
@@ -619,6 +654,7 @@ export const useWindowStore = create<WindowStore>()(
           .filter((w: PersistedWindow) => appRegistry[w.appId]) // Nur existierende Apps
           .map((w: PersistedWindow) => ({
             ...w,
+            isFullscreen: w.isFullscreen ?? false, // Default for old persisted data
             id: `${w.appId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             title: getAppTitle(w.appId),
             zIndex: zIndex++,
