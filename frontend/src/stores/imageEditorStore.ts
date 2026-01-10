@@ -3277,19 +3277,23 @@ Der Prompt sollte auf Englisch sein und maximal 200 Wörter haben.`
                     { type: 'image_url', image_url: { url: layer.imageData } },
                     {
                       type: 'text',
-                      text: `Analysiere dieses Bild. Das Bild hat aktuell ${img.width}x${img.height} Pixel und soll auf ${targetWidth}x${targetHeight} Pixel erweitert werden.
+                      text: `Analysiere dieses Bild und erstelle einen Prompt für ein Bildgenerierungsmodell.
 
-Erstelle einen detaillierten Prompt für ein Bildgenerierungsmodell, der beschreibt:
-1. Was ist der Hauptinhalt des Bildes (Objekt, Person, Szene)?
-2. Wie sieht der Hintergrund aus (Farben, Texturen, Muster)?
-3. Wie sollte der erweiterte Bereich aussehen, um nahtlos zum Original zu passen?
+WICHTIG: Das Zielbild muss im ${targetWidth > targetHeight ? 'LANDSCAPE/WIDE' : targetHeight > targetWidth ? 'PORTRAIT/TALL' : 'SQUARE'} Format sein (Seitenverhältnis ca. ${Math.round(targetWidth/targetHeight * 100) / 100}:1).
 
-Der Prompt soll ein NEUES Bild beschreiben, das:
-- Den gleichen Inhalt wie das Original zeigt
-- Aber größer ist und den Hintergrund/Umgebung natürlich fortsetzt
-- Im Seitenverhältnis ${targetWidth}:${targetHeight} ist
+Aktuell: ${img.width}x${img.height}px → Ziel: ${targetWidth}x${targetHeight}px
 
-Antworte NUR mit dem englischen Prompt für das Bildgenerierungsmodell.`
+Beschreibe im Prompt:
+1. Den Hauptinhalt (was ist zentral im Bild?)
+2. Den Hintergrund/die Umgebung (Farben, Stil, Atmosphäre)
+3. Wie die erweiterten Bereiche aussehen sollen
+
+Der Prompt MUSS enthalten:
+- "${targetWidth > targetHeight ? 'wide landscape format, horizontal composition' : targetHeight > targetWidth ? 'tall portrait format, vertical composition' : 'square format'}"
+- Beschreibung wie der Hintergrund natürlich fortgesetzt wird
+- Gleicher Stil und gleiche Atmosphäre wie das Original
+
+Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
                     }
                   ]
                 }]
@@ -3393,13 +3397,35 @@ Antworte NUR mit dem englischen Prompt für das Bildgenerierungsmodell.`
 
             pushHistory('AI Extend Image')
 
-            // Create new layer with extended image
+            // Load the generated image
             const newImg = new Image()
             await new Promise<void>((resolve, reject) => {
               newImg.onload = () => resolve()
               newImg.onerror = reject
               newImg.src = newImageData!
             })
+
+            // Scale/fit the generated image to target size if needed
+            let finalImageData = newImageData
+            if (newImg.width !== targetWidth || newImg.height !== targetHeight) {
+              showToast('Passe Größe an...', 'info')
+
+              const scaleCanvas = document.createElement('canvas')
+              scaleCanvas.width = targetWidth
+              scaleCanvas.height = targetHeight
+              const scaleCtx = scaleCanvas.getContext('2d')
+              if (scaleCtx) {
+                // Calculate scaling to cover the target area (crop if needed)
+                const scale = Math.max(targetWidth / newImg.width, targetHeight / newImg.height)
+                const scaledWidth = newImg.width * scale
+                const scaledHeight = newImg.height * scale
+                const offsetX = (targetWidth - scaledWidth) / 2
+                const offsetY = (targetHeight - scaledHeight) / 2
+
+                scaleCtx.drawImage(newImg, offsetX, offsetY, scaledWidth, scaledHeight)
+                finalImageData = scaleCanvas.toDataURL('image/png')
+              }
+            }
 
             const newLayer = {
               id: generateId(),
@@ -3409,12 +3435,12 @@ Antworte NUR mit dem englischen Prompt für das Bildgenerierungsmodell.`
               locked: false,
               opacity: 100,
               blendMode: 'normal' as const,
-              x: Math.floor((targetWidth - newImg.width) / 2),
-              y: Math.floor((targetHeight - newImg.height) / 2),
-              width: newImg.width,
-              height: newImg.height,
+              x: 0,
+              y: 0,
+              width: targetWidth,
+              height: targetHeight,
               rotation: 0,
-              imageData: newImageData,
+              imageData: finalImageData,
             }
 
             set((state) => ({
