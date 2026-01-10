@@ -731,6 +731,25 @@ export function ImageEditorApp() {
                     </div>
                   </div>
 
+                  {/* Twitch */}
+                  <div>
+                    <p className="text-xs text-purple-400 font-medium mb-1.5">Twitch</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1920); setNewProjectHeight(1080) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Offline Banner (1920×1080)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1200); setNewProjectHeight(480) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Profile Banner (1200×480)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(320); setNewProjectHeight(160) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Panel (320×160)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(112); setNewProjectHeight(112) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Emote (112×112)
+                      </button>
+                    </div>
+                  </div>
+
                   {/* TikTok & Pinterest */}
                   <div>
                     <p className="text-xs text-cyan-400 font-medium mb-1.5">TikTok & Pinterest</p>
