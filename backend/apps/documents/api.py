@@ -449,16 +449,18 @@ class LayerAssetUpdateSchema(Schema):
 # Layer Asset Endpoints
 @router.get('/layer-assets/', response=List[LayerAssetSchema])
 def list_layer_assets(request, category: str = ''):
-    """List all layer assets for the current user"""
-    assets = LayerAsset.objects.filter(user=request.user)
+    """List all layer assets (available to all users)"""
+    assets = LayerAsset.objects.all()
     if category:
         assets = assets.filter(category=category)
     return assets
 
 
-@router.post('/layer-assets/', response={201: LayerAssetSchema, 400: ErrorSchema})
+@router.post('/layer-assets/', response={201: LayerAssetSchema, 400: ErrorSchema, 403: ErrorSchema})
 def create_layer_asset(request, data: LayerAssetCreateSchema):
-    """Create a new layer asset"""
+    """Create a new layer asset (admin only)"""
+    if not request.user.is_staff:
+        return 403, {'detail': 'Only admins can add assets to the library'}
     asset = LayerAsset.objects.create(
         user=request.user,
         name=data.name,
@@ -471,10 +473,12 @@ def create_layer_asset(request, data: LayerAssetCreateSchema):
     return 201, asset
 
 
-@router.patch('/layer-assets/{asset_id}', response={200: LayerAssetSchema, 404: ErrorSchema})
+@router.patch('/layer-assets/{asset_id}', response={200: LayerAssetSchema, 403: ErrorSchema, 404: ErrorSchema})
 def update_layer_asset(request, asset_id: int, data: LayerAssetUpdateSchema):
-    """Update a layer asset (rename or change category)"""
-    asset = get_object_or_404(LayerAsset, id=asset_id, user=request.user)
+    """Update a layer asset (admin only)"""
+    if not request.user.is_staff:
+        return 403, {'detail': 'Only admins can edit library assets'}
+    asset = get_object_or_404(LayerAsset, id=asset_id)
     if data.name is not None:
         asset.name = data.name
     if data.category is not None:
@@ -483,9 +487,11 @@ def update_layer_asset(request, asset_id: int, data: LayerAssetUpdateSchema):
     return asset
 
 
-@router.delete('/layer-assets/{asset_id}', response={204: None, 404: ErrorSchema})
+@router.delete('/layer-assets/{asset_id}', response={204: None, 403: ErrorSchema, 404: ErrorSchema})
 def delete_layer_asset(request, asset_id: int):
-    """Delete a layer asset"""
-    asset = get_object_or_404(LayerAsset, id=asset_id, user=request.user)
+    """Delete a layer asset (admin only)"""
+    if not request.user.is_staff:
+        return 403, {'detail': 'Only admins can delete library assets'}
+    asset = get_object_or_404(LayerAsset, id=asset_id)
     asset.delete()
     return 204, None

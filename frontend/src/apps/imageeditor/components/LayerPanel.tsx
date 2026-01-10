@@ -29,6 +29,7 @@ import {
   Library,
 } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
+import { useAuthStore } from '@/stores/authStore'
 import type { BlendMode, LayerType } from '../types'
 import LayerLibraryModal from './LayerLibraryModal'
 
@@ -62,6 +63,8 @@ interface AIEditDialogState {
 export function LayerPanel() {
   const { t, i18n } = useTranslation()
   const isGerman = i18n.language === 'de'
+  const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.is_staff ?? false
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -696,21 +699,23 @@ export function LayerPanel() {
                   {isGerman ? 'Mit KI bearbeiten' : 'AI Edit'}
                 </button>
 
-                {/* Separator */}
-                <div className="my-1 border-t border-gray-700" />
-
-                {/* Save to Library */}
-                <button
-                  onClick={() => {
-                    setSaveToLibraryDialog({ visible: true, layerId: contextMenu.layerId })
-                    closeContextMenu()
-                  }}
-                  disabled={targetLayer.locked || !targetLayer.imageData}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30 text-green-600"
-                >
-                  <Library className="w-4 h-4" />
-                  {isGerman ? 'In Bibliothek speichern' : 'Save to Library'}
-                </button>
+                {/* Save to Library - Admin only */}
+                {isAdmin && (
+                  <>
+                    <div className="my-1 border-t border-gray-700" />
+                    <button
+                      onClick={() => {
+                        setSaveToLibraryDialog({ visible: true, layerId: contextMenu.layerId })
+                        closeContextMenu()
+                      }}
+                      disabled={targetLayer.locked || !targetLayer.imageData}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30 text-green-600"
+                    >
+                      <Library className="w-4 h-4" />
+                      {isGerman ? 'In Bibliothek speichern' : 'Save to Library'}
+                    </button>
+                  </>
+                )}
 
                 {/* Delete */}
                 <button
@@ -946,6 +951,7 @@ export function LayerPanel() {
       <LayerLibraryModal
         isOpen={isLibraryOpen}
         onClose={() => setIsLibraryOpen(false)}
+        isAdmin={isAdmin}
       />
     </div>
   )

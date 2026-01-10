@@ -7,9 +7,10 @@ import type { LayerAsset } from '@/stores/imageEditorStore'
 interface LayerLibraryModalProps {
   isOpen: boolean
   onClose: () => void
+  isAdmin?: boolean
 }
 
-export default function LayerLibraryModal({ isOpen, onClose }: LayerLibraryModalProps) {
+export default function LayerLibraryModal({ isOpen, onClose, isAdmin = false }: LayerLibraryModalProps) {
   const { i18n } = useTranslation()
   const isGerman = i18n.language === 'de'
 
@@ -202,8 +203,8 @@ export default function LayerLibraryModal({ isOpen, onClose }: LayerLibraryModal
                     )}
                   </div>
 
-                  {/* Hover actions */}
-                  {editingId !== asset.id && (
+                  {/* Hover actions - Admin only */}
+                  {isAdmin && editingId !== asset.id && (
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => handleStartEdit(asset, e)}
