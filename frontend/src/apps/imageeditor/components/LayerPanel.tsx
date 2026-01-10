@@ -20,7 +20,10 @@ import {
   Merge,
   Layers,
   Pencil,
-  Eraser,
+  GripVertical,
+  Scissors,
+  Wand2,
+  X,
   Loader2,
 } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
@@ -48,14 +51,24 @@ interface ContextMenuState {
   layerId: string | null
 }
 
+interface AIEditDialogState {
+  visible: boolean
+  layerId: string | null
+}
+
 export function LayerPanel() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const isGerman = i18n.language === 'de'
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Drag and drop state
+  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
+  const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -64,6 +77,14 @@ export function LayerPanel() {
     y: 0,
     layerId: null,
   })
+
+  // AI Edit dialog state
+  const [aiEditDialog, setAiEditDialog] = useState<AIEditDialogState>({
+    visible: false,
+    layerId: null,
+  })
+  const [aiEditPrompt, setAiEditPrompt] = useState('')
+  const aiEditInputRef = useRef<HTMLInputElement>(null)
 
   const {
     currentProject,
@@ -85,8 +106,9 @@ export function LayerPanel() {
     flattenLayers,
     getSelectedLayer,
     addImageAsLayer,
-    removeBackground,
-    isRemovingBackground,
+    trimLayer,
+    editImageWithAI,
+    isEditingImage,
   } = useImageEditorStore()
 
   const handleImportImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,6 +137,21 @@ export function LayerPanel() {
       inputRef.current.select()
     }
   }, [editingLayerId])
+
+  // Focus AI edit input when dialog opens
+  useEffect(() => {
+    if (aiEditDialog.visible && aiEditInputRef.current) {
+      aiEditInputRef.current.focus()
+    }
+  }, [aiEditDialog.visible])
+
+  // Handle AI edit submission
+  const handleAIEditSubmit = async () => {
+    if (!aiEditDialog.layerId || !aiEditPrompt.trim()) return
+    await editImageWithAI(aiEditDialog.layerId, aiEditPrompt.trim())
+    setAiEditDialog({ visible: false, layerId: null })
+    setAiEditPrompt('')
+  }
 
   // Close context menu when clicking outside
   useEffect(() => {
@@ -183,6 +220,54 @@ export function LayerPanel() {
     }
   }
 
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, layerId: string) => {
+    setDraggedLayerId(layerId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', layerId)
+    // Make the drag image slightly transparent
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5'
+    }
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedLayerId(null)
+    setDragOverLayerId(null)
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1'
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent, layerId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (layerId !== draggedLayerId) {
+      setDragOverLayerId(layerId)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverLayerId(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetLayerId: string) => {
+    e.preventDefault()
+    setDragOverLayerId(null)
+
+    if (!draggedLayerId || draggedLayerId === targetLayerId) return
+
+    // Get indices in original (non-reversed) array
+    const draggedIndex = layers.findIndex((l) => l.id === draggedLayerId)
+    const targetIndex = layers.findIndex((l) => l.id === targetLayerId)
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      reorderLayer(draggedLayerId, targetIndex)
+    }
+
+    setDraggedLayerId(null)
+  }
+
   const getLayerIcon = (type: LayerType) => {
     switch (type) {
       case 'image':
@@ -196,21 +281,51 @@ export function LayerPanel() {
     }
   }
 
+  // Clear selection when clicking on empty space
+  const handleClearSelection = useCallback((e: React.MouseEvent) => {
+    // Only clear if clicking directly on the container, not on a child
+    if (e.target === e.currentTarget) {
+      selectLayer(null)
+    }
+  }, [selectLayer])
+
   return (
     <div className="flex flex-col h-full">
       {/* Layer List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" onClick={handleClearSelection}>
         {[...layers].reverse().map((layer, index) => (
           <div
             key={layer.id}
-            onClick={() => selectLayer(layer.id)}
+            draggable={!layer.locked}
+            onDragStart={(e) => handleDragStart(e, layer.id)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => handleDragOver(e, layer.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, layer.id)}
+            onClick={(e) => {
+              e.stopPropagation()
+              selectLayer(layer.id)
+            }}
             onContextMenu={(e) => handleContextMenu(e, layer.id)}
             className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
               selectedLayerId === layer.id
                 ? 'bg-violet-600/30'
                 : 'hover:bg-gray-800'
+            } ${
+              dragOverLayerId === layer.id
+                ? 'border-t-2 border-violet-500'
+                : ''
+            } ${
+              draggedLayerId === layer.id
+                ? 'opacity-50'
+                : ''
             }`}
           >
+            {/* Drag Handle */}
+            <div className={`cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 ${layer.locked ? 'opacity-30' : ''}`}>
+              <GripVertical className="w-4 h-4" />
+            </div>
+
             {/* Visibility */}
             <button
               onClick={(e) => {
@@ -234,6 +349,17 @@ export function LayerPanel() {
                   alt={layer.name}
                   className="w-full h-full object-cover"
                 />
+              ) : layer.type === 'text' && layer.text ? (
+                <span
+                  className="text-[8px] leading-none text-center truncate px-0.5"
+                  style={{
+                    fontFamily: layer.fontFamily || 'Arial',
+                    fontWeight: layer.fontWeight || 400,
+                    color: layer.fontColor || '#ffffff',
+                  }}
+                >
+                  {layer.text.slice(0, 5)}
+                </span>
               ) : (
                 <span className="text-gray-500">{getLayerIcon(layer.type)}</span>
               )}
@@ -452,32 +578,6 @@ export function LayerPanel() {
               </div>
             </div>
 
-            {/* AI Tools */}
-            {selectedLayer.imageData && (
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">
-                  AI Tools
-                </label>
-                <button
-                  onClick={() => removeBackground(selectedLayer.id)}
-                  disabled={selectedLayer.locked || isRemovingBackground}
-                  className="w-full flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:opacity-50 rounded text-xs font-medium transition-all"
-                  title={t('imageeditor.removeBackground')}
-                >
-                  {isRemovingBackground ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {t('imageeditor.removingBackground')}
-                    </>
-                  ) : (
-                    <>
-                      <Eraser className="w-4 h-4" />
-                      {t('imageeditor.removeBackground')}
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -509,6 +609,32 @@ export function LayerPanel() {
                 >
                   <Copy className="w-4 h-4" />
                   {t('imageeditor.duplicateLayer')}
+                </button>
+
+                {/* Trim - remove transparent areas */}
+                <button
+                  onClick={() => {
+                    trimLayer(contextMenu.layerId!)
+                    closeContextMenu()
+                  }}
+                  disabled={targetLayer.locked || targetLayer.type === 'text'}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30"
+                >
+                  <Scissors className="w-4 h-4" />
+                  {isGerman ? 'Zuschneiden (Auto-Trim)' : 'Auto-Trim'}
+                </button>
+
+                {/* AI Edit */}
+                <button
+                  onClick={() => {
+                    setAiEditDialog({ visible: true, layerId: contextMenu.layerId })
+                    closeContextMenu()
+                  }}
+                  disabled={targetLayer.locked || targetLayer.type === 'text' || !targetLayer.imageData}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30 text-violet-400"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  {isGerman ? 'Mit KI bearbeiten' : 'AI Edit'}
                 </button>
 
                 {/* Delete */}
@@ -593,6 +719,84 @@ export function LayerPanel() {
               </>
             )
           })()}
+        </div>
+      )}
+
+      {/* AI Edit Dialog */}
+      {aiEditDialog.visible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-800 rounded-lg shadow-xl w-96 max-w-[90vw]">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div className="flex items-center gap-2 text-violet-400">
+                <Wand2 className="w-5 h-5" />
+                <h3 className="font-semibold">
+                  {isGerman ? 'Mit KI bearbeiten' : 'AI Edit'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setAiEditDialog({ visible: false, layerId: null })
+                  setAiEditPrompt('')
+                }}
+                className="p-1 hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <label className="block text-sm text-gray-400 mb-2">
+                {isGerman ? 'Beschreibe die gewünschte Änderung:' : 'Describe the desired change:'}
+              </label>
+              <input
+                ref={aiEditInputRef}
+                type="text"
+                value={aiEditPrompt}
+                onChange={(e) => setAiEditPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation() // Prevent global keyboard handlers from intercepting keys
+                  if (e.key === 'Enter' && !isEditingImage) {
+                    handleAIEditSubmit()
+                  }
+                  if (e.key === 'Escape') {
+                    setAiEditDialog({ visible: false, layerId: null })
+                    setAiEditPrompt('')
+                  }
+                }}
+                placeholder={isGerman ? 'z.B. "Mache den Hintergrund blau"' : 'e.g. "Make the background blue"'}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                disabled={isEditingImage}
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    setAiEditDialog({ visible: false, layerId: null })
+                    setAiEditPrompt('')
+                  }}
+                  disabled={isEditingImage}
+                  className="px-4 py-2 text-sm hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isGerman ? 'Abbrechen' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleAIEditSubmit}
+                  disabled={!aiEditPrompt.trim() || isEditingImage}
+                  className="px-4 py-2 text-sm bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isEditingImage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isGerman ? 'Bearbeite...' : 'Editing...'}
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4" />
+                      {isGerman ? 'Bearbeiten' : 'Edit'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

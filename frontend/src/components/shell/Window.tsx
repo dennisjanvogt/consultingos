@@ -19,7 +19,8 @@ import { useGoStore } from '@/stores/goStore'
 import { useKnowledgebaseStore } from '@/stores/knowledgebaseStore'
 import { useAdminStore } from '@/stores/adminStore'
 import { useVaultStore } from '@/stores/vaultStore'
-import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3, Clock, Users, Network } from 'lucide-react'
+import { useImageEditorStore } from '@/stores/imageEditorStore'
+import { X, Square, Grid3X3, List, FolderPlus, Upload, Plus, Settings2, LogOut, Save, Circle, FileText, Play, BarChart3, Clock, Users, Network, Undo2, Redo2, Download } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import type { KanbanBoard } from '@/api/types'
 
@@ -631,6 +632,168 @@ function ChessTitleBarControls() {
   )
 }
 
+// All available tools for the settings menu
+const IMAGE_EDITOR_ALL_TOOLS = [
+  { id: 'select', label: 'Select (V)', group: 'Selection' },
+  { id: 'rectSelect', label: 'Rect Select (Q)', group: 'Selection' },
+  { id: 'ellipseSelect', label: 'Ellipse Select (W)', group: 'Selection' },
+  { id: 'lassoSelect', label: 'Lasso (A)', group: 'Selection' },
+  { id: 'magicWand', label: 'Magic Wand (F)', group: 'Selection' },
+  { id: 'move', label: 'Move (M)', group: 'Selection' },
+  { id: 'freeTransform', label: 'Free Transform (\\)', group: 'Selection' },
+  { id: 'brush', label: 'Brush (B)', group: 'Drawing' },
+  { id: 'pencil', label: 'Pencil (P)', group: 'Drawing' },
+  { id: 'eraser', label: 'Eraser (E)', group: 'Drawing' },
+  { id: 'highlighter', label: 'Highlighter (Z)', group: 'Drawing' },
+  { id: 'spray', label: 'Spray (X)', group: 'Drawing' },
+  { id: 'bucket', label: 'Bucket (K)', group: 'Fill' },
+  { id: 'gradient', label: 'Gradient (G)', group: 'Fill' },
+  { id: 'blur', label: 'Blur (J)', group: 'Retouch' },
+  { id: 'dodge', label: 'Dodge (D)', group: 'Retouch' },
+  { id: 'burn', label: 'Burn (N)', group: 'Retouch' },
+  { id: 'clone', label: 'Clone (S)', group: 'Retouch' },
+  { id: 'heal', label: 'Heal (/)', group: 'Retouch' },
+  { id: 'text', label: 'Text (T)', group: 'Other' },
+  { id: 'crop', label: 'Crop (C)', group: 'Other' },
+  { id: 'eyedropper', label: 'Eyedropper (I)', group: 'Other' },
+] as const
+
+// Image Editor Title Bar Controls
+function ImageEditorTitleBarControls() {
+  const { undo, redo, canUndo, canRedo, setShowExportDialog, viewMode, disabledTools, toggleToolEnabled } = useImageEditorStore()
+  const [showToolSettings, setShowToolSettings] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
+  const settingsRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      const isInDropdown = settingsRef.current?.contains(target)
+      const isInButton = buttonRef.current?.contains(target)
+      if (!isInDropdown && !isInButton) {
+        setShowToolSettings(false)
+      }
+    }
+    if (showToolSettings) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showToolSettings])
+
+  // Calculate dropdown position when opened
+  const handleOpenSettings = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setShowToolSettings(!showToolSettings)
+  }
+
+  // Only show in editor view
+  if (viewMode !== 'editor') return null
+
+  // Group tools by category
+  const toolsByGroup = IMAGE_EDITOR_ALL_TOOLS.reduce((acc, tool) => {
+    if (!acc[tool.group]) acc[tool.group] = []
+    acc[tool.group].push(tool)
+    return acc
+  }, {} as Record<string, typeof IMAGE_EDITOR_ALL_TOOLS[number][]>)
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          undo()
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        disabled={!canUndo()}
+        className="p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-30 transition-colors"
+        title="Undo"
+      >
+        <Undo2 className="w-4 h-4" />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          redo()
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        disabled={!canRedo()}
+        className="p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-30 transition-colors"
+        title="Redo"
+      >
+        <Redo2 className="w-4 h-4" />
+      </button>
+
+      {/* Tool Settings */}
+      <div>
+        <button
+          ref={buttonRef}
+          onClick={handleOpenSettings}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={`p-1.5 rounded transition-colors ${showToolSettings ? 'bg-violet-600 text-white' : 'hover:bg-black/10 dark:hover:bg-white/10'}`}
+          title="Tool Settings"
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
+
+        {showToolSettings && createPortal(
+          <div
+            ref={settingsRef}
+            className="fixed w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl max-h-80 overflow-y-auto"
+            style={{ top: dropdownPos.top, right: dropdownPos.right, zIndex: 999999 }}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <div className="p-2 border-b border-gray-700">
+              <span className="text-xs font-semibold text-gray-400">Tools ein/aus</span>
+            </div>
+            {Object.entries(toolsByGroup).map(([group, tools]) => (
+              <div key={group} className="p-1">
+                <div className="px-2 py-1 text-[10px] font-semibold text-gray-500 uppercase">{group}</div>
+                {tools.map((tool) => (
+                  <label
+                    key={tool.id}
+                    className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 rounded cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!disabledTools.includes(tool.id as any)}
+                      onChange={() => toggleToolEnabled(tool.id as any)}
+                      className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-violet-500"
+                    />
+                    <span className="text-xs text-gray-300">{tool.label}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>,
+          document.body
+        )}
+      </div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setShowExportDialog(true)
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gold-600 hover:bg-gold-700 text-white transition-all shadow-sm"
+      >
+        <Download className="w-3 h-3" />
+        Export
+      </button>
+    </div>
+  )
+}
+
 // Go Title Bar Controls
 function GoTitleBarControls() {
   const { setShowNewGameModal } = useGoStore()
@@ -869,6 +1032,9 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
         )}
         {window.appId === 'vault' && (
           <VaultTitleBarControls />
+        )}
+        {window.appId === 'imageeditor' && (
+          <ImageEditorTitleBarControls />
         )}
       </div>
     </>

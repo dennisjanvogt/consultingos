@@ -1,25 +1,70 @@
 import { useTranslation } from 'react-i18next'
-import { RotateCcw, Eye, EyeOff } from 'lucide-react'
+import { RotateCcw, Eye, EyeOff, Layers, Globe } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
+import { useEffect } from 'react'
 
 export function FilterPanel() {
   const { t } = useTranslation()
 
   const {
     filters,
+    filterMode,
+    setFilterMode,
     livePreview,
     setLivePreview,
     setFilters,
     applyFilters,
     resetFilters,
+    loadLayerFilters,
     getSelectedLayer,
+    selectedLayerId,
   } = useImageEditorStore()
 
   const selectedLayer = getSelectedLayer()
-  const isDisabled = !selectedLayer || selectedLayer.locked
+  const isDisabled = filterMode === 'layer' && (!selectedLayer || selectedLayer.locked)
+
+  // Load layer filters when switching to layer mode or selecting a different layer
+  useEffect(() => {
+    if (filterMode === 'layer' && selectedLayerId) {
+      loadLayerFilters(selectedLayerId)
+    }
+  }, [filterMode, selectedLayerId, loadLayerFilters])
 
   return (
     <div className="p-3 space-y-4">
+      {/* Mode Toggle */}
+      <div className="flex items-center gap-1 p-1 bg-gray-800 rounded">
+        <button
+          onClick={() => setFilterMode('layer')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs transition-colors ${
+            filterMode === 'layer'
+              ? 'bg-violet-600 text-white'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          {t('imageeditor.layer')}
+        </button>
+        <button
+          onClick={() => setFilterMode('global')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs transition-colors ${
+            filterMode === 'global'
+              ? 'bg-violet-600 text-white'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          {t('imageeditor.global')}
+        </button>
+      </div>
+
+      {/* Selected Layer Info (only in layer mode) */}
+      {filterMode === 'layer' && selectedLayer && (
+        <div className="text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded">
+          {t('imageeditor.editingLayer')}: <span className="text-white">{selectedLayer.name}</span>
+        </div>
+      )}
+
       {/* Live Preview Toggle */}
       <div className="flex items-center justify-between pb-2 border-b border-gray-800">
         <span className="text-xs text-gray-400">{t('imageeditor.livePreview')}</span>
@@ -309,9 +354,14 @@ export function FilterPanel() {
       </div>
 
       {/* Help Text */}
-      {isDisabled && (
+      {filterMode === 'layer' && isDisabled && (
         <p className="text-xs text-gray-500 text-center">
           {t('imageeditor.selectLayerToEdit')}
+        </p>
+      )}
+      {filterMode === 'global' && (
+        <p className="text-xs text-gray-500 text-center">
+          {t('imageeditor.globalFilterInfo')}
         </p>
       )}
     </div>

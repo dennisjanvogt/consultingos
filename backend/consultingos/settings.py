@@ -18,6 +18,10 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'consulting.dennis24.com', 'dennis24.com']
 
+# Allow large uploads for image editor (100MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -46,6 +50,7 @@ INSTALLED_APPS = [
     'apps.knowledgebase',
     'apps.vault',
     'apps.videoeditor',
+    'apps.imageeditor',
 ]
 
 MIDDLEWARE = [

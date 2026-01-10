@@ -15,6 +15,8 @@ import {
   Paintbrush,
   Pencil,
   Eraser,
+  Highlighter,
+  SprayCan,
   Type,
   Crop,
   Pipette,
@@ -35,6 +37,9 @@ import {
   Minus,
   Square,
   Circle,
+  Pentagon,
+  Star,
+  ArrowRight,
   PaintBucket,
   Palette,
   Stamp,
@@ -46,6 +51,7 @@ import {
   CircleDashed,
   Lasso,
   Wand2,
+  Heart,
 } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
 import type { Tool, BlendMode } from './types'
@@ -55,12 +61,18 @@ import { FilterPanel } from './components/FilterPanel'
 import { ExportDialog } from './components/ExportDialog'
 import { TextDialog } from './components/TextDialog'
 import { HistoryPanel } from './components/HistoryPanel'
+import { ElementsPanel } from './components/ElementsPanel'
+import { TextEffectsPanel } from './components/TextEffectsPanel'
+import { TextPropertiesPanel } from './components/TextPropertiesPanel'
+import { MagicPanel } from './components/MagicPanel'
+import { TextPanel } from './components/TextPanel'
 import { ToolDropdown } from './components/ToolDropdown'
 import { ShortcutHelpDialog } from './components/ShortcutHelpDialog'
 import { ToastContainer } from './components/Toast'
+import { Sparkles, Shapes } from 'lucide-react'
 
-// Tool definitions with groups
-const TOOLS: { id: Tool; icon: React.ReactNode; label: string; shortcut: string; group: string }[] = [
+// All tool definitions with groups
+const ALL_TOOLS: { id: Tool; icon: React.ReactNode; label: string; shortcut: string; group: string }[] = [
   // Selection Tools
   { id: 'select', icon: <MousePointer className="w-4 h-4" />, label: 'Select', shortcut: 'V', group: 'select' },
   { id: 'rectSelect', icon: <SquareDashed className="w-4 h-4" />, label: 'Rect Select', shortcut: 'Q', group: 'select' },
@@ -68,15 +80,14 @@ const TOOLS: { id: Tool; icon: React.ReactNode; label: string; shortcut: string;
   { id: 'lassoSelect', icon: <Lasso className="w-4 h-4" />, label: 'Lasso', shortcut: 'A', group: 'select' },
   { id: 'magicWand', icon: <Wand2 className="w-4 h-4" />, label: 'Magic Wand', shortcut: 'F', group: 'select' },
   { id: 'move', icon: <Move className="w-4 h-4" />, label: 'Move', shortcut: 'M', group: 'select' },
+  { id: 'freeTransform', icon: <Maximize2 className="w-4 h-4" />, label: 'Free Transform', shortcut: '\\', group: 'select' },
   // Drawing Tools
   { id: 'brush', icon: <Paintbrush className="w-4 h-4" />, label: 'Brush', shortcut: 'B', group: 'draw' },
   { id: 'pencil', icon: <Pencil className="w-4 h-4" />, label: 'Pencil', shortcut: 'P', group: 'draw' },
   { id: 'eraser', icon: <Eraser className="w-4 h-4" />, label: 'Eraser', shortcut: 'E', group: 'draw' },
-  // Shape Tools
-  { id: 'line', icon: <Minus className="w-4 h-4" />, label: 'Line', shortcut: 'L', group: 'shape' },
-  { id: 'rectangle', icon: <Square className="w-4 h-4" />, label: 'Rectangle', shortcut: 'R', group: 'shape' },
-  { id: 'ellipse', icon: <Circle className="w-4 h-4" />, label: 'Ellipse', shortcut: 'O', group: 'shape' },
-  // Fill Tools
+  { id: 'highlighter', icon: <Highlighter className="w-4 h-4" />, label: 'Highlighter', shortcut: 'Z', group: 'draw' },
+  { id: 'spray', icon: <SprayCan className="w-4 h-4" />, label: 'Spray', shortcut: 'X', group: 'draw' },
+  // Fill Tools (Shapes are now in Elements panel)
   { id: 'bucket', icon: <PaintBucket className="w-4 h-4" />, label: 'Bucket', shortcut: 'K', group: 'fill' },
   { id: 'gradient', icon: <Palette className="w-4 h-4" />, label: 'Gradient', shortcut: 'G', group: 'fill' },
   // Retouch Tools
@@ -84,21 +95,173 @@ const TOOLS: { id: Tool; icon: React.ReactNode; label: string; shortcut: string;
   { id: 'dodge', icon: <Sun className="w-4 h-4" />, label: 'Dodge', shortcut: 'D', group: 'retouch' },
   { id: 'burn', icon: <Moon className="w-4 h-4" />, label: 'Burn', shortcut: 'N', group: 'retouch' },
   { id: 'clone', icon: <Stamp className="w-4 h-4" />, label: 'Clone', shortcut: 'S', group: 'retouch' },
+  { id: 'heal', icon: <Heart className="w-4 h-4" />, label: 'Heal', shortcut: '/', group: 'retouch' },
   // Other Tools
   { id: 'text', icon: <Type className="w-4 h-4" />, label: 'Text', shortcut: 'T', group: 'other' },
   { id: 'crop', icon: <Crop className="w-4 h-4" />, label: 'Crop', shortcut: 'C', group: 'other' },
   { id: 'eyedropper', icon: <Pipette className="w-4 h-4" />, label: 'Eyedropper', shortcut: 'I', group: 'other' },
 ]
 
-// Tool groups for dropdown menu
+// Tool groups for dropdown menu (Shapes moved to Elements panel)
 const TOOL_GROUPS = [
   { id: 'select', label: 'Selection', icon: <MousePointer className="w-4 h-4" /> },
   { id: 'draw', label: 'Drawing', icon: <Paintbrush className="w-4 h-4" /> },
-  { id: 'shape', label: 'Shapes', icon: <Square className="w-4 h-4" /> },
   { id: 'fill', label: 'Fill', icon: <PaintBucket className="w-4 h-4" /> },
   { id: 'retouch', label: 'Retouch', icon: <Droplets className="w-4 h-4" /> },
   { id: 'other', label: 'Other', icon: <Type className="w-4 h-4" /> },
 ]
+
+// Compact Tool Bar Component for top toolbar
+function CompactToolBar() {
+  const { activeTool, setActiveTool, disabledTools } = useImageEditorStore()
+  const enabledTools = ALL_TOOLS.filter(tool => !disabledTools.includes(tool.id))
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {enabledTools.map((tool) => (
+        <button
+          key={tool.id}
+          onClick={() => setActiveTool(tool.id)}
+          className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+            activeTool === tool.id
+              ? 'bg-violet-600 text-white'
+              : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+          }`}
+          title={`${tool.label} (${tool.shortcut})`}
+        >
+          {tool.icon}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Inline Tool Options for toolbar
+function InlineToolOptions() {
+  const {
+    activeTool,
+    brushSettings,
+    setBrushSettings,
+    eraserSettings,
+    setEraserSettings,
+    bucketSettings,
+    setBucketSettings,
+    gradientSettings,
+    setGradientSettings,
+    retouchSettings,
+    setRetouchSettings,
+    cloneSettings,
+    setCloneSettings,
+    addRecentColor,
+  } = useImageEditorStore()
+
+  // Show size slider for drawing tools
+  const sizeTools = ['brush', 'pencil', 'eraser', 'highlighter', 'spray', 'blur', 'dodge', 'burn', 'clone', 'heal']
+  const colorTools = ['brush', 'pencil', 'highlighter', 'spray', 'bucket']
+
+  if (!sizeTools.includes(activeTool) && !colorTools.includes(activeTool) && activeTool !== 'gradient') {
+    return null
+  }
+
+  const getSize = () => {
+    if (activeTool === 'eraser') return eraserSettings.size
+    if (['blur', 'dodge', 'burn', 'heal'].includes(activeTool)) return retouchSettings.size
+    if (activeTool === 'clone') return cloneSettings.size
+    return brushSettings.size
+  }
+
+  const setSize = (size: number) => {
+    if (activeTool === 'eraser') setEraserSettings({ size })
+    else if (['blur', 'dodge', 'burn', 'heal'].includes(activeTool)) setRetouchSettings({ size })
+    else if (activeTool === 'clone') setCloneSettings({ size })
+    else setBrushSettings({ size })
+  }
+
+  const maxSize = activeTool === 'clone' ? 200 : ['blur', 'dodge', 'burn', 'heal'].includes(activeTool) ? 100 : 500
+
+  return (
+    <div className="flex items-center gap-3 ml-3 pl-3 border-l border-gray-700">
+      {/* Size */}
+      {sizeTools.includes(activeTool) && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 w-8">{getSize()}px</span>
+          <input
+            type="range"
+            min="1"
+            max={maxSize}
+            value={getSize()}
+            onChange={(e) => setSize(Number(e.target.value))}
+            className="w-24 h-1 accent-violet-500"
+          />
+        </div>
+      )}
+
+      {/* Color */}
+      {colorTools.includes(activeTool) && (
+        <input
+          type="color"
+          value={brushSettings.color}
+          onChange={(e) => {
+            setBrushSettings({ color: e.target.value })
+            addRecentColor(e.target.value)
+          }}
+          className="w-7 h-7 rounded cursor-pointer border border-gray-600"
+        />
+      )}
+
+      {/* Gradient colors */}
+      {activeTool === 'gradient' && (
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={gradientSettings.startColor}
+            onChange={(e) => setGradientSettings({ startColor: e.target.value })}
+            className="w-6 h-6 rounded cursor-pointer border border-gray-600"
+            title="Start"
+          />
+          <span className="text-gray-500">→</span>
+          <input
+            type="color"
+            value={gradientSettings.endColor}
+            onChange={(e) => setGradientSettings({ endColor: e.target.value })}
+            className="w-6 h-6 rounded cursor-pointer border border-gray-600"
+            title="End"
+          />
+          <div className="flex gap-1 ml-1">
+            <button
+              onClick={() => setGradientSettings({ type: 'linear' })}
+              className={`px-2 py-0.5 text-xs rounded ${gradientSettings.type === 'linear' ? 'bg-violet-600' : 'bg-gray-700'}`}
+            >
+              Linear
+            </button>
+            <button
+              onClick={() => setGradientSettings({ type: 'radial' })}
+              className={`px-2 py-0.5 text-xs rounded ${gradientSettings.type === 'radial' ? 'bg-violet-600' : 'bg-gray-700'}`}
+            >
+              Radial
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tolerance for bucket */}
+      {activeTool === 'bucket' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">Tol:</span>
+          <input
+            type="range"
+            min="0"
+            max="255"
+            value={bucketSettings.tolerance}
+            onChange={(e) => setBucketSettings({ tolerance: Number(e.target.value) })}
+            className="w-16 h-1 accent-violet-500"
+          />
+          <span className="text-xs text-gray-500 w-6">{bucketSettings.tolerance}</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function ImageEditorApp() {
   const { t } = useTranslation()
@@ -107,7 +270,7 @@ export function ImageEditorApp() {
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectWidth, setNewProjectWidth] = useState(1920)
   const [newProjectHeight, setNewProjectHeight] = useState(1080)
-  const [rightPanel, setRightPanel] = useState<'filters' | 'history'>('filters')
+  // rightPanelTab is now from the store for persistence
   const [showTextDialog, setShowTextDialog] = useState(false)
   const [textPosition, setTextPosition] = useState({ x: 0, y: 0 })
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200)
@@ -148,6 +311,8 @@ export function ImageEditorApp() {
     savedProjects,
     activeTool,
     setActiveTool,
+    rightPanelTab,
+    setRightPanelTab,
     brushSettings,
     setBrushSettings,
     eraserSettings,
@@ -188,10 +353,18 @@ export function ImageEditorApp() {
     redo,
     canUndo,
     canRedo,
+    loadProjectsFromBackend,
+    isLoading,
+    triggerFitToView,
   } = useImageEditorStore()
 
-  // Only show projects that have saved data
-  const availableProjects = projects.filter((p) => savedProjects[p.id])
+  // Load projects from backend on mount
+  useEffect(() => {
+    loadProjectsFromBackend()
+  }, [loadProjectsFromBackend])
+
+  // Projects come from backend now, not local savedProjects
+  const availableProjects = projects
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -266,9 +439,6 @@ export function ImageEditorApp() {
         b: 'brush',
         p: 'pencil',
         e: 'eraser',
-        l: 'line',
-        r: 'rectangle',
-        o: 'ellipse',
         k: 'bucket',
         g: 'gradient',
         j: 'blur',
@@ -393,7 +563,12 @@ export function ImageEditorApp() {
 
         {/* Projects Grid */}
         <div className="flex-1 overflow-auto p-4">
-          {availableProjects.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm">{t('common.loading')}</p>
+            </div>
+          ) : availableProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <ImageIcon className="w-16 h-16 mb-4 opacity-50" />
               <p className="text-lg mb-2">{t('imageeditor.noProjects')}</p>
@@ -531,552 +706,48 @@ export function ImageEditorApp() {
   // Editor View
   return (
     <div className="h-full flex flex-col bg-gray-900 text-white">
-      {/* Toolbar */}
+      {/* Top Toolbar - Tools + Options + Project Name */}
       <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-800 bg-gray-850">
-        {/* Left: Back & Tools */}
-        <div className="flex items-center gap-1">
+        {/* Left: Back button + Tools + Options */}
+        <div className="flex items-center gap-2 flex-1">
           <button
             onClick={closeProject}
-            className="p-1.5 hover:bg-gray-700 rounded transition-colors"
+            className="p-1.5 hover:bg-gray-700 rounded transition-colors shrink-0"
             title={t('imageeditor.back')}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="w-px h-6 bg-gray-700 mx-1" />
-          {/* Tool Dropdowns */}
-          {TOOL_GROUPS.map((group) => (
-            <ToolDropdown
-              key={group.id}
-              label={group.label}
-              groupIcon={group.icon}
-              tools={TOOLS.filter((t) => t.group === group.id)}
-              activeTool={activeTool}
-              onSelectTool={setActiveTool}
-            />
-          ))}
+          <div className="w-px h-6 bg-gray-700 shrink-0" />
+          <CompactToolBar />
+          <InlineToolOptions />
         </div>
 
-        {/* Center: Project Name */}
-        <div className="text-sm font-medium text-gray-300">
-          {currentProject?.name || 'Untitled'}
-        </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={undo}
-            disabled={!canUndo()}
-            className="p-2 hover:bg-gray-700 rounded transition-colors disabled:opacity-30"
-            title={t('imageeditor.undo')}
-          >
-            <Undo2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={redo}
-            disabled={!canRedo()}
-            className="p-2 hover:bg-gray-700 rounded transition-colors disabled:opacity-30"
-            title={t('imageeditor.redo')}
-          >
-            <Redo2 className="w-4 h-4" />
-          </button>
-          <div className="w-px h-6 bg-gray-700 mx-1" />
-          <button
-            onClick={() => setShowExportDialog(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 rounded text-sm font-medium transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            {t('imageeditor.export')}
-          </button>
+        {/* Right: Editable Project Name */}
+        <div className="flex items-center shrink-0">
+          <input
+            type="text"
+            value={currentProject?.name || ''}
+            onChange={(e) => {
+              useImageEditorStore.getState().updateProjectName(e.target.value)
+            }}
+            className="bg-transparent text-sm font-medium text-gray-300 border-b border-transparent hover:border-gray-600 focus:border-violet-500 focus:outline-none px-2 py-1 text-right w-48"
+            placeholder="Projektname"
+          />
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel: Tool Settings */}
-        <div className="w-56 border-r border-gray-800 overflow-y-auto">
-          <div className="p-3">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-              {activeTool === 'brush' ? t('imageeditor.brush') : activeTool === 'eraser' ? t('imageeditor.eraser') : t('imageeditor.tool')}
-            </h3>
-
-            {(activeTool === 'brush' || activeTool === 'eraser') && (
-              <div className="space-y-4">
-                {/* Size */}
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.size')}</span>
-                    <span>{activeTool === 'brush' ? brushSettings.size : eraserSettings.size}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="500"
-                    value={activeTool === 'brush' ? brushSettings.size : eraserSettings.size}
-                    onChange={(e) =>
-                      activeTool === 'brush'
-                        ? setBrushSettings({ size: Number(e.target.value) })
-                        : setEraserSettings({ size: Number(e.target.value) })
-                    }
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-
-                {/* Hardness */}
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.hardness')}</span>
-                    <span>{activeTool === 'brush' ? brushSettings.hardness : eraserSettings.hardness}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={activeTool === 'brush' ? brushSettings.hardness : eraserSettings.hardness}
-                    onChange={(e) =>
-                      activeTool === 'brush'
-                        ? setBrushSettings({ hardness: Number(e.target.value) })
-                        : setEraserSettings({ hardness: Number(e.target.value) })
-                    }
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-
-                {/* Opacity */}
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.opacity')}</span>
-                    <span>{activeTool === 'brush' ? brushSettings.opacity : eraserSettings.opacity}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={activeTool === 'brush' ? brushSettings.opacity : eraserSettings.opacity}
-                    onChange={(e) =>
-                      activeTool === 'brush'
-                        ? setBrushSettings({ opacity: Number(e.target.value) })
-                        : setEraserSettings({ opacity: Number(e.target.value) })
-                    }
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-
-                {/* Color (only for brush) */}
-                {activeTool === 'brush' && (
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-400">{t('imageeditor.color')}</span>
-                      <span>{brushSettings.color}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={brushSettings.color}
-                        onChange={(e) => {
-                          setBrushSettings({ color: e.target.value })
-                          addRecentColor(e.target.value)
-                        }}
-                        className="w-10 h-10 rounded cursor-pointer border-none"
-                      />
-                      <div className="flex-1">
-                        {/* Recent colors */}
-                        <div className="text-xs text-gray-500 mb-1">{t('imageeditor.recentColors')}</div>
-                        <div className="grid grid-cols-5 gap-1">
-                          {recentColors.map((color, index) => (
-                            <button
-                              key={`${color}-${index}`}
-                              onClick={() => setBrushSettings({ color })}
-                              className={`w-5 h-5 rounded border ${
-                                brushSettings.color.toLowerCase() === color.toLowerCase()
-                                  ? 'border-violet-500 ring-1 ring-violet-500'
-                                  : 'border-gray-600'
-                              }`}
-                              style={{ backgroundColor: color }}
-                              title={color}
-                            />
-                          ))}
-                        </div>
-                        {/* Basic colors */}
-                        <div className="text-xs text-gray-500 mt-2 mb-1">{t('imageeditor.basicColors')}</div>
-                        <div className="grid grid-cols-5 gap-1">
-                          {['#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#808080', '#c0c0c0'].map(
-                            (color) => (
-                              <button
-                                key={color}
-                                onClick={() => {
-                                  setBrushSettings({ color })
-                                  addRecentColor(color)
-                                }}
-                                className={`w-5 h-5 rounded border ${
-                                  brushSettings.color.toLowerCase() === color.toLowerCase()
-                                    ? 'border-violet-500 ring-1 ring-violet-500'
-                                    : 'border-gray-600'
-                                }`}
-                                style={{ backgroundColor: color }}
-                                title={color}
-                              />
-                            )
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTool === 'text' && (
-              <div className="text-sm text-gray-400">
-                {t('imageeditor.textHelp')}
-              </div>
-            )}
-
-            {activeTool === 'crop' && (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-400">
-                  {t('imageeditor.cropHelp')}
-                </p>
-                {crop.active && (
-                  <div className="space-y-2">
-                    <div className="text-xs text-gray-500">
-                      {Math.round(crop.width)} × {Math.round(crop.height)} px
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={applyCrop}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 rounded text-sm font-medium transition-colors"
-                      >
-                        <Check className="w-4 h-4" />
-                        {t('imageeditor.applyCrop')}
-                      </button>
-                      <button
-                        onClick={cancelCrop}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                        {t('common.cancel')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Pencil Tool */}
-            {activeTool === 'pencil' && (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.size')}</span>
-                    <span>{brushSettings.size}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    value={brushSettings.size}
-                    onChange={(e) => setBrushSettings({ size: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.color')}</span>
-                  </div>
-                  <input
-                    type="color"
-                    value={brushSettings.color}
-                    onChange={(e) => {
-                      setBrushSettings({ color: e.target.value })
-                      addRecentColor(e.target.value)
-                    }}
-                    className="w-full h-8 rounded cursor-pointer border-none"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Shape Tools (Line, Rectangle, Ellipse) */}
-            {['line', 'rectangle', 'ellipse'].includes(activeTool) && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShapeSettings({ filled: true, stroked: false })}
-                    className={`flex-1 py-1.5 rounded text-xs ${shapeSettings.filled && !shapeSettings.stroked ? 'bg-violet-600' : 'bg-gray-700'}`}
-                  >
-                    {t('imageeditor.filled')}
-                  </button>
-                  <button
-                    onClick={() => setShapeSettings({ filled: false, stroked: true })}
-                    className={`flex-1 py-1.5 rounded text-xs ${!shapeSettings.filled && shapeSettings.stroked ? 'bg-violet-600' : 'bg-gray-700'}`}
-                  >
-                    {t('imageeditor.stroke')}
-                  </button>
-                  <button
-                    onClick={() => setShapeSettings({ filled: true, stroked: true })}
-                    className={`flex-1 py-1.5 rounded text-xs ${shapeSettings.filled && shapeSettings.stroked ? 'bg-violet-600' : 'bg-gray-700'}`}
-                  >
-                    {t('imageeditor.both')}
-                  </button>
-                </div>
-                {(shapeSettings.filled || activeTool === 'line') && (
-                  <div>
-                    <div className="text-xs text-gray-400 mb-1">{t('imageeditor.fillColor')}</div>
-                    <input
-                      type="color"
-                      value={shapeSettings.fillColor}
-                      onChange={(e) => setShapeSettings({ fillColor: e.target.value })}
-                      className="w-full h-8 rounded cursor-pointer border-none"
-                    />
-                  </div>
-                )}
-                {shapeSettings.stroked && activeTool !== 'line' && (
-                  <div>
-                    <div className="text-xs text-gray-400 mb-1">{t('imageeditor.strokeColor')}</div>
-                    <input
-                      type="color"
-                      value={shapeSettings.strokeColor}
-                      onChange={(e) => setShapeSettings({ strokeColor: e.target.value })}
-                      className="w-full h-8 rounded cursor-pointer border-none"
-                    />
-                  </div>
-                )}
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.strokeWidth')}</span>
-                    <span>{shapeSettings.strokeWidth}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="50"
-                    value={shapeSettings.strokeWidth}
-                    onChange={(e) => setShapeSettings({ strokeWidth: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">{t('imageeditor.shiftForSquare')}</p>
-              </div>
-            )}
-
-            {/* Bucket Fill Tool */}
-            {activeTool === 'bucket' && (
-              <div className="space-y-4">
-                <div>
-                  <div className="text-xs text-gray-400 mb-1">{t('imageeditor.fillColor')}</div>
-                  <input
-                    type="color"
-                    value={brushSettings.color}
-                    onChange={(e) => {
-                      setBrushSettings({ color: e.target.value })
-                      addRecentColor(e.target.value)
-                    }}
-                    className="w-full h-8 rounded cursor-pointer border-none"
-                  />
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.tolerance')}</span>
-                    <span>{bucketSettings.tolerance}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={bucketSettings.tolerance}
-                    onChange={(e) => setBucketSettings({ tolerance: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Gradient Tool */}
-            {activeTool === 'gradient' && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setGradientSettings({ type: 'linear' })}
-                    className={`flex-1 py-1.5 rounded text-xs ${gradientSettings.type === 'linear' ? 'bg-violet-600' : 'bg-gray-700'}`}
-                  >
-                    {t('imageeditor.linear')}
-                  </button>
-                  <button
-                    onClick={() => setGradientSettings({ type: 'radial' })}
-                    className={`flex-1 py-1.5 rounded text-xs ${gradientSettings.type === 'radial' ? 'bg-violet-600' : 'bg-gray-700'}`}
-                  >
-                    {t('imageeditor.radial')}
-                  </button>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 mb-1">{t('imageeditor.startColor')}</div>
-                  <input
-                    type="color"
-                    value={gradientSettings.startColor}
-                    onChange={(e) => setGradientSettings({ startColor: e.target.value })}
-                    className="w-full h-8 rounded cursor-pointer border-none"
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 mb-1">{t('imageeditor.endColor')}</div>
-                  <input
-                    type="color"
-                    value={gradientSettings.endColor}
-                    onChange={(e) => setGradientSettings({ endColor: e.target.value })}
-                    className="w-full h-8 rounded cursor-pointer border-none"
-                  />
-                </div>
-                <div
-                  className="h-6 rounded"
-                  style={{
-                    background: gradientSettings.type === 'linear'
-                      ? `linear-gradient(to right, ${gradientSettings.startColor}, ${gradientSettings.endColor})`
-                      : `radial-gradient(circle, ${gradientSettings.startColor}, ${gradientSettings.endColor})`
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Retouch Tools (Blur, Dodge, Burn) */}
-            {['blur', 'sharpen', 'smudge', 'dodge', 'burn'].includes(activeTool) && (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.size')}</span>
-                    <span>{retouchSettings.size}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="100"
-                    value={retouchSettings.size}
-                    onChange={(e) => setRetouchSettings({ size: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.strength')}</span>
-                    <span>{retouchSettings.strength}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    value={retouchSettings.strength}
-                    onChange={(e) => setRetouchSettings({ strength: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">
-                  {activeTool === 'blur' && t('imageeditor.blurHelp')}
-                  {activeTool === 'dodge' && t('imageeditor.dodgeHelp')}
-                  {activeTool === 'burn' && t('imageeditor.burnHelp')}
-                </p>
-              </div>
-            )}
-
-            {/* Clone Stamp Tool */}
-            {activeTool === 'clone' && (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.size')}</span>
-                    <span>{cloneSettings.size}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="200"
-                    value={cloneSettings.size}
-                    onChange={(e) => setCloneSettings({ size: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.hardness')}</span>
-                    <span>{cloneSettings.hardness}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={cloneSettings.hardness}
-                    onChange={(e) => setCloneSettings({ hardness: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">{t('imageeditor.cloneHelp')}</p>
-                {cloneSettings.sourceX !== null && (
-                  <div className="text-xs text-green-400">
-                    {t('imageeditor.sourceSet')}: ({Math.round(cloneSettings.sourceX)}, {Math.round(cloneSettings.sourceY!)})
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Selection Tools */}
-            {['rectSelect', 'ellipseSelect', 'lassoSelect'].includes(activeTool) && (
-              <div className="space-y-4">
-                <p className="text-xs text-gray-400">
-                  {activeTool === 'rectSelect' && t('imageeditor.rectSelectHelp')}
-                  {activeTool === 'ellipseSelect' && t('imageeditor.ellipseSelectHelp')}
-                  {activeTool === 'lassoSelect' && t('imageeditor.lassoSelectHelp')}
-                </p>
-              </div>
-            )}
-
-            {/* Magic Wand Tool */}
-            {activeTool === 'magicWand' && (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.tolerance')}</span>
-                    <span>{bucketSettings.tolerance}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={bucketSettings.tolerance}
-                    onChange={(e) => setBucketSettings({ tolerance: Number(e.target.value) })}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">{t('imageeditor.magicWandHelp')}</p>
-              </div>
-            )}
-
-            {/* Grid Toggle */}
-            <div className="mt-6 pt-4 border-t border-gray-800">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showGrid}
-                  onChange={(e) => setShowGrid(e.target.checked)}
-                  className="w-4 h-4 accent-violet-500"
-                />
-                <Grid3X3 className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-400">{t('imageeditor.showGrid')}</span>
-              </label>
-              {showGrid && (
-                <div className="mt-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">{t('imageeditor.gridSize')}</span>
-                    <span>{gridSize}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={gridSize}
-                    onChange={(e) => setGridSize(Number(e.target.value))}
-                    className="w-full accent-violet-500"
-                  />
-                </div>
-              )}
-            </div>
+        {/* Left Panel: Layers Only */}
+        <div className="w-[270px] border-r border-gray-800 flex flex-col overflow-hidden">
+          {/* Layers Header */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 shrink-0 border-b border-gray-700">
+            <Layers className="w-4 h-4 text-gray-400" />
+            <span className="text-xs font-semibold text-gray-300 uppercase">{t('imageeditor.layers')}</span>
+          </div>
+          {/* Layers Content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <LayerPanel />
           </div>
         </div>
 
@@ -1105,77 +776,84 @@ export function ImageEditorApp() {
               <ZoomIn className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setZoom(100)}
+              onClick={() => triggerFitToView()}
               className="p-1 hover:bg-gray-700 rounded ml-2"
-              title="Fit"
+              title="Fit to View"
             >
               <Maximize2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Right Panel: Layers (always visible) & Filters/History (tabs) */}
+        {/* Right Panel: Elements, Text, Magic, Filters, History */}
         <div ref={rightPanelRef} className="w-64 border-l border-gray-800 flex flex-col overflow-hidden">
-          {/* Layers Section - Always Visible */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
-              <div className="flex items-center gap-1.5 text-xs font-medium">
-                <Layers className="w-3.5 h-3.5" />
-                {t('imageeditor.layers')}
+          {/* Tab Buttons */}
+          <div className="flex border-b border-gray-800 shrink-0">
+            <button
+              onClick={() => setRightPanelTab('elements')}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs transition-colors ${
+                rightPanelTab === 'elements'
+                  ? 'text-white border-b-2 border-violet-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Shapes className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setRightPanelTab('text')}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs transition-colors ${
+                rightPanelTab === 'text'
+                  ? 'text-white border-b-2 border-violet-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Type className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setRightPanelTab('magic')}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs transition-colors ${
+                rightPanelTab === 'magic'
+                  ? 'text-white border-b-2 border-violet-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setRightPanelTab('filters')}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs transition-colors ${
+                rightPanelTab === 'filters'
+                  ? 'text-white border-b-2 border-violet-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setRightPanelTab('history')}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs transition-colors ${
+                rightPanelTab === 'history'
+                  ? 'text-white border-b-2 border-violet-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <History className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Text Properties - shown when text layer is selected */}
+            {currentProject?.layers.find((l) => l.id === selectedLayerId)?.type === 'text' && (
+              <div className="border-b border-gray-700">
+                <TextPropertiesPanel />
+                <TextEffectsPanel />
               </div>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <LayerPanel />
-            </div>
-          </div>
-
-          {/* Resizable Splitter - Improved with larger click area */}
-          <div
-            className="h-3 cursor-ns-resize flex items-center justify-center group relative"
-            onMouseDown={() => setIsResizing(true)}
-          >
-            {/* Background line */}
-            <div className={`absolute inset-x-0 h-px top-1/2 -translate-y-1/2 transition-colors ${
-              isResizing ? 'bg-violet-500' : 'bg-gray-700 group-hover:bg-gray-600'
-            }`} />
-            {/* Drag handle */}
-            <div className={`relative w-12 h-1.5 rounded-full transition-all ${
-              isResizing
-                ? 'bg-violet-500 scale-110'
-                : 'bg-gray-600 group-hover:bg-violet-400 group-hover:scale-105'
-            }`} />
-          </div>
-
-          {/* Filters/History Tabs */}
-          <div className="flex flex-col" style={{ height: bottomPanelHeight }}>
-            <div className="flex border-b border-gray-800">
-              <button
-                onClick={() => setRightPanel('filters')}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-xs transition-colors ${
-                  rightPanel === 'filters'
-                    ? 'text-white border-b-2 border-violet-500'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                {t('imageeditor.filters')}
-              </button>
-              <button
-                onClick={() => setRightPanel('history')}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-xs transition-colors ${
-                  rightPanel === 'history'
-                    ? 'text-white border-b-2 border-violet-500'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <History className="w-3.5 h-3.5" />
-                {t('imageeditor.history')}
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {rightPanel === 'filters' && <FilterPanel />}
-              {rightPanel === 'history' && <HistoryPanel />}
-            </div>
+            )}
+            {rightPanelTab === 'elements' && <ElementsPanel />}
+            {rightPanelTab === 'text' && <TextPanel />}
+            {rightPanelTab === 'magic' && <MagicPanel />}
+            {rightPanelTab === 'filters' && <FilterPanel />}
+            {rightPanelTab === 'history' && <HistoryPanel />}
           </div>
         </div>
       </div>

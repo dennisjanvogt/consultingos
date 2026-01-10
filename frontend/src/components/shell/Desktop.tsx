@@ -115,13 +115,8 @@ export function Desktop() {
         tileAllWindows()
       }
 
-      // Meta/Command key (Mac) or AltGr (Windows) - Toggle App Overview (GNOME-style)
-      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform)
-      const isAppOverviewKey = isMac
-        ? e.key === 'Meta'
-        : e.key === 'AltGraph' || (e.key === 'Alt' && e.location === 2) // AltGr on Windows
-
-      if (isAppOverviewKey && !e.repeat && !isSpotlightOpen) {
+      // + key - Toggle App Overview
+      if ((e.key === '+' || e.key === '=') && !isInput && !e.repeat && !isSpotlightOpen) {
         e.preventDefault()
         setAppOverviewOpen(!isAppOverviewOpen)
       }

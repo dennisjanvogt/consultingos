@@ -6,6 +6,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
+    "create": "Create",
     "search": "Search",
     "loading": "Loading...",
     "error": "Error",
@@ -61,7 +62,7 @@
     "knowledgebase": "Knowledge Base",
     "vault": "Vault",
     "videoeditor": "Video Editor",
-    "imageeditor": "Image Editor",
+    "imageeditor": "Canwa",
     "game2048": "2048",
     "snake": "Snake",
     "tetris": "Tetris",
@@ -205,6 +206,8 @@
     "moveUp": "Move Up",
     "moveDown": "Move Down",
     "blendMode": "Blend Mode",
+    "elements": "Elements",
+    "magic": "Magic",
     "filters": "Filters",
     "brightness": "Brightness",
     "contrast": "Contrast",
@@ -280,7 +283,11 @@
     "mergeDown": "Merge Down",
     "flatten": "Flatten",
     "removeBackground": "Remove Background",
-    "removingBackground": "Removing background..."
+    "removingBackground": "Removing background...",
+    "layer": "Layer",
+    "global": "Global",
+    "editingLayer": "Editing layer",
+    "globalFilterInfo": "Filters will be applied to all layers"
   },
   "whiteboard": {
     "title": "Whiteboard",

@@ -24,6 +24,7 @@ from apps.knowledgebase.api import router as knowledgebase_router
 from apps.terminal.api import router as terminal_router
 from apps.vault.api import router as vault_router
 from apps.videoeditor.api import router as videoeditor_router
+from apps.imageeditor.api import router as imageeditor_router
 
 # Register routers
 api.add_router('/auth/', users_router, tags=['Auth'])
@@ -43,3 +44,4 @@ api.add_router('/knowledgebase/', knowledgebase_router, tags=['Knowledgebase'])
 api.add_router('/terminal/', terminal_router, tags=['Terminal'])
 api.add_router('/vault/', vault_router, tags=['Vault'])
 api.add_router('/videoeditor/', videoeditor_router, tags=['Video Editor'])
+api.add_router('/imageeditor/', imageeditor_router, tags=['Image Editor'])

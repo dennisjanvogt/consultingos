@@ -4,12 +4,18 @@
 export type Tool =
   | 'select'
   | 'move'
+  | 'freeTransform'
   | 'brush'
   | 'pencil'
   | 'eraser'
+  | 'highlighter'
+  | 'spray'
   | 'line'
   | 'rectangle'
   | 'ellipse'
+  | 'polygon'
+  | 'star'
+  | 'arrow'
   | 'bucket'
   | 'gradient'
   | 'text'
@@ -21,6 +27,7 @@ export type Tool =
   | 'dodge'
   | 'burn'
   | 'clone'
+  | 'heal'
   | 'rectSelect'
   | 'ellipseSelect'
   | 'lassoSelect'
@@ -43,6 +50,90 @@ export type BlendMode =
 
 // === Layer Types ===
 export type LayerType = 'image' | 'text' | 'shape' | 'adjustment'
+
+// === Text Effects ===
+export interface TextShadow {
+  enabled: boolean
+  offsetX: number
+  offsetY: number
+  blur: number
+  color: string
+}
+
+export interface TextOutline {
+  enabled: boolean
+  width: number
+  color: string
+}
+
+export interface TextGlow {
+  enabled: boolean
+  color: string
+  intensity: number
+}
+
+export interface TextEffects {
+  shadow: TextShadow
+  outline: TextOutline
+  glow: TextGlow
+  curve: number // -100 to 100 (bend amount)
+}
+
+export const DEFAULT_TEXT_EFFECTS: TextEffects = {
+  shadow: { enabled: false, offsetX: 4, offsetY: 4, blur: 8, color: '#000000' },
+  outline: { enabled: false, width: 2, color: '#000000' },
+  glow: { enabled: false, color: '#ff00ff', intensity: 20 },
+  curve: 0,
+}
+
+// === Layer Effects (for image/shape layers) ===
+export interface DropShadow {
+  enabled: boolean
+  offsetX: number
+  offsetY: number
+  blur: number
+  spread: number
+  color: string
+  opacity: number
+}
+
+export interface InnerShadow {
+  enabled: boolean
+  offsetX: number
+  offsetY: number
+  blur: number
+  color: string
+  opacity: number
+}
+
+export interface OuterGlow {
+  enabled: boolean
+  blur: number
+  spread: number
+  color: string
+  opacity: number
+}
+
+export interface InnerGlow {
+  enabled: boolean
+  blur: number
+  color: string
+  opacity: number
+}
+
+export interface LayerEffects {
+  dropShadow: DropShadow
+  innerShadow: InnerShadow
+  outerGlow: OuterGlow
+  innerGlow: InnerGlow
+}
+
+export const DEFAULT_LAYER_EFFECTS: LayerEffects = {
+  dropShadow: { enabled: false, offsetX: 5, offsetY: 5, blur: 10, spread: 0, color: '#000000', opacity: 50 },
+  innerShadow: { enabled: false, offsetX: 2, offsetY: 2, blur: 5, color: '#000000', opacity: 50 },
+  outerGlow: { enabled: false, blur: 15, spread: 5, color: '#ffffff', opacity: 75 },
+  innerGlow: { enabled: false, blur: 10, color: '#ffffff', opacity: 50 },
+}
 
 // === Core Interfaces ===
 
@@ -70,6 +161,11 @@ export interface Layer {
   fontColor?: string
   fontWeight?: number
   textAlign?: 'left' | 'center' | 'right'
+  textEffects?: TextEffects
+  // Layer effects (shadows, glows for image/shape layers)
+  layerEffects?: LayerEffects
+  // Per-layer filters
+  filters?: Filters
 }
 
 export interface ImageProject {

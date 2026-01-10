@@ -2,7 +2,358 @@ import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Download, Image as ImageIcon, Check } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
-import type { ExportSettings } from '../types'
+import type { ExportSettings, Filters, Layer, TextEffects } from '../types'
+import { DEFAULT_TEXT_EFFECTS } from '../types'
+
+// Build CSS filter string from Filters object
+const buildFilterString = (f: Filters): string => {
+  const filterParts: string[] = []
+
+  if (f.brightness !== 0) {
+    filterParts.push(`brightness(${100 + f.brightness}%)`)
+  }
+  if (f.contrast !== 0) {
+    filterParts.push(`contrast(${100 + f.contrast}%)`)
+  }
+  if (f.saturation !== 0) {
+    filterParts.push(`saturate(${100 + f.saturation}%)`)
+  }
+  if (f.hue !== 0) {
+    filterParts.push(`hue-rotate(${f.hue}deg)`)
+  }
+  if (f.blur > 0) {
+    filterParts.push(`blur(${f.blur}px)`)
+  }
+  if (f.grayscale) {
+    filterParts.push('grayscale(100%)')
+  }
+  if (f.sepia) {
+    filterParts.push('sepia(100%)')
+  }
+  if (f.invert) {
+    filterParts.push('invert(100%)')
+  }
+
+  return filterParts.length > 0 ? filterParts.join(' ') : 'none'
+}
+
+// Check if filters need pixel manipulation (not just CSS filters)
+const needsPixelManipulation = (f: Filters): boolean => {
+  return f.sharpen > 0 || f.noise > 0 || f.pixelate > 0 || f.posterize > 0 ||
+         f.vignette > 0 || f.emboss || f.edgeDetect || f.tintAmount > 0
+}
+
+// Apply pixel-based filters to ImageData
+const applyPixelFilters = (ctx: CanvasRenderingContext2D, f: Filters, width: number, height: number) => {
+  const imageData = ctx.getImageData(0, 0, width, height)
+  const data = imageData.data
+
+  // Pixelate (do first as it changes structure)
+  if (f.pixelate > 1) {
+    const size = Math.max(2, Math.floor(f.pixelate))
+    const tempCanvas = document.createElement('canvas')
+    tempCanvas.width = width
+    tempCanvas.height = height
+    const tempCtx = tempCanvas.getContext('2d')
+    if (tempCtx) {
+      const smallWidth = Math.ceil(width / size)
+      const smallHeight = Math.ceil(height / size)
+      tempCtx.drawImage(ctx.canvas, 0, 0, smallWidth, smallHeight)
+      ctx.imageSmoothingEnabled = false
+      ctx.clearRect(0, 0, width, height)
+      ctx.drawImage(tempCanvas, 0, 0, smallWidth, smallHeight, 0, 0, width, height)
+      ctx.imageSmoothingEnabled = true
+      const newImageData = ctx.getImageData(0, 0, width, height)
+      for (let i = 0; i < data.length; i++) {
+        data[i] = newImageData.data[i]
+      }
+    }
+  }
+
+  // Posterize (reduce color levels)
+  if (f.posterize > 0 && f.posterize < 256) {
+    const levels = Math.max(2, f.posterize)
+    const step = 255 / (levels - 1)
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.round(Math.round(data[i] / step) * step)
+      data[i + 1] = Math.round(Math.round(data[i + 1] / step) * step)
+      data[i + 2] = Math.round(Math.round(data[i + 2] / step) * step)
+    }
+  }
+
+  // Noise
+  if (f.noise > 0) {
+    const amount = f.noise * 2.55
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue
+      const noise = (Math.random() - 0.5) * amount
+      data[i] = Math.max(0, Math.min(255, data[i] + noise))
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise))
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise))
+    }
+  }
+
+  // Tint
+  if (f.tintAmount > 0 && f.tintColor) {
+    const hex = f.tintColor.replace('#', '')
+    const tintR = parseInt(hex.substring(0, 2), 16)
+    const tintG = parseInt(hex.substring(2, 4), 16)
+    const tintB = parseInt(hex.substring(4, 6), 16)
+    const amount = f.tintAmount / 100
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue
+      data[i] = data[i] * (1 - amount) + tintR * amount
+      data[i + 1] = data[i + 1] * (1 - amount) + tintG * amount
+      data[i + 2] = data[i + 2] * (1 - amount) + tintB * amount
+    }
+  }
+
+  // Vignette
+  if (f.vignette > 0) {
+    const centerX = width / 2
+    const centerY = height / 2
+    const maxDist = Math.sqrt(centerX * centerX + centerY * centerY)
+    const strength = f.vignette / 100
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4
+        if (data[i + 3] === 0) continue
+        const dx = x - centerX
+        const dy = y - centerY
+        const dist = Math.sqrt(dx * dx + dy * dy) / maxDist
+        const vignette = 1 - (dist * dist * strength)
+        data[i] *= vignette
+        data[i + 1] *= vignette
+        data[i + 2] *= vignette
+      }
+    }
+  }
+
+  // Sharpen (3x3 convolution)
+  if (f.sharpen > 0) {
+    const amount = f.sharpen / 100
+    const kernel = [
+      0, -amount, 0,
+      -amount, 1 + 4 * amount, -amount,
+      0, -amount, 0
+    ]
+    const tempData = new Uint8ClampedArray(data)
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const i = (y * width + x) * 4
+        if (tempData[i + 3] === 0) continue
+        for (let c = 0; c < 3; c++) {
+          let sum = 0
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const ki = ((y + ky) * width + (x + kx)) * 4 + c
+              sum += tempData[ki] * kernel[(ky + 1) * 3 + (kx + 1)]
+            }
+          }
+          data[i + c] = Math.max(0, Math.min(255, sum))
+        }
+      }
+    }
+  }
+
+  // Emboss
+  if (f.emboss) {
+    const kernel = [-2, -1, 0, -1, 1, 1, 0, 1, 2]
+    const tempData = new Uint8ClampedArray(data)
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const i = (y * width + x) * 4
+        if (tempData[i + 3] === 0) continue
+        for (let c = 0; c < 3; c++) {
+          let sum = 128
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const ki = ((y + ky) * width + (x + kx)) * 4 + c
+              sum += tempData[ki] * kernel[(ky + 1) * 3 + (kx + 1)]
+            }
+          }
+          data[i + c] = Math.max(0, Math.min(255, sum))
+        }
+      }
+    }
+  }
+
+  // Edge Detection
+  if (f.edgeDetect) {
+    const kernel = [-1, -1, -1, -1, 8, -1, -1, -1, -1]
+    const tempData = new Uint8ClampedArray(data)
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const i = (y * width + x) * 4
+        if (tempData[i + 3] === 0) continue
+        for (let c = 0; c < 3; c++) {
+          let sum = 0
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const ki = ((y + ky) * width + (x + kx)) * 4 + c
+              sum += tempData[ki] * kernel[(ky + 1) * 3 + (kx + 1)]
+            }
+          }
+          data[i + c] = Math.max(0, Math.min(255, sum))
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0)
+}
+
+// Render curved text along an arc
+const renderCurvedText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  effects: TextEffects,
+  fontColor: string,
+  fontSize: number
+) => {
+  ctx.save()
+
+  const curveAmount = effects.curve / 100
+  const arcHeight = width * 0.3 * Math.abs(curveAmount)
+  const isConvex = curveAmount > 0
+
+  const chord = width * 0.8
+  const radius = arcHeight > 0 ? (arcHeight / 2 + (chord * chord) / (8 * arcHeight)) : 1000000
+
+  const centerY = isConvex ? y + radius : y - radius + fontSize
+  const totalAngle = 2 * Math.asin(chord / (2 * radius))
+
+  const textWidth = ctx.measureText(text).width
+  const startAngle = isConvex ? Math.PI - totalAngle / 2 : totalAngle / 2
+  const anglePerChar = (totalAngle * textWidth) / (text.length * chord)
+
+  ctx.translate(x, centerY)
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    const charWidth = ctx.measureText(char).width
+    const charAngle = startAngle + (i + 0.5) * anglePerChar * (isConvex ? 1 : -1)
+
+    ctx.save()
+    ctx.rotate(charAngle + (isConvex ? Math.PI / 2 : -Math.PI / 2))
+    ctx.translate(0, -radius)
+
+    if (effects.glow.enabled) {
+      ctx.shadowColor = effects.glow.color
+      ctx.shadowBlur = effects.glow.intensity
+      ctx.fillStyle = effects.glow.color
+      ctx.fillText(char, -charWidth / 2, 0)
+    }
+
+    if (effects.shadow.enabled) {
+      ctx.shadowColor = effects.shadow.color
+      ctx.shadowBlur = effects.shadow.blur
+      ctx.shadowOffsetX = effects.shadow.offsetX
+      ctx.shadowOffsetY = effects.shadow.offsetY
+    } else {
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
+    }
+
+    if (effects.outline.enabled) {
+      ctx.strokeStyle = effects.outline.color
+      ctx.lineWidth = effects.outline.width * 2
+      ctx.lineJoin = 'round'
+      ctx.strokeText(char, -charWidth / 2, 0)
+    }
+
+    ctx.fillStyle = fontColor
+    ctx.fillText(char, -charWidth / 2, 0)
+
+    ctx.restore()
+  }
+
+  ctx.restore()
+}
+
+// Render text layer with effects
+const renderTextLayer = (ctx: CanvasRenderingContext2D, layer: Layer) => {
+  if (layer.type !== 'text' || !layer.text) return
+
+  const effects = layer.textEffects || DEFAULT_TEXT_EFFECTS
+  const fontSize = layer.fontSize || 48
+  const fontFamily = layer.fontFamily || 'Arial'
+  const fontWeight = layer.fontWeight || 400
+  const textAlign = layer.textAlign || 'left'
+  const fontColor = layer.fontColor || '#ffffff'
+
+  ctx.save()
+  ctx.globalAlpha = layer.opacity / 100
+  ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+
+  // Apply transforms
+  ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
+  ctx.rotate((layer.rotation * Math.PI) / 180)
+  ctx.translate(-layer.width / 2, -layer.height / 2)
+
+  // Set font
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
+  ctx.textAlign = textAlign
+  ctx.textBaseline = 'top'
+
+  // Calculate text position based on alignment
+  let textX = 0
+  if (textAlign === 'center') {
+    textX = layer.width / 2
+  } else if (textAlign === 'right') {
+    textX = layer.width
+  }
+
+  // Handle curved text
+  if (effects.curve !== 0) {
+    renderCurvedText(ctx, layer.text, textX, fontSize / 2, layer.width, effects, fontColor, fontSize)
+  } else {
+    // Render glow effect
+    if (effects.glow.enabled) {
+      ctx.save()
+      ctx.shadowColor = effects.glow.color
+      ctx.shadowBlur = effects.glow.intensity
+      ctx.shadowOffsetX = 0
+      ctx.shadowOffsetY = 0
+      ctx.fillStyle = effects.glow.color
+      for (let i = 0; i < 3; i++) {
+        ctx.fillText(layer.text, textX, fontSize / 2)
+      }
+      ctx.restore()
+    }
+
+    // Render shadow effect
+    if (effects.shadow.enabled) {
+      ctx.save()
+      ctx.shadowColor = effects.shadow.color
+      ctx.shadowBlur = effects.shadow.blur
+      ctx.shadowOffsetX = effects.shadow.offsetX
+      ctx.shadowOffsetY = effects.shadow.offsetY
+      ctx.fillStyle = fontColor
+      ctx.fillText(layer.text, textX, fontSize / 2)
+      ctx.restore()
+    }
+
+    // Render outline effect
+    if (effects.outline.enabled) {
+      ctx.save()
+      ctx.strokeStyle = effects.outline.color
+      ctx.lineWidth = effects.outline.width * 2
+      ctx.lineJoin = 'round'
+      ctx.strokeText(layer.text, textX, fontSize / 2)
+      ctx.restore()
+    }
+
+    // Render main text
+    ctx.fillStyle = fontColor
+    ctx.fillText(layer.text, textX, fontSize / 2)
+  }
+
+  ctx.restore()
+}
 
 interface ExportDialogProps {
   isOpen: boolean
@@ -25,7 +376,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const { currentProject } = useImageEditorStore()
+  const { currentProject, filterMode, filters: globalFilters } = useImageEditorStore()
 
   const [settings, setSettings] = useState<ExportSettings>({
     format: 'png',
@@ -49,33 +400,78 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Fill background
-      if (settings.backgroundColor !== 'transparent') {
-        ctx.fillStyle = settings.backgroundColor
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-      }
-
-      // Scale for export
+      // Scale for export first
       ctx.scale(settings.scale, settings.scale)
 
-      // Draw each visible layer
+      // Fill background - first with project background, then override if export setting is different
+      if (settings.backgroundColor === 'transparent') {
+        // Use project background color
+        ctx.fillStyle = currentProject.backgroundColor
+        ctx.fillRect(0, 0, currentProject.width, currentProject.height)
+      } else {
+        // Use export setting background
+        ctx.fillStyle = settings.backgroundColor
+        ctx.fillRect(0, 0, currentProject.width, currentProject.height)
+      }
+
+      // Draw each visible layer with filters
       for (const layer of currentProject.layers) {
         if (!layer.visible) continue
 
+        // Handle text layers
+        if (layer.type === 'text' && layer.text) {
+          renderTextLayer(ctx, layer)
+          continue
+        }
+
+        // Handle image layers
         if (layer.imageData) {
           await new Promise<void>((resolve) => {
             const img = new Image()
             img.onload = () => {
-              ctx.save()
-              ctx.globalAlpha = layer.opacity / 100
+              // Determine which filters to apply
+              const activeFilters = filterMode === 'layer' ? (layer.filters || globalFilters) : globalFilters
+              const filterStr = buildFilterString(activeFilters)
+              const needsPixel = needsPixelManipulation(activeFilters)
 
-              // Apply transforms
-              ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
-              ctx.rotate((layer.rotation * Math.PI) / 180)
-              ctx.translate(-layer.width / 2, -layer.height / 2)
+              if (needsPixel) {
+                // Create temp canvas for pixel manipulation
+                const tempCanvas = document.createElement('canvas')
+                tempCanvas.width = layer.width
+                tempCanvas.height = layer.height
+                const tempCtx = tempCanvas.getContext('2d')
+                if (tempCtx) {
+                  // Apply CSS filters first
+                  tempCtx.filter = filterStr
+                  tempCtx.drawImage(img, 0, 0, layer.width, layer.height)
+                  tempCtx.filter = 'none'
 
-              ctx.drawImage(img, 0, 0)
-              ctx.restore()
+                  // Apply pixel filters
+                  applyPixelFilters(tempCtx, activeFilters, layer.width, layer.height)
+
+                  // Draw to main canvas with transforms
+                  ctx.save()
+                  ctx.globalAlpha = layer.opacity / 100
+                  ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+                  ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
+                  ctx.rotate((layer.rotation * Math.PI) / 180)
+                  ctx.translate(-layer.width / 2, -layer.height / 2)
+                  ctx.drawImage(tempCanvas, 0, 0)
+                  ctx.restore()
+                }
+              } else {
+                // Just CSS filters, draw directly
+                ctx.save()
+                ctx.globalAlpha = layer.opacity / 100
+                ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+                ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
+                ctx.rotate((layer.rotation * Math.PI) / 180)
+                ctx.translate(-layer.width / 2, -layer.height / 2)
+                ctx.filter = filterStr
+                ctx.drawImage(img, 0, 0, layer.width, layer.height)
+                ctx.filter = 'none'
+                ctx.restore()
+              }
               resolve()
             }
             img.src = layer.imageData!
@@ -111,7 +507,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
       console.error('Export failed:', error)
       setIsExporting(false)
     }
-  }, [currentProject, settings, onClose])
+  }, [currentProject, settings, onClose, filterMode, globalFilters])
 
   if (!isOpen || !currentProject) return null
 
