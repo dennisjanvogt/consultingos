@@ -98,7 +98,7 @@ export default function LayerLibraryModal({ isOpen, onClose }: LayerLibraryModal
       <div className="bg-gray-800 rounded-lg shadow-xl w-[600px] max-w-[90vw] max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <div className="flex items-center gap-2 text-emerald-400">
+          <div className="flex items-center gap-2 text-green-600">
             <Library className="w-5 h-5" />
             <h3 className="font-semibold">
               {isGerman ? 'Asset-Bibliothek' : 'Asset Library'}
@@ -124,7 +124,7 @@ export default function LayerLibraryModal({ isOpen, onClose }: LayerLibraryModal
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={isGerman ? 'Assets durchsuchen...' : 'Search assets...'}
-              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 text-sm"
             />
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function LayerLibraryModal({ isOpen, onClose }: LayerLibraryModal
                 <div
                   key={asset.id}
                   onClick={() => handleInsert(asset)}
-                  className="group relative bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all"
+                  className="group relative bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-green-600 transition-all"
                 >
                   {/* Thumbnail */}
                   <div className="aspect-square bg-[repeating-conic-gradient(#374151_0%_25%,#1f2937_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-2">
@@ -186,11 +186,11 @@ export default function LayerLibraryModal({ isOpen, onClose }: LayerLibraryModal
                               setEditingName('')
                             }
                           }}
-                          className="flex-1 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="flex-1 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-xs focus:outline-none focus:ring-1 focus:ring-green-600"
                         />
                         <button
                           onClick={handleSaveEdit}
-                          className="p-1 hover:bg-gray-700 rounded text-emerald-400"
+                          className="p-1 hover:bg-gray-700 rounded text-green-600"
                         >
                           <Check className="w-3 h-3" />
                         </button>

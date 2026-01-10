@@ -518,7 +518,7 @@ export function LayerPanel() {
           </button>
           <button
             onClick={() => setIsLibraryOpen(true)}
-            className="p-1.5 hover:bg-gray-700 rounded text-emerald-400"
+            className="p-1.5 hover:bg-gray-700 rounded text-green-600"
             title={isGerman ? 'Asset-Bibliothek' : 'Asset Library'}
           >
             <Library className="w-4 h-4" />
@@ -706,7 +706,7 @@ export function LayerPanel() {
                     closeContextMenu()
                   }}
                   disabled={targetLayer.locked || !targetLayer.imageData}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30 text-emerald-400"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors disabled:opacity-30 text-green-600"
                 >
                   <Library className="w-4 h-4" />
                   {isGerman ? 'In Bibliothek speichern' : 'Save to Library'}
@@ -880,7 +880,7 @@ export function LayerPanel() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-gray-800 rounded-lg shadow-xl w-96 max-w-[90vw]">
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <div className="flex items-center gap-2 text-emerald-400">
+              <div className="flex items-center gap-2 text-green-600">
                 <Library className="w-5 h-5" />
                 <h3 className="font-semibold">
                   {isGerman ? 'In Bibliothek speichern' : 'Save to Library'}
@@ -916,7 +916,7 @@ export function LayerPanel() {
                   }
                 }}
                 placeholder={isGerman ? 'z.B. "Logo-Variante 1"' : 'e.g. "Logo Variant 1"'}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
               />
               <div className="flex justify-end gap-2 mt-4">
                 <button
@@ -931,7 +931,7 @@ export function LayerPanel() {
                 <button
                   onClick={handleSaveToLibrary}
                   disabled={!libraryAssetName.trim()}
-                  className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 py-2 text-sm bg-green-700 hover:bg-green-800 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   <Library className="w-4 h-4" />
                   {isGerman ? 'Speichern' : 'Save'}
