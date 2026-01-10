@@ -281,6 +281,8 @@ interface ImageEditorState {
   extractedColors: string[]
   generateAIImage: (prompt: string) => Promise<void>
   editImageWithAI: (layerId: string, prompt: string) => Promise<void>
+  editLayerWithContext: (layerId: string, instruction: string) => Promise<void>
+  isEditingLayerWithContext: boolean
   applyAIFilter: (layerId: string, filterType: string) => Promise<void>
   upscaleImage: (layerId: string, scale: number) => Promise<void>
   extractColorPalette: (layerId: string) => Promise<void>
@@ -343,6 +345,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
       isAutoEnhancing: false,
       isGeneratingImage: false,
       isEditingImage: false,
+      isEditingLayerWithContext: false,
       isApplyingFilter: false,
       isUpscaling: false,
       isExtractingColors: false,
@@ -2622,6 +2625,163 @@ export const useImageEditorStore = create<ImageEditorState>()(
           console.error('AI image edit failed:', error)
           set({ isEditingImage: false })
           showToast('Bearbeitung fehlgeschlagen', 'error')
+        }
+      },
+
+      // AI Context-Aware Layer Editing - Two-step process:
+      // 1. Analysis LLM analyzes composite + layer to generate detailed prompt
+      // 2. Image generation model creates new layer based on that prompt
+      editLayerWithContext: async (layerId, instruction) => {
+        const { currentProject, pushHistory, showToast, generateAIImage } = get()
+        if (!currentProject) return
+
+        const layer = currentProject.layers.find((l) => l.id === layerId)
+        if (!layer || !layer.imageData) {
+          showToast('Keine Ebene mit Bilddaten ausgewählt', 'error')
+          return
+        }
+
+        set({ isEditingLayerWithContext: true })
+        showToast('Analysiere Bild und Ebene...', 'info')
+
+        try {
+          // Import AI store to get API key and models
+          const { useAIStore } = await import('@/stores/aiStore')
+          const aiState = useAIStore.getState()
+
+          // Fetch user API key if not already loaded
+          let apiKey = aiState.userApiKey
+          if (!apiKey) {
+            apiKey = await aiState.fetchUserApiKey()
+          }
+
+          if (!apiKey) {
+            throw new Error('Kein API-Schlüssel konfiguriert')
+          }
+
+          const analysisModel = aiState.analysisModel || 'google/gemini-2.0-flash-001'
+
+          // Step 1: Render composite image of all layers
+          const compositeCanvas = document.createElement('canvas')
+          compositeCanvas.width = currentProject.width
+          compositeCanvas.height = currentProject.height
+          const compositeCtx = compositeCanvas.getContext('2d')
+          if (!compositeCtx) throw new Error('Failed to get canvas context')
+
+          // Fill background
+          compositeCtx.fillStyle = currentProject.backgroundColor || '#ffffff'
+          compositeCtx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height)
+
+          // Draw each visible layer
+          for (const l of currentProject.layers) {
+            if (!l.visible) continue
+
+            if (l.imageData) {
+              try {
+                const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+                  const image = new Image()
+                  image.onload = () => resolve(image)
+                  image.onerror = reject
+                  image.src = l.imageData!
+                })
+
+                compositeCtx.save()
+                compositeCtx.globalAlpha = l.opacity / 100
+                compositeCtx.translate(l.x + l.width / 2, l.y + l.height / 2)
+                compositeCtx.rotate((l.rotation * Math.PI) / 180)
+                compositeCtx.drawImage(img, -l.width / 2, -l.height / 2, l.width, l.height)
+                compositeCtx.restore()
+              } catch {
+                // Skip failed images
+              }
+            } else if (l.type === 'text' && l.text) {
+              compositeCtx.save()
+              compositeCtx.globalAlpha = l.opacity / 100
+              compositeCtx.font = `${l.fontSize || 24}px ${l.fontFamily || 'Arial'}`
+              compositeCtx.fillStyle = l.fontColor || '#000000'
+              compositeCtx.textAlign = (l.textAlign as CanvasTextAlign) || 'left'
+              compositeCtx.fillText(l.text, l.x, l.y + (l.fontSize || 24))
+              compositeCtx.restore()
+            }
+          }
+
+          const compositeImage = compositeCanvas.toDataURL('image/png')
+
+          // Step 2: Call analysis LLM with composite + layer images
+          showToast('KI erstellt detaillierten Prompt...', 'info')
+
+          const analysisResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Canwa Image Editor'
+            },
+            body: JSON.stringify({
+              model: analysisModel,
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'image_url',
+                      image_url: { url: compositeImage }
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: { url: layer.imageData }
+                    },
+                    {
+                      type: 'text',
+                      text: `Du bist ein Experte für Bildgenerierung. Analysiere diese zwei Bilder:
+
+Bild 1: Das Gesamtbild (Komposition aller Ebenen)
+Bild 2: Eine einzelne Ebene aus diesem Bild
+
+Der Benutzer möchte eine NEUE Version von Bild 2 erstellen mit dieser Anweisung: "${instruction}"
+
+Erstelle einen detaillierten, präzisen Prompt für ein Bildgenerierungsmodell (wie DALL-E oder Flux).
+Der Prompt soll beschreiben, wie das neue Bild aussehen soll, damit es:
+1. Zur Gesamtkomposition passt (Stil, Farben, Perspektive)
+2. Die Anweisung des Benutzers umsetzt
+
+Antworte NUR mit dem Prompt für das Bildgenerierungsmodell, ohne weitere Erklärungen.
+Der Prompt sollte auf Englisch sein und maximal 200 Wörter haben.`
+                    }
+                  ]
+                }
+              ]
+            })
+          })
+
+          if (!analysisResponse.ok) {
+            const error = await analysisResponse.text()
+            throw new Error(`Analysis API error: ${error}`)
+          }
+
+          const analysisData = await analysisResponse.json()
+          const generatedPrompt = analysisData.choices?.[0]?.message?.content
+
+          if (!generatedPrompt || typeof generatedPrompt !== 'string') {
+            throw new Error('Kein Prompt vom Analyse-LLM generiert')
+          }
+
+          console.log('Generated prompt from analysis:', generatedPrompt)
+
+          // Step 3: Generate new image using the detailed prompt
+          showToast('Generiere neue Ebene...', 'info')
+          set({ isEditingLayerWithContext: false })
+
+          // Use the existing generateAIImage function with the generated prompt
+          await generateAIImage(generatedPrompt.trim())
+
+          pushHistory('AI Context Edit')
+          showToast('Neue Ebene basierend auf Analyse erstellt', 'success')
+        } catch (error) {
+          console.error('AI context-aware edit failed:', error)
+          set({ isEditingLayerWithContext: false })
+          showToast(`Kontextbasierte Bearbeitung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`, 'error')
         }
       },
 

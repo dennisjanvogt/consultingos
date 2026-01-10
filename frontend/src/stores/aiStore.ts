@@ -33,13 +33,17 @@ interface AIState {
   // Model selection
   chatModel: string
   imageModel: string
+  analysisModel: string  // Vision model for image analysis
   chatModels: AIModel[]
   imageModels: AIModel[]
   isLoadingModels: boolean
   setChatModel: (model: string) => void
   setImageModel: (model: string) => void
+  setAnalysisModel: (model: string) => void
   getChatModelInfo: () => AIModel | undefined
   getImageModelInfo: () => AIModel | undefined
+  getAnalysisModelInfo: () => AIModel | undefined
+  getVisionModels: () => AIModel[]  // Filter: only vision-capable models
   fetchModels: (forceRefresh?: boolean) => Promise<void>
 
   // API Key status
@@ -203,12 +207,14 @@ export const useAIStore = create<AIState>()(
       // Model selection state
       chatModel: 'google/gemini-2.0-flash-001',
       imageModel: 'google/gemini-2.0-flash-001:image-generation',
+      analysisModel: 'google/gemini-2.0-flash-001',  // Default vision model for analysis
       chatModels: [],
       imageModels: [],
       isLoadingModels: false,
 
       setChatModel: (model) => set({ chatModel: model }),
       setImageModel: (model) => set({ imageModel: model }),
+      setAnalysisModel: (model) => set({ analysisModel: model }),
 
       // API Key status
       apiKeyStatus: null,
@@ -249,6 +255,8 @@ export const useAIStore = create<AIState>()(
 
       getChatModelInfo: () => get().chatModels.find((m) => m.id === get().chatModel),
       getImageModelInfo: () => get().imageModels.find((m) => m.id === get().imageModel),
+      getAnalysisModelInfo: () => get().chatModels.find((m) => m.id === get().analysisModel),
+      getVisionModels: () => get().chatModels.filter((m) => m.isVision),
 
       fetchModels: async (forceRefresh = false) => {
         if (get().chatModels.length > 0 && !forceRefresh) return // Already loaded
@@ -456,6 +464,7 @@ export const useAIStore = create<AIState>()(
       partialize: (state) => ({
         chatModel: state.chatModel,
         imageModel: state.imageModel,
+        analysisModel: state.analysisModel,
         currentHelperId: state.currentHelperId,
         analysisMode: state.analysisMode,
       }),

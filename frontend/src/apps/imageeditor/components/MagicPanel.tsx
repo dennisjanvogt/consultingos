@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
+import { useAIStore, groupModelsByProvider } from '@/stores/aiStore'
 import { DEFAULT_LAYER_EFFECTS } from '../types'
 import type { LayerEffects } from '../types'
 import {
@@ -17,6 +18,8 @@ import {
   Pipette,
   Copy,
   Layers,
+  BrainCircuit,
+  Settings2,
 } from 'lucide-react'
 
 // Preset gradients
@@ -73,6 +76,7 @@ export function MagicPanel() {
     isAutoEnhancing,
     isRemovingBackground,
     isGeneratingImage,
+    isEditingLayerWithContext,
     isApplyingFilter,
     isUpscaling,
     isExtractingColors,
@@ -82,6 +86,7 @@ export function MagicPanel() {
     addBackgroundGradient,
     addBackgroundPattern,
     generateAIImage,
+    editLayerWithContext,
     applyAIFilter,
     upscaleImage,
     extractColorPalette,
@@ -89,6 +94,23 @@ export function MagicPanel() {
     addRecentColor,
     updateLayerEffects,
   } = useImageEditorStore()
+
+  const {
+    analysisModel,
+    setAnalysisModel,
+    imageModel,
+    setImageModel,
+    getVisionModels,
+    imageModels,
+    chatModels,
+    fetchModels,
+    isLoadingModels,
+  } = useAIStore()
+
+  // Load models on mount
+  useEffect(() => {
+    fetchModels()
+  }, [fetchModels])
 
   const [expandedSection, setExpandedSection] = useState<string | null>('magic')
   const [customGradient, setCustomGradient] = useState({
@@ -103,11 +125,17 @@ export function MagicPanel() {
     color2: '#666666',
   })
   const [aiPrompt, setAiPrompt] = useState('')
+  const [contextInstruction, setContextInstruction] = useState('')
 
   const selectedLayer = currentProject?.layers.find((l) => l.id === selectedLayerId)
   const hasImageData = selectedLayer?.imageData
   const isImageOrShapeLayer = selectedLayer?.type === 'image' || selectedLayer?.type === 'shape'
   const layerEffects = selectedLayer?.layerEffects || DEFAULT_LAYER_EFFECTS
+
+  // Get vision-capable models for analysis
+  const visionModels = getVisionModels()
+  const groupedVisionModels = groupModelsByProvider(visionModels)
+  const groupedImageModels = groupModelsByProvider(imageModels)
 
   const updateEffect = (updates: Partial<LayerEffects>) => {
     if (!selectedLayerId) return
@@ -132,6 +160,13 @@ export function MagicPanel() {
     navigator.clipboard.writeText(color)
     setBrushSettings({ color })
     addRecentColor(color)
+  }
+
+  const handleContextEdit = () => {
+    if (contextInstruction.trim() && selectedLayerId) {
+      editLayerWithContext(selectedLayerId, contextInstruction)
+      setContextInstruction('')
+    }
   }
 
   return (
@@ -182,6 +217,150 @@ export function MagicPanel() {
                 <Image className="h-4 w-4" />
               )}
               {isGerman ? 'Bild generieren' : 'Generate Image'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Context-Aware Layer Editing Section */}
+      <div className="space-y-2">
+        <button
+          onClick={() => toggleSection('context-edit')}
+          className="flex items-center gap-2 w-full text-left text-sm font-medium"
+        >
+          {expandedSection === 'context-edit' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <BrainCircuit className="h-4 w-4 text-purple-400" />
+          {isGerman ? 'Kontextbasierte Bearbeitung' : 'Context-Aware Editing'}
+        </button>
+
+        {expandedSection === 'context-edit' && (
+          <div className="pl-6 space-y-3">
+            {/* Info */}
+            <p className="text-[10px] text-gray-500">
+              {isGerman
+                ? 'Analysiert das Gesamtbild und die ausgewählte Ebene, um eine passende neue Ebene zu generieren.'
+                : 'Analyzes the full image and selected layer to generate a matching new layer.'}
+            </p>
+
+            {/* Model Settings */}
+            <div className="space-y-2 p-2 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <Settings2 className="h-3 w-3" />
+                {isGerman ? 'Modell-Einstellungen' : 'Model Settings'}
+              </div>
+
+              {/* Analysis Model */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-500">
+                  {isGerman ? 'Analyse-LLM (Vision)' : 'Analysis LLM (Vision)'}
+                </label>
+                <select
+                  value={analysisModel}
+                  onChange={(e) => setAnalysisModel(e.target.value)}
+                  disabled={isLoadingModels}
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
+                >
+                  {isLoadingModels ? (
+                    <option>{isGerman ? 'Lade Modelle...' : 'Loading models...'}</option>
+                  ) : visionModels.length === 0 ? (
+                    <option>{isGerman ? 'Keine Vision-Modelle' : 'No vision models'}</option>
+                  ) : (
+                    Object.entries(groupedVisionModels).map(([provider, models]) => (
+                      <optgroup key={provider} label={provider}>
+                        {models.slice(0, 10).map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.name} {model.isFree && '(Free)'}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* Image Generation Model */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-500">
+                  {isGerman ? 'Bildgenerierung' : 'Image Generation'}
+                </label>
+                <select
+                  value={imageModel}
+                  onChange={(e) => setImageModel(e.target.value)}
+                  disabled={isLoadingModels}
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
+                >
+                  {isLoadingModels ? (
+                    <option>{isGerman ? 'Lade Modelle...' : 'Loading models...'}</option>
+                  ) : imageModels.length === 0 ? (
+                    <option>{isGerman ? 'Keine Bild-Modelle' : 'No image models'}</option>
+                  ) : (
+                    Object.entries(groupedImageModels).map(([provider, models]) => (
+                      <optgroup key={provider} label={provider}>
+                        {models.map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.name} {model.isFree && '(Free)'}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* Layer Selection Info */}
+            {selectedLayer ? (
+              <div className="flex items-center gap-2 p-2 bg-gray-800/30 rounded text-xs">
+                <Layers className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-gray-400">{isGerman ? 'Ebene:' : 'Layer:'}</span>
+                <span className="text-white truncate">{selectedLayer.name}</span>
+              </div>
+            ) : (
+              <p className="text-xs text-amber-500/80 text-center">
+                {isGerman ? 'Wähle eine Ebene mit Bild aus' : 'Select a layer with image'}
+              </p>
+            )}
+
+            {/* Instruction Input */}
+            <textarea
+              value={contextInstruction}
+              onChange={(e) => setContextInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleContextEdit()
+                }
+              }}
+              placeholder={isGerman
+                ? 'z.B. "Passe den Hintergrund an die Person an" oder "Mache die Beleuchtung konsistent"'
+                : 'e.g. "Match the background to the person" or "Make the lighting consistent"'}
+              className="w-full h-16 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+            />
+
+            {/* Generate Button */}
+            <button
+              onClick={handleContextEdit}
+              disabled={!contextInstruction.trim() || !hasImageData || isEditingLayerWithContext || isGeneratingImage}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                contextInstruction.trim() && hasImageData && !isEditingLayerWithContext && !isGeneratingImage
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
+                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isEditingLayerWithContext || isGeneratingImage ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isEditingLayerWithContext
+                    ? (isGerman ? 'Analysiere...' : 'Analyzing...')
+                    : (isGerman ? 'Generiere...' : 'Generating...')}
+                </>
+              ) : (
+                <>
+                  <BrainCircuit className="h-4 w-4" />
+                  {isGerman ? 'Neue Ebene generieren' : 'Generate New Layer'}
+                </>
+              )}
             </button>
           </div>
         )}
