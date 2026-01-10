@@ -618,7 +618,7 @@ export function ImageEditorApp() {
         {/* New Project Dialog */}
         {showNewDialog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="bg-gray-800 rounded-xl w-full max-w-md p-6">
+            <div className="bg-gray-800 rounded-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
               <h2 className="text-lg font-semibold mb-4">{t('imageeditor.newProject')}</h2>
               <div className="space-y-4">
                 <div>
@@ -652,34 +652,113 @@ export function ImageEditorApp() {
                     />
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setNewProjectWidth(1920)
-                      setNewProjectHeight(1080)
-                    }}
-                    className="px-3 py-1 bg-gray-700 rounded text-xs"
-                  >
-                    1920×1080
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNewProjectWidth(1280)
-                      setNewProjectHeight(720)
-                    }}
-                    className="px-3 py-1 bg-gray-700 rounded text-xs"
-                  >
-                    1280×720
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNewProjectWidth(1080)
-                      setNewProjectHeight(1080)
-                    }}
-                    className="px-3 py-1 bg-gray-700 rounded text-xs"
-                  >
-                    1080×1080
-                  </button>
+
+                {/* Preset Categories */}
+                <div className="space-y-3">
+                  {/* YouTube */}
+                  <div>
+                    <p className="text-xs text-red-400 font-medium mb-1.5 flex items-center gap-1">
+                      <span>YouTube</span>
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1280); setNewProjectHeight(720) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Thumbnail (1280×720)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(2560); setNewProjectHeight(1440) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Banner (2560×1440)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1920); setNewProjectHeight(1080) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        End Screen (1920×1080)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Instagram */}
+                  <div>
+                    <p className="text-xs text-pink-400 font-medium mb-1.5">Instagram</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1080); setNewProjectHeight(1080) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Post (1080×1080)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1080); setNewProjectHeight(1350) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Portrait (1080×1350)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1080); setNewProjectHeight(1920) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Story/Reels (1080×1920)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Facebook */}
+                  <div>
+                    <p className="text-xs text-blue-400 font-medium mb-1.5">Facebook</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1200); setNewProjectHeight(630) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Post (1200×630)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(820); setNewProjectHeight(312) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Cover (820×312)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1080); setNewProjectHeight(1080) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Ad (1080×1080)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Twitter/X */}
+                  <div>
+                    <p className="text-xs text-gray-300 font-medium mb-1.5">X / Twitter</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1600); setNewProjectHeight(900) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Post (1600×900)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1500); setNewProjectHeight(500) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Header (1500×500)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* LinkedIn */}
+                  <div>
+                    <p className="text-xs text-sky-400 font-medium mb-1.5">LinkedIn</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1200); setNewProjectHeight(627) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Post (1200×627)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1584); setNewProjectHeight(396) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Banner (1584×396)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* TikTok & Pinterest */}
+                  <div>
+                    <p className="text-xs text-cyan-400 font-medium mb-1.5">TikTok & Pinterest</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1080); setNewProjectHeight(1920) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        TikTok (1080×1920)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(1000); setNewProjectHeight(1500) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Pinterest Pin (1000×1500)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Standard */}
+                  <div>
+                    <p className="text-xs text-violet-400 font-medium mb-1.5">Standard</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => { setNewProjectWidth(1920); setNewProjectHeight(1080) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        Full HD (1920×1080)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(3840); setNewProjectHeight(2160) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        4K (3840×2160)
+                      </button>
+                      <button onClick={() => { setNewProjectWidth(2480); setNewProjectHeight(3508) }} className="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                        A4 Print (2480×3508)
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">
