@@ -20,6 +20,7 @@ import {
   Layers,
   BrainCircuit,
   Settings2,
+  Expand,
 } from 'lucide-react'
 
 // Preset gradients
@@ -77,6 +78,7 @@ export function MagicPanel() {
     isRemovingBackground,
     isGeneratingImage,
     isEditingLayerWithContext,
+    isExtendingImage,
     isApplyingFilter,
     isUpscaling,
     isExtractingColors,
@@ -87,6 +89,7 @@ export function MagicPanel() {
     addBackgroundPattern,
     generateAIImage,
     editLayerWithContext,
+    extendImageToFit,
     applyAIFilter,
     upscaleImage,
     extractColorPalette,
@@ -131,6 +134,11 @@ export function MagicPanel() {
   const hasImageData = selectedLayer?.imageData
   const isImageOrShapeLayer = selectedLayer?.type === 'image' || selectedLayer?.type === 'shape'
   const layerEffects = selectedLayer?.layerEffects || DEFAULT_LAYER_EFFECTS
+
+  // Check if layer needs extension to fit canvas
+  const needsExtension = hasImageData && currentProject && selectedLayer && (
+    selectedLayer.width < currentProject.width || selectedLayer.height < currentProject.height
+  )
 
   // Get vision-capable models for analysis
   const visionModels = getVisionModels()
@@ -418,6 +426,82 @@ export function MagicPanel() {
             {!hasImageData && (
               <p className="text-xs text-gray-500 text-center">
                 {isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image'}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Extend Image Section */}
+      <div className="space-y-2">
+        <button
+          onClick={() => toggleSection('extend')}
+          className="flex items-center gap-2 w-full text-left text-sm font-medium"
+        >
+          {expandedSection === 'extend' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <Expand className="h-4 w-4 text-sky-400" />
+          {isGerman ? 'Bild erweitern' : 'Extend Image'}
+        </button>
+
+        {expandedSection === 'extend' && (
+          <div className="pl-6 space-y-2">
+            {/* Info about current sizes */}
+            {selectedLayer && currentProject && (
+              <div className="text-[10px] text-gray-500 space-y-0.5">
+                <div>{isGerman ? 'Ebene' : 'Layer'}: {selectedLayer.width}x{selectedLayer.height}px</div>
+                <div>{isGerman ? 'Leinwand' : 'Canvas'}: {currentProject.width}x{currentProject.height}px</div>
+              </div>
+            )}
+
+            {needsExtension ? (
+              <>
+                {/* Local Extension Button */}
+                <button
+                  onClick={() => selectedLayerId && extendImageToFit(selectedLayerId, false)}
+                  disabled={isExtendingImage}
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    !isExtendingImage
+                      ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isExtendingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Expand className="h-4 w-4" />
+                  )}
+                  {isGerman ? 'Schnell erweitern' : 'Quick Extend'}
+                </button>
+                <p className="text-[10px] text-gray-500 text-center">
+                  {isGerman ? 'Analysiert Ränder, füllt mit Farbverlauf' : 'Analyzes edges, fills with gradient'}
+                </p>
+
+                {/* AI Extension Button */}
+                <button
+                  onClick={() => selectedLayerId && extendImageToFit(selectedLayerId, true)}
+                  disabled={isExtendingImage || isGeneratingImage}
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    !isExtendingImage && !isGeneratingImage
+                      ? 'bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-500 hover:to-cyan-500 text-white'
+                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isExtendingImage || isGeneratingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <BrainCircuit className="h-4 w-4" />
+                  )}
+                  {isGerman ? 'KI-Erweiterung' : 'AI Extend'}
+                </button>
+                <p className="text-[10px] text-gray-500 text-center">
+                  {isGerman ? 'Generiert passenden Inhalt (kostet Credits)' : 'Generates matching content (costs credits)'}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-gray-500 text-center py-2">
+                {hasImageData
+                  ? (isGerman ? 'Bild ist bereits groß genug' : 'Image is already large enough')
+                  : (isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image')}
               </p>
             )}
           </div>

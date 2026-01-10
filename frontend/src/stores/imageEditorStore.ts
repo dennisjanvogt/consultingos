@@ -286,6 +286,8 @@ interface ImageEditorState {
   applyAIFilter: (layerId: string, filterType: string) => Promise<void>
   upscaleImage: (layerId: string, scale: number) => Promise<void>
   extractColorPalette: (layerId: string) => Promise<void>
+  extendImageToFit: (layerId: string, useAI?: boolean) => Promise<void>
+  isExtendingImage: boolean
 
   // History
   pushHistory: (name: string) => void
@@ -349,6 +351,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
       isApplyingFilter: false,
       isUpscaling: false,
       isExtractingColors: false,
+      isExtendingImage: false,
       extractedColors: [],
 
       // View mode
@@ -3205,6 +3208,387 @@ Der Prompt sollte auf Englisch sein und maximal 200 Wörter haben.`
           console.error('Color extraction failed:', error)
           set({ isExtractingColors: false })
           showToast('Failed to extract colors', 'error')
+        }
+      },
+
+      // Extend image to fit project canvas
+      extendImageToFit: async (layerId, useAI = false) => {
+        const { currentProject, pushHistory, showToast } = get()
+        if (!currentProject) return
+
+        const layer = currentProject.layers.find((l) => l.id === layerId)
+        if (!layer || !layer.imageData) {
+          showToast('Keine Bilddaten zum Erweitern', 'error')
+          return
+        }
+
+        // Check if extension is needed
+        const targetWidth = currentProject.width
+        const targetHeight = currentProject.height
+        if (layer.width >= targetWidth && layer.height >= targetHeight) {
+          showToast('Bild ist bereits groß genug', 'info')
+          return
+        }
+
+        set({ isExtendingImage: true })
+        showToast(useAI ? 'Erweitere Bild mit KI...' : 'Erweitere Bild...', 'info')
+
+        try {
+          // Load the original image
+          const img = new Image()
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve()
+            img.onerror = reject
+            img.src = layer.imageData!
+          })
+
+          if (useAI) {
+            // AI-based extension using OpenRouter
+            const { useAIStore } = await import('@/stores/aiStore')
+            const aiState = useAIStore.getState()
+
+            let apiKey = aiState.userApiKey
+            if (!apiKey) {
+              apiKey = await aiState.fetchUserApiKey()
+            }
+
+            if (!apiKey) {
+              throw new Error('Kein API-Schlüssel konfiguriert')
+            }
+
+            const analysisModel = aiState.analysisModel || 'google/gemini-2.0-flash-001'
+            const imageModel = aiState.imageModel || 'google/gemini-2.0-flash-001:image-generation'
+
+            // Step 1: Analyze the image to understand its content
+            showToast('Analysiere Bildinhalt...', 'info')
+            const analysisResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'Canwa Image Editor'
+              },
+              body: JSON.stringify({
+                model: analysisModel,
+                messages: [{
+                  role: 'user',
+                  content: [
+                    { type: 'image_url', image_url: { url: layer.imageData } },
+                    {
+                      type: 'text',
+                      text: `Analysiere dieses Bild. Das Bild hat aktuell ${img.width}x${img.height} Pixel und soll auf ${targetWidth}x${targetHeight} Pixel erweitert werden.
+
+Erstelle einen detaillierten Prompt für ein Bildgenerierungsmodell, der beschreibt:
+1. Was ist der Hauptinhalt des Bildes (Objekt, Person, Szene)?
+2. Wie sieht der Hintergrund aus (Farben, Texturen, Muster)?
+3. Wie sollte der erweiterte Bereich aussehen, um nahtlos zum Original zu passen?
+
+Der Prompt soll ein NEUES Bild beschreiben, das:
+- Den gleichen Inhalt wie das Original zeigt
+- Aber größer ist und den Hintergrund/Umgebung natürlich fortsetzt
+- Im Seitenverhältnis ${targetWidth}:${targetHeight} ist
+
+Antworte NUR mit dem englischen Prompt für das Bildgenerierungsmodell.`
+                    }
+                  ]
+                }]
+              })
+            })
+
+            if (!analysisResponse.ok) {
+              throw new Error('Analyse fehlgeschlagen')
+            }
+
+            const analysisData = await analysisResponse.json()
+            const extendPrompt = analysisData.choices?.[0]?.message?.content
+
+            if (!extendPrompt) {
+              throw new Error('Kein Prompt generiert')
+            }
+
+            // Step 2: Generate extended image
+            showToast('Generiere erweitertes Bild...', 'info')
+            const genResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'Canwa Image Editor'
+              },
+              body: JSON.stringify({
+                model: imageModel,
+                messages: [{
+                  role: 'user',
+                  content: extendPrompt.trim()
+                }]
+              })
+            })
+
+            if (!genResponse.ok) {
+              throw new Error('Bildgenerierung fehlgeschlagen')
+            }
+
+            const genData = await genResponse.json()
+
+            // Extract image from response (same logic as generateAIImage)
+            let newImageData: string | null = null
+            const message = genData.choices?.[0]?.message
+            const content = message?.content
+
+            if (message?.images && Array.isArray(message.images)) {
+              for (const imgItem of message.images) {
+                if (imgItem.type === 'image_url' && imgItem.image_url?.url) {
+                  newImageData = imgItem.image_url.url
+                  break
+                }
+                if (imgItem.url) {
+                  newImageData = imgItem.url
+                  break
+                }
+              }
+            }
+
+            if (!newImageData && Array.isArray(content)) {
+              for (const part of content) {
+                if (part.type === 'image_url' && part.image_url?.url) {
+                  newImageData = part.image_url.url
+                  break
+                }
+                if (part.inline_data?.data) {
+                  const mimeType = part.inline_data.mime_type || 'image/png'
+                  newImageData = `data:${mimeType};base64,${part.inline_data.data}`
+                  break
+                }
+              }
+            }
+
+            if (!newImageData && content && typeof content === 'string') {
+              const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/)
+              if (base64Match) newImageData = base64Match[0]
+            }
+
+            if (!newImageData && genData.data?.[0]?.url) {
+              newImageData = genData.data[0].url
+            }
+            if (!newImageData && genData.data?.[0]?.b64_json) {
+              newImageData = `data:image/png;base64,${genData.data[0].b64_json}`
+            }
+
+            if (!newImageData) {
+              throw new Error('Kein Bild in der Antwort')
+            }
+
+            // Fetch if URL
+            if (newImageData.startsWith('http')) {
+              const imgResponse = await fetch(newImageData)
+              const blob = await imgResponse.blob()
+              newImageData = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.readAsDataURL(blob)
+              })
+            }
+
+            pushHistory('AI Extend Image')
+
+            // Create new layer with extended image
+            const newImg = new Image()
+            await new Promise<void>((resolve, reject) => {
+              newImg.onload = () => resolve()
+              newImg.onerror = reject
+              newImg.src = newImageData!
+            })
+
+            const newLayer = {
+              id: generateId(),
+              name: `${layer.name} (erweitert)`,
+              type: 'image' as const,
+              visible: true,
+              locked: false,
+              opacity: 100,
+              blendMode: 'normal' as const,
+              x: Math.floor((targetWidth - newImg.width) / 2),
+              y: Math.floor((targetHeight - newImg.height) / 2),
+              width: newImg.width,
+              height: newImg.height,
+              rotation: 0,
+              imageData: newImageData,
+            }
+
+            set((state) => ({
+              currentProject: state.currentProject
+                ? {
+                    ...state.currentProject,
+                    layers: [...state.currentProject.layers, newLayer],
+                    updatedAt: Date.now(),
+                  }
+                : null,
+              selectedLayerId: newLayer.id,
+              isExtendingImage: false,
+              isDirty: true,
+            }))
+
+            await get().saveProjectToBackend()
+            showToast('Bild mit KI erweitert', 'success')
+
+          } else {
+            // Local extension: Analyze edges and create gradient fill
+            const canvas = document.createElement('canvas')
+            canvas.width = targetWidth
+            canvas.height = targetHeight
+            const ctx = canvas.getContext('2d')
+            if (!ctx) throw new Error('Canvas context failed')
+
+            // Sample edge colors from original image
+            const sampleCanvas = document.createElement('canvas')
+            sampleCanvas.width = img.width
+            sampleCanvas.height = img.height
+            const sampleCtx = sampleCanvas.getContext('2d')
+            if (!sampleCtx) throw new Error('Sample canvas context failed')
+            sampleCtx.drawImage(img, 0, 0)
+
+            // Get average colors from each edge
+            const getEdgeColor = (edge: 'top' | 'bottom' | 'left' | 'right') => {
+              const sampleSize = 10
+              let r = 0, g = 0, b = 0, count = 0
+
+              if (edge === 'top' || edge === 'bottom') {
+                const y = edge === 'top' ? 0 : img.height - sampleSize
+                const data = sampleCtx.getImageData(0, y, img.width, sampleSize).data
+                for (let i = 0; i < data.length; i += 4) {
+                  r += data[i]; g += data[i + 1]; b += data[i + 2]; count++
+                }
+              } else {
+                const x = edge === 'left' ? 0 : img.width - sampleSize
+                const data = sampleCtx.getImageData(x, 0, sampleSize, img.height).data
+                for (let i = 0; i < data.length; i += 4) {
+                  r += data[i]; g += data[i + 1]; b += data[i + 2]; count++
+                }
+              }
+
+              return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`
+            }
+
+            const topColor = getEdgeColor('top')
+            const bottomColor = getEdgeColor('bottom')
+            const leftColor = getEdgeColor('left')
+            const rightColor = getEdgeColor('right')
+
+            // Calculate center position for the original image
+            const offsetX = Math.floor((targetWidth - img.width) / 2)
+            const offsetY = Math.floor((targetHeight - img.height) / 2)
+
+            // Create gradient background
+            // Vertical gradient
+            const vGradient = ctx.createLinearGradient(0, 0, 0, targetHeight)
+            vGradient.addColorStop(0, topColor)
+            vGradient.addColorStop(0.5, topColor)
+            vGradient.addColorStop(0.5, bottomColor)
+            vGradient.addColorStop(1, bottomColor)
+            ctx.fillStyle = vGradient
+            ctx.fillRect(0, 0, targetWidth, targetHeight)
+
+            // Horizontal gradient overlay with transparency
+            ctx.globalCompositeOperation = 'overlay'
+            const hGradient = ctx.createLinearGradient(0, 0, targetWidth, 0)
+            hGradient.addColorStop(0, leftColor)
+            hGradient.addColorStop(0.5, 'transparent')
+            hGradient.addColorStop(1, rightColor)
+            ctx.fillStyle = hGradient
+            ctx.fillRect(0, 0, targetWidth, targetHeight)
+
+            // Reset composite operation
+            ctx.globalCompositeOperation = 'source-over'
+
+            // Apply blur to the background for smoother transition
+            ctx.filter = 'blur(20px)'
+            ctx.drawImage(canvas, 0, 0)
+            ctx.filter = 'none'
+
+            // Draw original image in center
+            ctx.drawImage(img, offsetX, offsetY)
+
+            // Blend edges with feathered mask
+            const featherSize = 30
+            ctx.globalCompositeOperation = 'destination-out'
+
+            // Top feather
+            if (offsetY > 0) {
+              const topFade = ctx.createLinearGradient(0, offsetY, 0, offsetY + featherSize)
+              topFade.addColorStop(0, 'rgba(0,0,0,1)')
+              topFade.addColorStop(1, 'rgba(0,0,0,0)')
+              ctx.fillStyle = topFade
+              ctx.fillRect(offsetX, offsetY, img.width, featherSize)
+            }
+
+            // Bottom feather
+            if (offsetY + img.height < targetHeight) {
+              const bottomFade = ctx.createLinearGradient(0, offsetY + img.height - featherSize, 0, offsetY + img.height)
+              bottomFade.addColorStop(0, 'rgba(0,0,0,0)')
+              bottomFade.addColorStop(1, 'rgba(0,0,0,1)')
+              ctx.fillStyle = bottomFade
+              ctx.fillRect(offsetX, offsetY + img.height - featherSize, img.width, featherSize)
+            }
+
+            // Left feather
+            if (offsetX > 0) {
+              const leftFade = ctx.createLinearGradient(offsetX, 0, offsetX + featherSize, 0)
+              leftFade.addColorStop(0, 'rgba(0,0,0,1)')
+              leftFade.addColorStop(1, 'rgba(0,0,0,0)')
+              ctx.fillStyle = leftFade
+              ctx.fillRect(offsetX, offsetY, featherSize, img.height)
+            }
+
+            // Right feather
+            if (offsetX + img.width < targetWidth) {
+              const rightFade = ctx.createLinearGradient(offsetX + img.width - featherSize, 0, offsetX + img.width, 0)
+              rightFade.addColorStop(0, 'rgba(0,0,0,0)')
+              rightFade.addColorStop(1, 'rgba(0,0,0,1)')
+              ctx.fillStyle = rightFade
+              ctx.fillRect(offsetX + img.width - featherSize, offsetY, featherSize, img.height)
+            }
+
+            ctx.globalCompositeOperation = 'source-over'
+
+            // Redraw original image on top
+            ctx.drawImage(img, offsetX, offsetY)
+
+            const extendedImageData = canvas.toDataURL('image/png')
+
+            pushHistory('Extend Image')
+
+            // Update the layer with extended image
+            set((state) => ({
+              currentProject: state.currentProject
+                ? {
+                    ...state.currentProject,
+                    layers: state.currentProject.layers.map((l) =>
+                      l.id === layerId
+                        ? {
+                            ...l,
+                            imageData: extendedImageData,
+                            width: targetWidth,
+                            height: targetHeight,
+                            x: 0,
+                            y: 0,
+                          }
+                        : l
+                    ),
+                    updatedAt: Date.now(),
+                  }
+                : null,
+              isExtendingImage: false,
+              isDirty: true,
+            }))
+
+            showToast('Bild erweitert', 'success')
+          }
+        } catch (error) {
+          console.error('Image extension failed:', error)
+          set({ isExtendingImage: false })
+          showToast(`Erweiterung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`, 'error')
         }
       },
 
