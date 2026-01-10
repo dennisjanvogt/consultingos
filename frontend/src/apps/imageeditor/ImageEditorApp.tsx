@@ -627,6 +627,7 @@ export function ImageEditorApp() {
                     type="text"
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
                     placeholder={t('imageeditor.projectName')}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                     autoFocus
