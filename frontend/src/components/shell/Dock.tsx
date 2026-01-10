@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useWindowStore, type AppType } from '@/stores/windowStore'
 import { useAppSettingsStore } from '@/stores/appSettingsStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useAdminStore } from '@/stores/adminStore'
 import { useTranslation } from 'react-i18next'
 import { appRegistry } from '@/config/apps'
 import { EyeOff } from 'lucide-react'
@@ -13,6 +14,7 @@ interface DockItem {
   icon: React.ReactNode
   labelKey: string
   canDisable: boolean
+  badge?: number
 }
 
 export function Dock() {
@@ -20,6 +22,7 @@ export function Dock() {
   const { openWindow, closeWindow, windows, showDock, setShowDock } = useWindowStore()
   const { settings, fetchSettings, isAppEnabled, reorderDock, toggleApp } = useAppSettingsStore()
   const { user } = useAuthStore()
+  const { pendingCount, connectWebSocket, disconnectWebSocket } = useAdminStore()
   const hideTimeoutRef = useRef<number | null>(null)
   const [activeContextMenu, setActiveContextMenu] = useState<string | null>(null)
 
@@ -27,6 +30,14 @@ export function Dock() {
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
+
+  // Connect to WebSocket for real-time admin notifications
+  useEffect(() => {
+    if (user?.is_staff) {
+      connectWebSocket()
+      return () => disconnectWebSocket()
+    }
+  }, [user?.is_staff, connectWebSocket, disconnectWebSocket])
 
   // Memoize derived state
   const hasVisibleWindows = useMemo(
@@ -56,8 +67,9 @@ export function Dock() {
         icon: appRegistry[id].icon,
         labelKey: appRegistry[id].titleKey,
         canDisable: appRegistry[id].canDisable,
+        badge: id === 'admin' && pendingCount > 0 ? pendingCount : undefined,
       })),
-    [settings.dock_order, isAppEnabled, user?.is_staff]
+    [settings.dock_order, isAppEnabled, user?.is_staff, pendingCount]
   )
 
   // Handle reorder - update dock_order with new positions
@@ -199,9 +211,18 @@ const DockIcon = memo(function DockIcon({ item, label, isOpen, onClick, onDisabl
       <button
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-200"
+        className="relative w-11 h-11 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-200"
       >
         {item.icon}
+        {/* Badge */}
+        {item.badge !== undefined && item.badge > 0 && (
+          <span
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full shadow-sm"
+            style={{ backgroundColor: 'var(--color-gold-400)', color: 'var(--color-gold-900)' }}
+          >
+            {item.badge > 99 ? '99+' : item.badge}
+          </span>
+        )}
       </button>
 
       {/* Tooltip */}

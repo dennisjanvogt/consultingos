@@ -5,6 +5,7 @@ import { useWindowStore } from '@/stores/windowStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useAppSettingsStore } from '@/stores/appSettingsStore'
 import { useConfirmStore } from '@/stores/confirmStore'
+import { useAdminStore } from '@/stores/adminStore'
 import { appRegistry, type AppCategory } from '@/config/apps'
 
 const categoryOrder: AppCategory[] = ['core', 'productivity', 'tools', 'games', 'admin']
@@ -17,6 +18,7 @@ export function AppOverview() {
   const user = useAuthStore((state) => state.user)
   const { isAppEnabled, toggleApp } = useAppSettingsStore()
   const confirm = useConfirmStore((state) => state.confirm)
+  const pendingCount = useAdminStore((state) => state.pendingCount)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Get all apps that the user has access to
@@ -179,6 +181,15 @@ export function AppOverview() {
                           {/* App Icon */}
                           <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
                             {app.icon}
+                            {/* Badge for admin app */}
+                            {app.id === 'admin' && pendingCount > 0 && (
+                              <span
+                                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full shadow-sm"
+                                style={{ backgroundColor: 'var(--color-gold-400)', color: 'var(--color-gold-900)' }}
+                              >
+                                {pendingCount > 99 ? '99+' : pendingCount}
+                              </span>
+                            )}
                             {/* Dock indicator */}
                             {enabled && (
                               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shadow-md">

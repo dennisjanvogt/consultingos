@@ -218,6 +218,21 @@ def github_callback(request: HttpRequest, data: GitHubCallbackSchema):
                 if len(name_parts) > 1:
                     user.last_name = name_parts[1]
             user.save()
+
+            # Notify admins via WebSocket
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                pending_count = User.objects.filter(is_approved=False).count()
+                async_to_sync(channel_layer.group_send)(
+                    'admin_notifications',
+                    {
+                        'type': 'new_registration',
+                        'count': pending_count,
+                        'username': github_username,
+                    }
+                )
         else:
             # Update avatar for existing user on each login
             if github_avatar and user.avatar_url != github_avatar:
@@ -290,6 +305,21 @@ def approve_user(request: HttpRequest, data: ApproveUserSchema):
         user = User.objects.get(id=data.user_id)
         user.is_approved = True
         user.save()
+
+        # Notify all admins via WebSocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            pending_count = User.objects.filter(is_approved=False).count()
+            async_to_sync(channel_layer.group_send)(
+                'admin_notifications',
+                {
+                    'type': 'pending_count_update',
+                    'count': pending_count,
+                }
+            )
+
         return 200, {'message': f'User {user.username} approved'}
     except User.DoesNotExist:
         return 404, {'error': 'User not found'}
@@ -308,6 +338,21 @@ def reject_user(request: HttpRequest, data: ApproveUserSchema):
         user = User.objects.get(id=data.user_id, is_approved=False)
         username = user.username
         user.delete()
+
+        # Notify all admins via WebSocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            pending_count = User.objects.filter(is_approved=False).count()
+            async_to_sync(channel_layer.group_send)(
+                'admin_notifications',
+                {
+                    'type': 'pending_count_update',
+                    'count': pending_count,
+                }
+            )
+
         return 200, {'message': f'User {username} rejected and deleted'}
     except User.DoesNotExist:
         return 404, {'error': 'Pending user not found'}
