@@ -761,12 +761,18 @@ export function ImageEditorApp() {
                   className="group relative bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 transition-all cursor-pointer"
                   onClick={() => openProject(project.id)}
                 >
-                  <div className="aspect-video bg-gray-700 flex items-center justify-center">
+                  <div
+                    className="aspect-video flex items-center justify-center"
+                    style={{
+                      backgroundImage: 'repeating-conic-gradient(#3a3a3a 0% 25%, #2a2a2a 0% 50%)',
+                      backgroundSize: '16px 16px',
+                    }}
+                  >
                     {project.thumbnailUrl ? (
                       <img
                         src={project.thumbnailUrl}
                         alt={project.name}
-                        className="w-full h-full object-cover"
+                        className="h-full object-contain"
                       />
                     ) : (
                       <ImageIcon className="w-12 h-12 text-gray-500" />

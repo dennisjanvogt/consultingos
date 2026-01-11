@@ -98,9 +98,23 @@ const generateThumbnail = async (project: ImageProject): Promise<string> => {
     const offsetX = (THUMB_WIDTH - project.width * scale) / 2
     const offsetY = (THUMB_HEIGHT - project.height * scale) / 2
 
-    // Fill background
-    ctx.fillStyle = project.backgroundColor || '#ffffff'
-    ctx.fillRect(0, 0, THUMB_WIDTH, THUMB_HEIGHT)
+    // Fill background with checkerboard pattern for transparency
+    const checkerSize = 8
+    for (let y = 0; y < THUMB_HEIGHT; y += checkerSize) {
+      for (let x = 0; x < THUMB_WIDTH; x += checkerSize) {
+        const isEven = ((x / checkerSize) + (y / checkerSize)) % 2 === 0
+        ctx.fillStyle = isEven ? '#3a3a3a' : '#2a2a2a'
+        ctx.fillRect(x, y, checkerSize, checkerSize)
+      }
+    }
+
+    // If project has a non-transparent background color, fill on top
+    const bgColor = project.backgroundColor
+    const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'rgba(0,0,0,0)' || bgColor === ''
+    if (!isTransparent) {
+      ctx.fillStyle = bgColor
+      ctx.fillRect(offsetX, offsetY, project.width * scale, project.height * scale)
+    }
 
     // Draw each visible layer
     for (const layer of project.layers) {
