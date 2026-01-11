@@ -112,27 +112,205 @@ const TOOL_GROUPS = [
   { id: 'other', label: 'Other', icon: <Type className="w-4 h-4" /> },
 ]
 
-// Compact Tool Bar Component for top toolbar
+// Compact Tool Bar Component for top toolbar - centered with popup options
 function CompactToolBar() {
   const { activeTool, setActiveTool, disabledTools } = useImageEditorStore()
+  const [showOptions, setShowOptions] = useState(false)
+  const [optionsPosition, setOptionsPosition] = useState({ left: 0 })
+  const toolbarRef = useRef<HTMLDivElement>(null)
   const enabledTools = ALL_TOOLS.filter(tool => !disabledTools.includes(tool.id))
 
+  const handleToolClick = (toolId: Tool, e: React.MouseEvent<HTMLButtonElement>) => {
+    setActiveTool(toolId)
+    // Calculate position for options popup
+    const button = e.currentTarget
+    const toolbar = toolbarRef.current
+    if (toolbar) {
+      const buttonRect = button.getBoundingClientRect()
+      const toolbarRect = toolbar.getBoundingClientRect()
+      setOptionsPosition({ left: buttonRect.left - toolbarRect.left + buttonRect.width / 2 })
+    }
+    setShowOptions(true)
+  }
+
+  // Close options when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setShowOptions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
-    <div className="flex items-center gap-0.5">
-      {enabledTools.map((tool) => (
-        <button
-          key={tool.id}
-          onClick={() => setActiveTool(tool.id)}
-          className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-            activeTool === tool.id
-              ? 'bg-violet-600 text-white'
-              : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-          }`}
-          title={`${tool.label} (${tool.shortcut})`}
-        >
-          {tool.icon}
-        </button>
-      ))}
+    <div ref={toolbarRef} className="relative flex flex-col items-center">
+      <div className="flex items-center gap-0.5 bg-gray-800/50 rounded-lg px-1 py-0.5">
+        {enabledTools.map((tool) => (
+          <button
+            key={tool.id}
+            onClick={(e) => handleToolClick(tool.id as Tool, e)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              activeTool === tool.id
+                ? 'bg-violet-600 text-white'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title={`${tool.label} (${tool.shortcut})`}
+          >
+            {tool.icon}
+          </button>
+        ))}
+      </div>
+      {/* Options popup below the toolbar */}
+      {showOptions && <ToolOptionsPopup position={optionsPosition} onClose={() => setShowOptions(false)} />}
+    </div>
+  )
+}
+
+// Tool Options Popup that appears below the toolbar
+function ToolOptionsPopup({ position, onClose }: { position: { left: number }, onClose: () => void }) {
+  const {
+    activeTool,
+    brushSettings,
+    setBrushSettings,
+    eraserSettings,
+    setEraserSettings,
+    bucketSettings,
+    setBucketSettings,
+    gradientSettings,
+    setGradientSettings,
+    retouchSettings,
+    setRetouchSettings,
+    cloneSettings,
+    setCloneSettings,
+    addRecentColor,
+  } = useImageEditorStore()
+
+  // Show size slider for drawing tools
+  const sizeTools = ['brush', 'pencil', 'eraser', 'highlighter', 'spray', 'blur', 'dodge', 'burn', 'clone', 'heal']
+  const colorTools = ['brush', 'pencil', 'highlighter', 'spray', 'bucket']
+
+  // Don't show popup for tools without options
+  if (!sizeTools.includes(activeTool) && !colorTools.includes(activeTool) && activeTool !== 'gradient') {
+    return null
+  }
+
+  const getSize = () => {
+    if (activeTool === 'eraser') return eraserSettings.size
+    if (['blur', 'dodge', 'burn', 'heal'].includes(activeTool)) return retouchSettings.size
+    if (activeTool === 'clone') return cloneSettings.size
+    return brushSettings.size
+  }
+
+  const setSize = (size: number) => {
+    if (activeTool === 'eraser') setEraserSettings({ size })
+    else if (['blur', 'dodge', 'burn', 'heal'].includes(activeTool)) setRetouchSettings({ size })
+    else if (activeTool === 'clone') setCloneSettings({ size })
+    else setBrushSettings({ size })
+  }
+
+  const maxSize = activeTool === 'clone' ? 200 : ['blur', 'dodge', 'burn', 'heal'].includes(activeTool) ? 100 : 500
+
+  return (
+    <div
+      className="absolute top-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl px-3 py-2 z-50"
+      style={{
+        left: position.left,
+        transform: 'translateX(-50%)',
+      }}
+    >
+      {/* Arrow pointing up */}
+      <div
+        className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-800"
+      />
+
+      <div className="flex items-center gap-4">
+        {/* Size */}
+        {sizeTools.includes(activeTool) && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">Größe</span>
+            <input
+              type="range"
+              min="1"
+              max={maxSize}
+              value={getSize()}
+              onChange={(e) => setSize(Number(e.target.value))}
+              className="w-20 h-1.5 accent-violet-500"
+            />
+            <span className="text-xs text-gray-300 w-8">{getSize()}px</span>
+          </div>
+        )}
+
+        {/* Color */}
+        {colorTools.includes(activeTool) && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">Farbe</span>
+            <input
+              type="color"
+              value={brushSettings.color}
+              onChange={(e) => {
+                setBrushSettings({ color: e.target.value })
+                addRecentColor(e.target.value)
+              }}
+              className="w-7 h-7 rounded cursor-pointer border border-gray-600"
+            />
+          </div>
+        )}
+
+        {/* Gradient colors */}
+        {activeTool === 'gradient' && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <input
+                type="color"
+                value={gradientSettings.startColor}
+                onChange={(e) => setGradientSettings({ startColor: e.target.value })}
+                className="w-6 h-6 rounded cursor-pointer border border-gray-600"
+                title="Startfarbe"
+              />
+              <span className="text-gray-500">→</span>
+              <input
+                type="color"
+                value={gradientSettings.endColor}
+                onChange={(e) => setGradientSettings({ endColor: e.target.value })}
+                className="w-6 h-6 rounded cursor-pointer border border-gray-600"
+                title="Endfarbe"
+              />
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setGradientSettings({ type: 'linear' })}
+                className={`px-2 py-1 text-xs rounded ${gradientSettings.type === 'linear' ? 'bg-violet-600' : 'bg-gray-700'}`}
+              >
+                Linear
+              </button>
+              <button
+                onClick={() => setGradientSettings({ type: 'radial' })}
+                className={`px-2 py-1 text-xs rounded ${gradientSettings.type === 'radial' ? 'bg-violet-600' : 'bg-gray-700'}`}
+              >
+                Radial
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tolerance for bucket */}
+        {activeTool === 'bucket' && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">Toleranz</span>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={bucketSettings.tolerance}
+              onChange={(e) => setBucketSettings({ tolerance: Number(e.target.value) })}
+              className="w-16 h-1.5 accent-violet-500"
+            />
+            <span className="text-xs text-gray-300 w-6">{bucketSettings.tolerance}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -808,8 +986,8 @@ export function ImageEditorApp() {
     <div className="h-full flex flex-col bg-gray-900 text-white">
       {/* Top Toolbar - Tools + Options + Project Name */}
       <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-800 bg-gray-850">
-        {/* Left: Back button + Tools + Options */}
-        <div className="flex items-center gap-2 flex-1">
+        {/* Left: Back button */}
+        <div className="flex items-center gap-2 w-48">
           <button
             onClick={closeProject}
             className="p-1.5 hover:bg-gray-700 rounded transition-colors shrink-0"
@@ -817,20 +995,20 @@ export function ImageEditorApp() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="w-px h-6 bg-gray-700 shrink-0" />
-          <CompactToolBar />
-          <InlineToolOptions />
         </div>
 
+        {/* Center: Tools */}
+        <CompactToolBar />
+
         {/* Right: Editable Project Name */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center w-48 justify-end">
           <input
             type="text"
             value={currentProject?.name || ''}
             onChange={(e) => {
               useImageEditorStore.getState().updateProjectName(e.target.value)
             }}
-            className="bg-transparent text-sm font-medium text-gray-300 border-b border-transparent hover:border-gray-600 focus:border-violet-500 focus:outline-none px-2 py-1 text-right w-48"
+            className="bg-transparent text-sm font-medium text-gray-300 border-b border-transparent hover:border-gray-600 focus:border-violet-500 focus:outline-none px-2 py-1 text-right w-full"
             placeholder="Projektname"
           />
         </div>
