@@ -185,9 +185,31 @@ export function MagicPanel() {
 
   return (
     <div className="p-3 space-y-4">
-      {/* ===== ALWAYS VISIBLE SECTIONS ===== */}
+      {/* No layer selected warning - shown once at top */}
+      {!hasImageData && (
+        <div className="flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400">
+          <Layers className="h-4 w-4 shrink-0" />
+          {isGerman ? 'Wähle eine Ebene mit Bild für KI-Bearbeitung' : 'Select a layer with image for AI editing'}
+        </div>
+      )}
 
-      {/* AI Image Generation - Always visible */}
+      {/* Analysis Model Selection - at top */}
+      <div className="space-y-1.5">
+        <label className="text-xs text-gray-500 flex items-center gap-1.5">
+          <BrainCircuit className="h-3 w-3" />
+          {isGerman ? 'Analyse-Modell (Vision)' : 'Analysis Model (Vision)'}
+        </label>
+        <ModelPickerButton
+          type="analysis"
+          compact
+          className="w-full bg-gray-800 border border-gray-700 rounded justify-start"
+        />
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-800" />
+
+      {/* AI Image Generation */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Image className="h-4 w-4 text-emerald-400" />
@@ -223,21 +245,12 @@ export function MagicPanel() {
       {/* Divider */}
       <div className="border-t border-gray-800" />
 
-      {/* AI Image Edit - Edit existing layer with AI */}
+      {/* AI Image Edit */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Wand2 className="h-4 w-4 text-amber-400" />
           {isGerman ? 'KI Bildbearbeitung' : 'AI Image Edit'}
         </div>
-        {selectedLayer ? (
-          <div className="flex items-center gap-2 p-1.5 bg-gray-800/30 rounded text-xs">
-            <Layers className="h-3.5 w-3.5 text-gray-400" />
-            <span className="text-white truncate flex-1">{selectedLayer.name}</span>
-            <span className="text-[10px] text-gray-500">{selectedLayer.width}x{selectedLayer.height}</span>
-          </div>
-        ) : (
-          <p className="text-xs text-amber-500/80">{isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image'}</p>
-        )}
         <textarea
           value={aiEditPrompt}
           onChange={(e) => setAiEditPrompt(e.target.value)}
@@ -248,7 +261,7 @@ export function MagicPanel() {
               handleEditImage()
             }
           }}
-          placeholder={isGerman ? 'z.B. "Ändere den Himmel zu Sonnenuntergang" oder "Entferne die Person links"' : 'e.g. "Change sky to sunset" or "Remove person on the left"'}
+          placeholder={isGerman ? 'z.B. "Ändere den Himmel zu Sonnenuntergang"' : 'e.g. "Change sky to sunset"'}
           className="w-full h-14 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
         />
         <button
@@ -277,10 +290,10 @@ export function MagicPanel() {
       {/* Divider */}
       <div className="border-t border-gray-800" />
 
-      {/* One-Click Magic - Always visible */}
+      {/* One-Click Magic */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Wand2 className="h-4 w-4 text-violet-400" />
+          <Sparkles className="h-4 w-4 text-violet-400" />
           {isGerman ? 'Ein-Klick Magie' : 'One-Click Magic'}
         </div>
         <div className="flex gap-2">
@@ -311,17 +324,19 @@ export function MagicPanel() {
         </div>
       </div>
 
-      {/* Extend Image - Always visible when needed */}
+      {/* Extend Image - visible when needed */}
       {needsExtension && (
         <>
           <div className="border-t border-gray-800" />
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Expand className="h-4 w-4 text-sky-400" />
-              {isGerman ? 'Bild auf Canvas erweitern' : 'Extend to Canvas'}
-            </div>
-            <div className="text-[10px] text-gray-500">
-              {selectedLayer?.width}x{selectedLayer?.height} → {currentProject?.width}x{currentProject?.height}
+            <div className="flex items-center justify-between text-sm font-medium">
+              <div className="flex items-center gap-2">
+                <Expand className="h-4 w-4 text-sky-400" />
+                {isGerman ? 'Auf Canvas erweitern' : 'Extend to Canvas'}
+              </div>
+              <span className="text-[10px] text-gray-500">
+                {selectedLayer?.width}x{selectedLayer?.height} → {currentProject?.width}x{currentProject?.height}
+              </span>
             </div>
             <div className="flex gap-2">
               <button
@@ -354,21 +369,12 @@ export function MagicPanel() {
       {/* Divider */}
       <div className="border-t border-gray-800" />
 
-      {/* Context-Aware Layer Editing - Always visible */}
+      {/* Context-Aware Layer Editing */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <BrainCircuit className="h-4 w-4 text-purple-400" />
           {isGerman ? 'Kontextbasierte Bearbeitung' : 'Context-Aware Edit'}
         </div>
-        {selectedLayer ? (
-          <div className="flex items-center gap-2 p-1.5 bg-gray-800/30 rounded text-xs">
-            <Layers className="h-3.5 w-3.5 text-gray-400" />
-            <span className="text-white truncate flex-1">{selectedLayer.name}</span>
-            <span className="text-[10px] text-gray-500">{selectedLayer.width}x{selectedLayer.height}</span>
-          </div>
-        ) : (
-          <p className="text-xs text-amber-500/80">{isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image'}</p>
-        )}
         <textarea
           value={contextInstruction}
           onChange={(e) => setContextInstruction(e.target.value)}
@@ -379,7 +385,7 @@ export function MagicPanel() {
               handleContextEdit()
             }
           }}
-          placeholder={isGerman ? 'z.B. "Passe Hintergrund an die Person an" oder "Erweitere die Szene nach links"' : 'e.g. "Match background to person" or "Extend scene to the left"'}
+          placeholder={isGerman ? 'z.B. "Passe Hintergrund an die Person an"' : 'e.g. "Match background to person"'}
           className="w-full h-14 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
         />
         <button
@@ -403,22 +409,6 @@ export function MagicPanel() {
             </>
           )}
         </button>
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-gray-800" />
-
-      {/* Analysis Model Selection */}
-      <div className="space-y-1.5">
-        <label className="text-xs text-gray-500 flex items-center gap-1.5">
-          <BrainCircuit className="h-3 w-3" />
-          {isGerman ? 'Analyse-Modell (Vision)' : 'Analysis Model (Vision)'}
-        </label>
-        <ModelPickerButton
-          type="analysis"
-          compact
-          className="w-full bg-gray-800 border border-gray-700 rounded justify-start"
-        />
       </div>
 
       {/* ===== COLLAPSIBLE SECTIONS ===== */}
