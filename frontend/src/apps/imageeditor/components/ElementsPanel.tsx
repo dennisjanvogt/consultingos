@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, ChevronDown, ChevronRight } from 'lucide-react'
+import DOMPurify from 'dompurify'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
 
 interface CanwaElement {
@@ -157,7 +158,7 @@ export function ElementsPanel() {
               >
                 <div
                   className="w-full h-full text-gray-300 group-hover:text-white transition-colors pointer-events-none"
-                  dangerouslySetInnerHTML={{ __html: element.svg }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(element.svg) }}
                 />
               </button>
             ))}
@@ -195,7 +196,7 @@ export function ElementsPanel() {
                         >
                           <div
                             className="w-full h-full text-gray-300 group-hover:text-white transition-colors pointer-events-none"
-                            dangerouslySetInnerHTML={{ __html: element.svg }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(element.svg) }}
                           />
                         </button>
                       ))}

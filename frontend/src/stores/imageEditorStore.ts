@@ -66,6 +66,55 @@ import {
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 const AUTO_SAVE_DELAY = 2000 // 2 seconds after last change
 
+// OpenRouter Proxy - calls backend instead of direct API (keeps API key secure)
+interface OpenRouterRequest {
+  model: string
+  messages: Array<{ role: string; content: string | Array<unknown> }>
+  max_tokens?: number
+  temperature?: number
+  response_format?: { type: string }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface OpenRouterResponse {
+  choices?: Array<{
+    message?: {
+      content?: unknown
+      images?: Array<{
+        type?: string
+        image_url?: { url?: string }
+        url?: string
+      }>
+      image_url?: string
+      tool_calls?: Array<{
+        function?: { name?: string; arguments?: string }
+      }>
+    }
+  }>
+  data?: Array<{
+    b64_json?: string
+    url?: string
+  }>
+}
+
+async function callOpenRouterProxy(request: OpenRouterRequest): Promise<OpenRouterResponse> {
+  const response = await fetch('/api/ai/openrouter/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(request),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `API error: ${response.status}`)
+  }
+
+  return response.json()
+}
+
 // Generate thumbnail from project layers
 const generateThumbnail = async (project: ImageProject): Promise<string> => {
   try {
@@ -2483,47 +2532,17 @@ export const useImageEditorStore = create<ImageEditorState>()(
         showToast('Generating AI image...', 'info')
 
         try {
-          // Import AI store to get API key and model
+          // Get image model from AI store
           const { useAIStore } = await import('@/stores/aiStore')
           const aiState = useAIStore.getState()
-
-          // Fetch user API key if not already loaded
-          let apiKey = aiState.userApiKey
-          if (!apiKey) {
-            apiKey = await aiState.fetchUserApiKey()
-          }
-
-          if (!apiKey) {
-            throw new Error('No API key configured')
-          }
-
           const imageModel = aiState.imageModel || 'google/gemini-2.0-flash-001:image-generation'
 
-          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'HTTP-Referer': window.location.origin,
-              'X-Title': 'Canwa Image Editor'
-            },
-            body: JSON.stringify({
-              model: imageModel,
-              messages: [
-                {
-                  role: 'user',
-                  content: prompt
-                }
-              ]
-            })
+          // Use backend proxy (API key is handled server-side)
+          const data = await callOpenRouterProxy({
+            model: imageModel,
+            messages: [{ role: 'user', content: prompt }],
           })
 
-          if (!response.ok) {
-            const error = await response.text()
-            throw new Error(`API error: ${error}`)
-          }
-
-          const data = await response.json()
           console.log('AI Image Generation Response:', JSON.stringify(data, null, 2))
 
           // Extract image from response - handle various formats
@@ -2687,60 +2706,31 @@ export const useImageEditorStore = create<ImageEditorState>()(
         showToast('Bild wird mit KI bearbeitet...', 'info')
 
         try {
-          // Import AI store to get API key and model
+          // Get image model from AI store
           const { useAIStore } = await import('@/stores/aiStore')
           const aiState = useAIStore.getState()
-
-          // Fetch user API key if not already loaded
-          let apiKey = aiState.userApiKey
-          if (!apiKey) {
-            apiKey = await aiState.fetchUserApiKey()
-          }
-
-          if (!apiKey) {
-            throw new Error('Kein API-Schlüssel konfiguriert')
-          }
-
-          // Use a model that supports image input/output (Gemini 2.0 Flash for image editing)
           const imageModel = aiState.imageModel || 'google/gemini-2.0-flash-001:image-generation'
 
-          // Send the current image with the edit prompt
-          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'HTTP-Referer': window.location.origin,
-              'X-Title': 'Canwa Image Editor'
-            },
-            body: JSON.stringify({
-              model: imageModel,
-              messages: [
-                {
-                  role: 'user',
-                  content: [
-                    {
-                      type: 'image_url',
-                      image_url: {
-                        url: layer.imageData
-                      }
-                    },
-                    {
-                      type: 'text',
-                      text: `Edit this image: ${prompt}. Return only the edited image.`
-                    }
-                  ]
-                }
-              ]
-            })
+          // Use backend proxy (API key is handled server-side)
+          const data = await callOpenRouterProxy({
+            model: imageModel,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'image_url',
+                    image_url: { url: layer.imageData },
+                  },
+                  {
+                    type: 'text',
+                    text: `Edit this image: ${prompt}. Return only the edited image.`,
+                  },
+                ],
+              },
+            ],
           })
 
-          if (!response.ok) {
-            const error = await response.text()
-            throw new Error(`API error: ${error}`)
-          }
-
-          const data = await response.json()
           console.log('AI Image Edit Response:', JSON.stringify(data, null, 2))
 
           // Extract image from response - handle various formats (same as generateAIImage)
@@ -2892,20 +2882,9 @@ export const useImageEditorStore = create<ImageEditorState>()(
         showToast('Analysiere Bild und Ebene...', 'info')
 
         try {
-          // Import AI store to get API key and models
+          // Get models from AI store
           const { useAIStore } = await import('@/stores/aiStore')
           const aiState = useAIStore.getState()
-
-          // Fetch user API key if not already loaded
-          let apiKey = aiState.userApiKey
-          if (!apiKey) {
-            apiKey = await aiState.fetchUserApiKey()
-          }
-
-          if (!apiKey) {
-            throw new Error('Kein API-Schlüssel konfiguriert')
-          }
-
           const analysisModel = aiState.analysisModel || 'google/gemini-2.0-flash-001'
 
           // Step 1: Render composite image of all layers
@@ -2957,31 +2936,24 @@ export const useImageEditorStore = create<ImageEditorState>()(
           // Step 2: Call analysis LLM with composite + layer images
           showToast('KI erstellt detaillierten Prompt...', 'info')
 
-          const analysisResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'HTTP-Referer': window.location.origin,
-              'X-Title': 'Canwa Image Editor'
-            },
-            body: JSON.stringify({
-              model: analysisModel,
-              messages: [
-                {
-                  role: 'user',
-                  content: [
-                    {
-                      type: 'image_url',
-                      image_url: { url: compositeImage }
-                    },
-                    {
-                      type: 'image_url',
-                      image_url: { url: layer.imageData }
-                    },
-                    {
-                      type: 'text',
-                      text: `Du bist ein Experte für Bildgenerierung. Analysiere diese zwei Bilder:
+          // Use backend proxy for analysis
+          const analysisData = await callOpenRouterProxy({
+            model: analysisModel,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'image_url',
+                    image_url: { url: compositeImage },
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: { url: layer.imageData },
+                  },
+                  {
+                    type: 'text',
+                    text: `Du bist ein Experte für Bildgenerierung. Analysiere diese zwei Bilder:
 
 Bild 1: Das Gesamtbild (Komposition aller Ebenen)
 Bild 2: Eine einzelne Ebene aus diesem Bild
@@ -2994,20 +2966,13 @@ Der Prompt soll beschreiben, wie das neue Bild aussehen soll, damit es:
 2. Die Anweisung des Benutzers umsetzt
 
 Antworte NUR mit dem Prompt für das Bildgenerierungsmodell, ohne weitere Erklärungen.
-Der Prompt sollte auf Englisch sein und maximal 200 Wörter haben.`
-                    }
-                  ]
-                }
-              ]
-            })
+Der Prompt sollte auf Englisch sein und maximal 200 Wörter haben.`,
+                  },
+                ],
+              },
+            ],
           })
 
-          if (!analysisResponse.ok) {
-            const error = await analysisResponse.text()
-            throw new Error(`Analysis API error: ${error}`)
-          }
-
-          const analysisData = await analysisResponse.json()
           const generatedPrompt = analysisData.choices?.[0]?.message?.content
 
           if (!generatedPrompt || typeof generatedPrompt !== 'string') {
@@ -3487,41 +3452,23 @@ Der Prompt sollte auf Englisch sein und maximal 200 Wörter haben.`
           })
 
           if (useAI) {
-            // AI-based extension using OpenRouter
+            // AI-based extension using OpenRouter proxy
             const { useAIStore } = await import('@/stores/aiStore')
             const aiState = useAIStore.getState()
-
-            let apiKey = aiState.userApiKey
-            if (!apiKey) {
-              apiKey = await aiState.fetchUserApiKey()
-            }
-
-            if (!apiKey) {
-              throw new Error('Kein API-Schlüssel konfiguriert')
-            }
-
             const analysisModel = aiState.analysisModel || 'google/gemini-2.0-flash-001'
             const imageModel = aiState.imageModel || 'google/gemini-2.0-flash-001:image-generation'
 
             // Step 1: Analyze the image to understand its content
             showToast('Analysiere Bildinhalt...', 'info')
-            const analysisResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'Canwa Image Editor'
-              },
-              body: JSON.stringify({
-                model: analysisModel,
-                messages: [{
-                  role: 'user',
-                  content: [
-                    { type: 'image_url', image_url: { url: layer.imageData } },
-                    {
-                      type: 'text',
-                      text: `Analysiere dieses Bild und erstelle einen Prompt für ein Bildgenerierungsmodell.
+            const analysisData = await callOpenRouterProxy({
+              model: analysisModel,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'image_url', image_url: { url: layer.imageData } },
+                  {
+                    type: 'text',
+                    text: `Analysiere dieses Bild und erstelle einen Prompt für ein Bildgenerierungsmodell.
 
 WICHTIG: Das Zielbild muss im ${targetWidth > targetHeight ? 'LANDSCAPE/WIDE' : targetHeight > targetWidth ? 'PORTRAIT/TALL' : 'SQUARE'} Format sein (Seitenverhältnis ca. ${Math.round(targetWidth/targetHeight * 100) / 100}:1).
 
@@ -3537,48 +3484,27 @@ Der Prompt MUSS enthalten:
 - Beschreibung wie der Hintergrund natürlich fortgesetzt wird
 - Gleicher Stil und gleiche Atmosphäre wie das Original
 
-Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
-                    }
-                  ]
-                }]
-              })
+Antworte NUR mit dem englischen Prompt (max 150 Wörter).`,
+                  },
+                ],
+              }],
             })
 
-            if (!analysisResponse.ok) {
-              throw new Error('Analyse fehlgeschlagen')
-            }
+            const extendPrompt = analysisData.choices?.[0]?.message?.content as string | undefined
 
-            const analysisData = await analysisResponse.json()
-            const extendPrompt = analysisData.choices?.[0]?.message?.content
-
-            if (!extendPrompt) {
+            if (!extendPrompt || typeof extendPrompt !== 'string') {
               throw new Error('Kein Prompt generiert')
             }
 
             // Step 2: Generate extended image
             showToast('Generiere erweitertes Bild...', 'info')
-            const genResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'Canwa Image Editor'
-              },
-              body: JSON.stringify({
-                model: imageModel,
-                messages: [{
-                  role: 'user',
-                  content: extendPrompt.trim()
-                }]
-              })
+            const genData = await callOpenRouterProxy({
+              model: imageModel,
+              messages: [{
+                role: 'user',
+                content: extendPrompt.trim(),
+              }],
             })
-
-            if (!genResponse.ok) {
-              throw new Error('Bildgenerierung fehlgeschlagen')
-            }
-
-            const genData = await genResponse.json()
 
             // Extract image from response (same logic as generateAIImage)
             let newImageData: string | null = null

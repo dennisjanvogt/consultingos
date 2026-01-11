@@ -482,3 +482,76 @@ def delete_helper(request, helper_id: int):
 
     helper.delete()
     return 204, None
+
+
+# ==================== OpenRouter Proxy Endpoint ====================
+
+class OpenRouterRequestSchema(Schema):
+    model: str
+    messages: list
+    max_tokens: Optional[int] = 4096
+    temperature: Optional[float] = None
+    response_format: Optional[dict] = None
+
+
+class OpenRouterResponseSchema(Schema):
+    choices: list
+    model: str
+    usage: Optional[dict] = None
+
+
+@router.post('/openrouter/chat', response={200: dict, 400: ErrorSchema, 500: ErrorSchema})
+def openrouter_proxy(request, data: OpenRouterRequestSchema):
+    """
+    Proxy endpoint for OpenRouter API calls.
+    This keeps the API key secure on the server side.
+    """
+    if not request.user.is_authenticated:
+        return 400, {'error': 'Authentication required'}
+
+    api_key = get_openrouter_key(request.user)
+    if not api_key:
+        return 500, {'error': 'OpenRouter API key not configured. Please add your API key in Settings.'}
+
+    try:
+        # Build request payload
+        payload = {
+            'model': data.model,
+            'messages': data.messages,
+            'max_tokens': data.max_tokens,
+        }
+
+        if data.temperature is not None:
+            payload['temperature'] = data.temperature
+
+        if data.response_format is not None:
+            payload['response_format'] = data.response_format
+
+        logger.debug(f'OpenRouter proxy request for model: {data.model}')
+
+        response = httpx.post(
+            OPENROUTER_URL,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {api_key}',
+                'HTTP-Referer': 'https://consultingos.app',
+                'X-Title': 'ConsultingOS Image Editor',
+            },
+            json=payload,
+            timeout=180.0  # Long timeout for image generation
+        )
+
+        if response.status_code != 200:
+            error_text = response.text
+            logger.warning(f'OpenRouter API error: {error_text}')
+            return 500, {'error': f'OpenRouter API error: {error_text}'}
+
+        result = response.json()
+        return 200, result
+
+    except httpx.TimeoutException:
+        logger.warning('OpenRouter proxy timeout')
+        return 500, {'error': 'Request timeout - AI processing took too long'}
+    except Exception as e:
+        logger.exception(f'OpenRouter proxy error: {e}')
+        return 500, {'error': f'Error processing request: {str(e)}'}
