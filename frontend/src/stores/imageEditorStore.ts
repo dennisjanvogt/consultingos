@@ -514,8 +514,8 @@ interface ImageEditorState {
   rotateLayer: (layerId: string, degrees: number) => void
   flipLayerHorizontal: (layerId: string) => void
   flipLayerVertical: (layerId: string) => void
-  mergeLayerDown: (layerId: string) => void
-  flattenLayers: () => void
+  mergeLayerDown: (layerId: string) => Promise<void>
+  flattenLayers: () => Promise<void>
 
   // Image import
   importImage: (file: File) => Promise<void>
@@ -1640,7 +1640,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
         img.src = layer.imageData
       },
 
-      mergeLayerDown: (layerId) => {
+      mergeLayerDown: async (layerId) => {
         const { currentProject, pushHistory, selectedLayerId, showToast } = get()
         if (!currentProject) return
 
@@ -1661,65 +1661,82 @@ export const useImageEditorStore = create<ImageEditorState>()(
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // Draw bottom layer first
-        if (bottomLayer.imageData) {
-          const bottomImg = new Image()
-          bottomImg.src = bottomLayer.imageData
+        // Helper to load image and wait for it
+        const loadImage = (src: string): Promise<HTMLImageElement> => {
+          return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => resolve(img)
+            img.onerror = reject
+            img.src = src
+          })
+        }
+
+        // Helper to draw a layer with proper position, rotation, and scale
+        const drawLayer = (ctx: CanvasRenderingContext2D, layer: Layer, img: HTMLImageElement) => {
           ctx.save()
-          ctx.globalAlpha = bottomLayer.opacity / 100
-          ctx.globalCompositeOperation = bottomLayer.blendMode as GlobalCompositeOperation
-          ctx.translate(bottomLayer.x + bottomLayer.width / 2, bottomLayer.y + bottomLayer.height / 2)
-          ctx.rotate((bottomLayer.rotation * Math.PI) / 180)
-          ctx.drawImage(bottomImg, -bottomLayer.width / 2, -bottomLayer.height / 2)
+          ctx.globalAlpha = layer.opacity / 100
+          if (layer.blendMode && layer.blendMode !== 'normal') {
+            ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+          }
+          // Translate to layer center
+          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
+          // Apply rotation
+          ctx.rotate((layer.rotation * Math.PI) / 180)
+          // Draw image scaled to layer dimensions, centered at origin
+          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height)
           ctx.restore()
         }
 
-        // Draw top layer on top
-        if (topLayer.imageData) {
-          const topImg = new Image()
-          topImg.src = topLayer.imageData
-          ctx.save()
-          ctx.globalAlpha = topLayer.opacity / 100
-          ctx.globalCompositeOperation = topLayer.blendMode as GlobalCompositeOperation
-          ctx.translate(topLayer.x + topLayer.width / 2, topLayer.y + topLayer.height / 2)
-          ctx.rotate((topLayer.rotation * Math.PI) / 180)
-          ctx.drawImage(topImg, -topLayer.width / 2, -topLayer.height / 2)
-          ctx.restore()
+        try {
+          // Draw bottom layer first (wait for image to load)
+          if (bottomLayer.imageData) {
+            const bottomImg = await loadImage(bottomLayer.imageData)
+            drawLayer(ctx, bottomLayer, bottomImg)
+          }
+
+          // Draw top layer on top (wait for image to load)
+          if (topLayer.imageData) {
+            const topImg = await loadImage(topLayer.imageData)
+            drawLayer(ctx, topLayer, topImg)
+          }
+
+          const mergedImageData = canvas.toDataURL('image/png')
+
+          // Update the bottom layer with merged content and remove top layer
+          const newLayers = currentProject.layers.filter((l) => l.id !== layerId)
+          const bottomLayerIndex = newLayers.findIndex((l) => l.id === bottomLayer.id)
+          newLayers[bottomLayerIndex] = {
+            ...bottomLayer,
+            imageData: mergedImageData,
+            opacity: 100,
+            blendMode: 'normal',
+            x: 0,
+            y: 0,
+            width: currentProject.width,
+            height: currentProject.height,
+            rotation: 0,
+          }
+
+          set((state) => ({
+            currentProject: state.currentProject
+              ? {
+                  ...state.currentProject,
+                  layers: newLayers,
+                  updatedAt: Date.now(),
+                }
+              : null,
+            selectedLayerId: selectedLayerId === layerId ? bottomLayer.id : selectedLayerId,
+            isDirty: true,
+          }))
+
+          showToast('Layers merged', 'success')
+        } catch (error) {
+          console.error('Failed to merge layers:', error)
+          showToast('Failed to merge layers', 'error')
         }
-
-        const mergedImageData = canvas.toDataURL('image/png')
-
-        // Update the bottom layer with merged content and remove top layer
-        const newLayers = currentProject.layers.filter((l) => l.id !== layerId)
-        const bottomLayerIndex = newLayers.findIndex((l) => l.id === bottomLayer.id)
-        newLayers[bottomLayerIndex] = {
-          ...bottomLayer,
-          imageData: mergedImageData,
-          opacity: 100,
-          blendMode: 'normal',
-          x: 0,
-          y: 0,
-          width: currentProject.width,
-          height: currentProject.height,
-          rotation: 0,
-        }
-
-        set((state) => ({
-          currentProject: state.currentProject
-            ? {
-                ...state.currentProject,
-                layers: newLayers,
-                updatedAt: Date.now(),
-              }
-            : null,
-          selectedLayerId: selectedLayerId === layerId ? bottomLayer.id : selectedLayerId,
-          isDirty: true,
-        }))
-
-        showToast('Layers merged', 'success')
       },
 
-      flattenLayers: () => {
+      flattenLayers: async () => {
         const { currentProject, pushHistory, showToast } = get()
         if (!currentProject) return
         if (currentProject.layers.length <= 1) return // Nothing to flatten
@@ -1737,54 +1754,71 @@ export const useImageEditorStore = create<ImageEditorState>()(
         ctx.fillStyle = currentProject.backgroundColor
         ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-        // Draw all visible layers in order
-        currentProject.layers.forEach((layer) => {
-          if (!layer.visible || !layer.imageData) return
-
-          const img = new Image()
-          img.src = layer.imageData
-
-          ctx.save()
-          ctx.globalAlpha = layer.opacity / 100
-          ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
-          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
-          ctx.rotate((layer.rotation * Math.PI) / 180)
-          ctx.drawImage(img, -layer.width / 2, -layer.height / 2)
-          ctx.restore()
-        })
-
-        const flattenedImageData = canvas.toDataURL('image/png')
-
-        // Create a single flattened layer
-        const flattenedLayer: Layer = {
-          id: generateId(),
-          name: 'Flattened',
-          type: 'image',
-          visible: true,
-          locked: false,
-          opacity: 100,
-          blendMode: 'normal',
-          x: 0,
-          y: 0,
-          width: currentProject.width,
-          height: currentProject.height,
-          rotation: 0,
-          imageData: flattenedImageData,
+        // Helper to load image and wait for it
+        const loadImage = (src: string): Promise<HTMLImageElement> => {
+          return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => resolve(img)
+            img.onerror = reject
+            img.src = src
+          })
         }
 
-        set((state) => ({
-          currentProject: state.currentProject
-            ? {
-                ...state.currentProject,
-                layers: [flattenedLayer],
-                updatedAt: Date.now(),
-              }
-            : null,
-          selectedLayerId: flattenedLayer.id,
-          isDirty: true,
-        }))
+        try {
+          // Draw all visible layers in order (with proper async loading)
+          for (const layer of currentProject.layers) {
+            if (!layer.visible || !layer.imageData) continue
 
-        showToast('All layers flattened', 'success')
+            const img = await loadImage(layer.imageData)
+
+            ctx.save()
+            ctx.globalAlpha = layer.opacity / 100
+            if (layer.blendMode && layer.blendMode !== 'normal') {
+              ctx.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation
+            }
+            ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2)
+            ctx.rotate((layer.rotation * Math.PI) / 180)
+            // Draw image scaled to layer dimensions
+            ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height)
+            ctx.restore()
+          }
+
+          const flattenedImageData = canvas.toDataURL('image/png')
+
+          // Create a single flattened layer
+          const flattenedLayer: Layer = {
+            id: generateId(),
+            name: 'Flattened',
+            type: 'image',
+            visible: true,
+            locked: false,
+            opacity: 100,
+            blendMode: 'normal',
+            x: 0,
+            y: 0,
+            width: currentProject.width,
+            height: currentProject.height,
+            rotation: 0,
+            imageData: flattenedImageData,
+          }
+
+          set((state) => ({
+            currentProject: state.currentProject
+              ? {
+                  ...state.currentProject,
+                  layers: [flattenedLayer],
+                  updatedAt: Date.now(),
+                }
+              : null,
+            selectedLayerId: flattenedLayer.id,
+            isDirty: true,
+          }))
+
+          showToast('All layers flattened', 'success')
+        } catch (error) {
+          console.error('Failed to flatten layers:', error)
+          showToast('Failed to flatten layers', 'error')
+        }
       },
 
       // Image import
