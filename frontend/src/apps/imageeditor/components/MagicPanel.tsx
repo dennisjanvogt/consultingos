@@ -77,6 +77,7 @@ export function MagicPanel() {
     isAutoEnhancing,
     isRemovingBackground,
     isGeneratingImage,
+    isEditingImage,
     isEditingLayerWithContext,
     isExtendingImage,
     isApplyingFilter,
@@ -88,6 +89,7 @@ export function MagicPanel() {
     addBackgroundGradient,
     addBackgroundPattern,
     generateAIImage,
+    editImageWithAI,
     editLayerWithContext,
     extendImageToFit,
     applyAIFilter,
@@ -119,6 +121,7 @@ export function MagicPanel() {
     color2: '#666666',
   })
   const [aiPrompt, setAiPrompt] = useState('')
+  const [aiEditPrompt, setAiEditPrompt] = useState('')
   const [contextInstruction, setContextInstruction] = useState('')
 
   const selectedLayer = currentProject?.layers.find((l) => l.id === selectedLayerId)
@@ -157,6 +160,13 @@ export function MagicPanel() {
     if (aiPrompt.trim()) {
       generateAIImage(aiPrompt)
       setAiPrompt('')
+    }
+  }
+
+  const handleEditImage = () => {
+    if (aiEditPrompt.trim() && selectedLayerId) {
+      editImageWithAI(selectedLayerId, aiEditPrompt)
+      setAiEditPrompt('')
     }
   }
 
@@ -207,6 +217,60 @@ export function MagicPanel() {
         >
           {isGeneratingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Image className="h-3.5 w-3.5" />}
           {isGerman ? 'Generieren' : 'Generate'}
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-800" />
+
+      {/* AI Image Edit - Edit existing layer with AI */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Wand2 className="h-4 w-4 text-amber-400" />
+          {isGerman ? 'KI Bildbearbeitung' : 'AI Image Edit'}
+        </div>
+        {selectedLayer ? (
+          <div className="flex items-center gap-2 p-1.5 bg-gray-800/30 rounded text-xs">
+            <Layers className="h-3.5 w-3.5 text-gray-400" />
+            <span className="text-white truncate flex-1">{selectedLayer.name}</span>
+            <span className="text-[10px] text-gray-500">{selectedLayer.width}x{selectedLayer.height}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-amber-500/80">{isGerman ? 'Wähle eine Ebene mit Bild' : 'Select a layer with image'}</p>
+        )}
+        <textarea
+          value={aiEditPrompt}
+          onChange={(e) => setAiEditPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleEditImage()
+            }
+          }}
+          placeholder={isGerman ? 'z.B. "Ändere den Himmel zu Sonnenuntergang" oder "Entferne die Person links"' : 'e.g. "Change sky to sunset" or "Remove person on the left"'}
+          className="w-full h-14 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+        />
+        <button
+          onClick={handleEditImage}
+          disabled={!aiEditPrompt.trim() || !hasImageData || isEditingImage}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            aiEditPrompt.trim() && hasImageData && !isEditingImage
+              ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white'
+              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {isEditingImage ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {isGerman ? 'Bearbeite...' : 'Editing...'}
+            </>
+          ) : (
+            <>
+              <Wand2 className="h-3.5 w-3.5" />
+              {isGerman ? 'Bild bearbeiten' : 'Edit Image'}
+            </>
+          )}
         </button>
       </div>
 
