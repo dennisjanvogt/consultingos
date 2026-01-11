@@ -62,13 +62,19 @@ export function Canvas({ onTextClick }: CanvasProps) {
     layerHeight: number
   } | null>(null)
 
-  // Crop preview state - stores original bounds when cropping in freeTransform mode
+  // Crop preview state - stores original bounds AND current crop box when cropping in freeTransform mode
   const [cropPreview, setCropPreview] = useState<{
     layerId: string
+    // Original layer bounds (before crop)
     originalX: number
     originalY: number
     originalWidth: number
     originalHeight: number
+    // Current crop box (what will be visible after crop)
+    cropX: number
+    cropY: number
+    cropWidth: number
+    cropHeight: number
   } | null>(null)
 
   // Inline text editing state
@@ -927,35 +933,44 @@ export function Canvas({ onTextClick }: CanvasProps) {
       const isCropPreview = cropPreview && cropPreview.layerId === layer.id && isResizingLayer
 
       if (isCropPreview) {
-        // Crop preview mode: show original image clipped to current bounds
-        // Draw at original scale, offset to show the correct portion
-        const offsetX = layer.x - cropPreview.originalX
-        const offsetY = layer.y - cropPreview.originalY
+        // Crop preview mode: show original image with crop box overlay
+        // The layer stays at its original size, but we show which part will be kept
 
-        // First draw the parts that will be cropped with low opacity
+        // Calculate the relative position of the crop box within the original layer
+        const cropOffsetX = cropPreview.cropX - cropPreview.originalX
+        const cropOffsetY = cropPreview.cropY - cropPreview.originalY
+
+        // First draw the full original image with low opacity (parts to be cropped)
         ctx.save()
-        ctx.globalAlpha = (layer.opacity / 100) * 0.2
+        ctx.globalAlpha = (layer.opacity / 100) * 0.25
         ctx.filter = layerFilterStr
-        // Draw full image at original size, offset by the difference
         ctx.drawImage(
           layerCanvas,
           0, 0, layerCanvas.width, layerCanvas.height,
-          -offsetX, -offsetY, cropPreview.originalWidth, cropPreview.originalHeight
+          0, 0, cropPreview.originalWidth, cropPreview.originalHeight
         )
         ctx.restore()
 
         // Then draw the kept portion at full opacity with clip
         ctx.save()
         ctx.beginPath()
-        ctx.rect(0, 0, layer.width, layer.height)
+        ctx.rect(cropOffsetX, cropOffsetY, cropPreview.cropWidth, cropPreview.cropHeight)
         ctx.clip()
         ctx.globalAlpha = layer.opacity / 100
         ctx.filter = layerFilterStr
         ctx.drawImage(
           layerCanvas,
           0, 0, layerCanvas.width, layerCanvas.height,
-          -offsetX, -offsetY, cropPreview.originalWidth, cropPreview.originalHeight
+          0, 0, cropPreview.originalWidth, cropPreview.originalHeight
         )
+        ctx.restore()
+
+        // Draw crop border
+        ctx.save()
+        ctx.strokeStyle = '#8b5cf6'
+        ctx.lineWidth = 2
+        ctx.setLineDash([5, 5])
+        ctx.strokeRect(cropOffsetX, cropOffsetY, cropPreview.cropWidth, cropPreview.cropHeight)
         ctx.restore()
       } else if (needsPixel && activeFilters) {
         // Need pixel manipulation - use temp canvas
@@ -1162,7 +1177,20 @@ export function Canvas({ onTextClick }: CanvasProps) {
 
       // Minimum size constraints
       if (newWidth >= 20 && newHeight >= 20) {
-        setLayerTransform(selectedLayerId, Math.round(newX), Math.round(newY), Math.round(newWidth), Math.round(newHeight))
+        if (isFreeTransform && cropPreview) {
+          // In freeTransform mode, only update the crop box, NOT the layer size
+          // The layer stays at its original size, we just track the crop area
+          setCropPreview({
+            ...cropPreview,
+            cropX: Math.round(newX),
+            cropY: Math.round(newY),
+            cropWidth: Math.round(newWidth),
+            cropHeight: Math.round(newHeight),
+          })
+        } else {
+          // Normal resize - actually change the layer size
+          setLayerTransform(selectedLayerId, Math.round(newX), Math.round(newY), Math.round(newWidth), Math.round(newHeight))
+        }
       }
     }
 
@@ -1170,12 +1198,18 @@ export function Canvas({ onTextClick }: CanvasProps) {
       if (isResizingLayer && selectedLayerId) {
         // In freeTransform mode, apply crop after resize
         if (activeTool === 'freeTransform' && cropPreview && cropPreview.layerId === selectedLayerId) {
-          // Apply the crop to the layer image data with original bounds for true cropping
+          // Apply the crop to the layer image data
+          // The cropLayerToBounds function needs the original bounds and new crop bounds
           cropLayerToBounds(selectedLayerId, {
             x: cropPreview.originalX,
             y: cropPreview.originalY,
             width: cropPreview.originalWidth,
             height: cropPreview.originalHeight,
+          }, {
+            x: cropPreview.cropX,
+            y: cropPreview.cropY,
+            width: cropPreview.cropWidth,
+            height: cropPreview.cropHeight,
           })
           setCropPreview(null)
         } else {
@@ -2469,15 +2503,23 @@ export function Canvas({ onTextClick }: CanvasProps) {
 
           const scale = zoom / 100
           const handleSize = 10
+
+          // In freeTransform mode with active crop preview, use crop bounds for handles
+          const isCropping = activeTool === 'freeTransform' && cropPreview && cropPreview.layerId === layer.id
+          const boundsX = isCropping ? cropPreview.cropX : layer.x
+          const boundsY = isCropping ? cropPreview.cropY : layer.y
+          const boundsWidth = isCropping ? cropPreview.cropWidth : layer.width
+          const boundsHeight = isCropping ? cropPreview.cropHeight : layer.height
+
           const handles = [
-            { id: 'nw', x: layer.x * scale - handleSize / 2, y: layer.y * scale - handleSize / 2, cursor: 'nw-resize' },
-            { id: 'n', x: (layer.x + layer.width / 2) * scale - handleSize / 2, y: layer.y * scale - handleSize / 2, cursor: 'n-resize' },
-            { id: 'ne', x: (layer.x + layer.width) * scale - handleSize / 2, y: layer.y * scale - handleSize / 2, cursor: 'ne-resize' },
-            { id: 'e', x: (layer.x + layer.width) * scale - handleSize / 2, y: (layer.y + layer.height / 2) * scale - handleSize / 2, cursor: 'e-resize' },
-            { id: 'se', x: (layer.x + layer.width) * scale - handleSize / 2, y: (layer.y + layer.height) * scale - handleSize / 2, cursor: 'se-resize' },
-            { id: 's', x: (layer.x + layer.width / 2) * scale - handleSize / 2, y: (layer.y + layer.height) * scale - handleSize / 2, cursor: 's-resize' },
-            { id: 'sw', x: layer.x * scale - handleSize / 2, y: (layer.y + layer.height) * scale - handleSize / 2, cursor: 'sw-resize' },
-            { id: 'w', x: layer.x * scale - handleSize / 2, y: (layer.y + layer.height / 2) * scale - handleSize / 2, cursor: 'w-resize' },
+            { id: 'nw', x: boundsX * scale - handleSize / 2, y: boundsY * scale - handleSize / 2, cursor: 'nw-resize' },
+            { id: 'n', x: (boundsX + boundsWidth / 2) * scale - handleSize / 2, y: boundsY * scale - handleSize / 2, cursor: 'n-resize' },
+            { id: 'ne', x: (boundsX + boundsWidth) * scale - handleSize / 2, y: boundsY * scale - handleSize / 2, cursor: 'ne-resize' },
+            { id: 'e', x: (boundsX + boundsWidth) * scale - handleSize / 2, y: (boundsY + boundsHeight / 2) * scale - handleSize / 2, cursor: 'e-resize' },
+            { id: 'se', x: (boundsX + boundsWidth) * scale - handleSize / 2, y: (boundsY + boundsHeight) * scale - handleSize / 2, cursor: 'se-resize' },
+            { id: 's', x: (boundsX + boundsWidth / 2) * scale - handleSize / 2, y: (boundsY + boundsHeight) * scale - handleSize / 2, cursor: 's-resize' },
+            { id: 'sw', x: boundsX * scale - handleSize / 2, y: (boundsY + boundsHeight) * scale - handleSize / 2, cursor: 'sw-resize' },
+            { id: 'w', x: boundsX * scale - handleSize / 2, y: (boundsY + boundsHeight / 2) * scale - handleSize / 2, cursor: 'w-resize' },
           ]
 
           return (
@@ -2486,10 +2528,10 @@ export function Canvas({ onTextClick }: CanvasProps) {
               <div
                 className="absolute border-2 border-violet-500 pointer-events-none"
                 style={{
-                  left: layer.x * scale,
-                  top: layer.y * scale,
-                  width: layer.width * scale,
-                  height: layer.height * scale,
+                  left: boundsX * scale,
+                  top: boundsY * scale,
+                  width: boundsWidth * scale,
+                  height: boundsHeight * scale,
                 }}
               />
               {/* Resize handles */}
@@ -2531,6 +2573,10 @@ export function Canvas({ onTextClick }: CanvasProps) {
                           originalY: layer.y,
                           originalWidth: layer.width,
                           originalHeight: layer.height,
+                          cropX: layer.x,
+                          cropY: layer.y,
+                          cropWidth: layer.width,
+                          cropHeight: layer.height,
                         })
                       }
                     }

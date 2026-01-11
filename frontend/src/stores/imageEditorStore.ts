@@ -388,7 +388,7 @@ interface ImageEditorState {
   trimLayer: (layerId: string, effectPadding?: number) => void
 
   // Layer cropping (crop to current bounds)
-  cropLayerToBounds: (layerId: string, originalBounds?: { x: number; y: number; width: number; height: number }) => void
+  cropLayerToBounds: (layerId: string, originalBounds?: { x: number; y: number; width: number; height: number }, cropBounds?: { x: number; y: number; width: number; height: number }) => void
 
   // Background removal
   isRemovingBackground: boolean
@@ -1939,7 +1939,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
       },
 
       // Crop layer to current bounds (apply resize as actual crop)
-      cropLayerToBounds: (layerId, originalBounds) => {
+      cropLayerToBounds: (layerId, originalBounds, cropBounds) => {
         const { currentProject, pushHistory, showToast } = get()
         if (!currentProject) return
 
@@ -1951,10 +1951,16 @@ export const useImageEditorStore = create<ImageEditorState>()(
 
         const img = new Image()
         img.onload = () => {
-          // Create canvas at the layer's current display size
+          // Use cropBounds if provided (new crop box), otherwise use layer bounds
+          const targetWidth = cropBounds?.width ?? layer.width
+          const targetHeight = cropBounds?.height ?? layer.height
+          const targetX = cropBounds?.x ?? layer.x
+          const targetY = cropBounds?.y ?? layer.y
+
+          // Create canvas at the target crop size
           const canvas = document.createElement('canvas')
-          canvas.width = layer.width
-          canvas.height = layer.height
+          canvas.width = targetWidth
+          canvas.height = targetHeight
           const ctx = canvas.getContext('2d')
           if (!ctx) return
 
@@ -1965,29 +1971,29 @@ export const useImageEditorStore = create<ImageEditorState>()(
             const scaleY = img.height / originalBounds.height
 
             // Offset from original position (how much was cropped from left/top)
-            const offsetX = layer.x - originalBounds.x
-            const offsetY = layer.y - originalBounds.y
+            const offsetX = targetX - originalBounds.x
+            const offsetY = targetY - originalBounds.y
 
             // Source rect in the original image
             const srcX = offsetX * scaleX
             const srcY = offsetY * scaleY
-            const srcW = layer.width * scaleX
-            const srcH = layer.height * scaleY
+            const srcW = targetWidth * scaleX
+            const srcH = targetHeight * scaleY
 
             // Draw the cropped portion
             ctx.drawImage(
               img,
               srcX, srcY, srcW, srcH,  // Source rect (from original image)
-              0, 0, layer.width, layer.height  // Destination (full canvas)
+              0, 0, targetWidth, targetHeight  // Destination (full canvas)
             )
           } else {
             // Scale mode: just scale the image to fit current bounds
-            ctx.drawImage(img, 0, 0, layer.width, layer.height)
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
           }
 
           pushHistory('Crop Layer')
 
-          // Update layer with new image data at current bounds
+          // Update layer with new image data AND new position/size
           set((state) => ({
             currentProject: state.currentProject
               ? {
@@ -1996,6 +2002,10 @@ export const useImageEditorStore = create<ImageEditorState>()(
                     l.id === layerId
                       ? {
                           ...l,
+                          x: targetX,
+                          y: targetY,
+                          width: targetWidth,
+                          height: targetHeight,
                           imageData: canvas.toDataURL('image/png'),
                         }
                       : l
