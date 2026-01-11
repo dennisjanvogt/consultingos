@@ -21,8 +21,28 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+# Pokemon Generation ranges
+GENERATIONS = {
+    1: (1, 151),
+    2: (152, 251),
+    3: (252, 386),
+    4: (387, 493),
+    5: (494, 649),
+    6: (650, 721),
+    7: (722, 809),
+    8: (810, 905),
+    9: (906, 1025),
+}
+
+def get_generation(pokemon_id):
+    """Get the generation for a Pokemon ID"""
+    for gen, (start, end) in GENERATIONS.items():
+        if start <= pokemon_id <= end:
+            return gen
+    return None
+
 # Get Pokemon names from PokeAPI
-def get_pokemon_names(limit=151):
+def get_pokemon_names(limit=1025):
     """Fetch Pokemon names from PokeAPI"""
     url = f"https://pokeapi.co/api/v2/pokemon?limit={limit}"
     response = requests.get(url)
@@ -93,10 +113,10 @@ def main():
 
     # Get Pokemon names
     print("\nFetching Pokemon names from PokeAPI...")
-    pokemon_names = get_pokemon_names(151)  # Gen 1
+    pokemon_names = get_pokemon_names(1025)  # All main Pokemon (Gen 1-9)
     print(f"Got {len(pokemon_names)} Pokemon names")
 
-    # Check existing assets
+    # Check existing assets (by name with # prefix)
     existing = set(LayerAsset.objects.filter(category__startswith='Pokemon').values_list('name', flat=True))
     print(f"Already have {len(existing)} Pokemon in library")
 
@@ -105,14 +125,18 @@ def main():
     failed = 0
 
     for pokemon_id, name in pokemon_names.items():
-        pokemon_name = f"Pokemon #{pokemon_id:03d} {name}"
+        # Name format: #001 Bulbasaur
+        pokemon_name = f"#{pokemon_id:03d} {name}"
 
-        if pokemon_name in existing or name in existing:
-            print(f"  Skipping {name} (already exists)")
+        if pokemon_name in existing:
             skipped += 1
             continue
 
-        print(f"  Downloading {name}...", end=" ", flush=True)
+        gen = get_generation(pokemon_id)
+        if gen is None:
+            continue
+
+        print(f"  [{pokemon_id:04d}] Downloading {name}...", end=" ", flush=True)
 
         # Download artwork
         image_data = download_pokemon_artwork(pokemon_id)
@@ -132,14 +156,13 @@ def main():
         image_b64 = image_to_base64(image_data)
         thumbnail_b64 = image_to_base64(thumbnail_data)
 
-        # Determine category based on Pokemon type/generation
-        # Gen 1 Pokemon (1-151)
-        category = "Pokemon/Gen 1"
+        # Determine category based on generation
+        category = f"Pokemon/Gen {gen}"
 
         # Create asset
         LayerAsset.objects.create(
             user=admin_user,
-            name=name,
+            name=pokemon_name,
             image_data=image_b64,
             thumbnail=thumbnail_b64,
             width=width,

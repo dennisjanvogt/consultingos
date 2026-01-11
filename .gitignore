@@ -49,3 +49,4 @@ htmlcov/
 
 # Other projects
 open-wearables/
+backend/db_backup.sqlite3
