@@ -206,6 +206,40 @@ export function MagicPanel() {
         />
       </div>
 
+      {/* One-Click Magic - right after model selection */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Sparkles className="h-4 w-4 text-violet-400" />
+          {isGerman ? 'Ein-Klick Magie' : 'One-Click Magic'}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => selectedLayerId && autoEnhance(selectedLayerId)}
+            disabled={!hasImageData || isAutoEnhancing}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              hasImageData && !isAutoEnhancing
+                ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white'
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {isAutoEnhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {isGerman ? 'Verbessern' : 'Enhance'}
+          </button>
+          <button
+            onClick={() => selectedLayerId && removeBackground(selectedLayerId)}
+            disabled={!hasImageData || isRemovingBackground}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              hasImageData && !isRemovingBackground
+                ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {isRemovingBackground ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+            {isGerman ? 'Freistellen' : 'Remove BG'}
+          </button>
+        </div>
+      </div>
+
       {/* Divider */}
       <div className="border-t border-gray-800" />
 
@@ -285,43 +319,6 @@ export function MagicPanel() {
             </>
           )}
         </button>
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-gray-800" />
-
-      {/* One-Click Magic */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Sparkles className="h-4 w-4 text-violet-400" />
-          {isGerman ? 'Ein-Klick Magie' : 'One-Click Magic'}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => selectedLayerId && autoEnhance(selectedLayerId)}
-            disabled={!hasImageData || isAutoEnhancing}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              hasImageData && !isAutoEnhancing
-                ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isAutoEnhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {isGerman ? 'Verbessern' : 'Enhance'}
-          </button>
-          <button
-            onClick={() => selectedLayerId && removeBackground(selectedLayerId)}
-            disabled={!hasImageData || isRemovingBackground}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              hasImageData && !isRemovingBackground
-                ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isRemovingBackground ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
-            {isGerman ? 'Freistellen' : 'Remove BG'}
-          </button>
-        </div>
       </div>
 
       {/* Extend Image - visible when needed */}
