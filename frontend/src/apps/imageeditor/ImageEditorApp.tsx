@@ -442,6 +442,61 @@ function InlineToolOptions() {
   )
 }
 
+// File validation constants
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+
+// Magic bytes for common image formats
+const IMAGE_MAGIC_BYTES: Record<string, number[][]> = {
+  'image/png': [[0x89, 0x50, 0x4E, 0x47]], // PNG signature
+  'image/jpeg': [[0xFF, 0xD8, 0xFF]], // JPEG signature
+  'image/gif': [[0x47, 0x49, 0x46, 0x38]], // GIF87a or GIF89a
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF (WebP uses RIFF container)
+  'image/bmp': [[0x42, 0x4D]], // BM
+  'image/svg+xml': [[0x3C, 0x3F, 0x78, 0x6D, 0x6C], [0x3C, 0x73, 0x76, 0x67]], // <?xml or <svg
+}
+
+async function validateImageFile(file: File): Promise<{ valid: boolean; error?: string }> {
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` }
+  }
+
+  // Check MIME type
+  if (!file.type.startsWith('image/')) {
+    return { valid: false, error: 'File must be an image' }
+  }
+
+  // Validate magic bytes (first 8 bytes)
+  try {
+    const header = new Uint8Array(await file.slice(0, 8).arrayBuffer())
+    const signatures = IMAGE_MAGIC_BYTES[file.type] || []
+
+    // SVG files are text-based, need different handling
+    if (file.type === 'image/svg+xml') {
+      const text = await file.slice(0, 100).text()
+      if (!text.includes('<?xml') && !text.includes('<svg')) {
+        return { valid: false, error: 'Invalid SVG file' }
+      }
+      return { valid: true }
+    }
+
+    // Check if file matches any known signature for its type
+    if (signatures.length > 0) {
+      const matchesSignature = signatures.some(sig =>
+        sig.every((byte, i) => header[i] === byte)
+      )
+      if (!matchesSignature) {
+        return { valid: false, error: 'File content does not match its extension' }
+      }
+    }
+  } catch {
+    // If we can't read the file header, allow it but log a warning
+    console.warn('Could not validate file magic bytes')
+  }
+
+  return { valid: true }
+}
+
 export function ImageEditorApp() {
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -535,6 +590,7 @@ export function ImageEditorApp() {
     loadProjectsFromBackend,
     isLoading,
     triggerFitToView,
+    showToast,
   } = useImageEditorStore()
 
   // Load projects from backend on mount
@@ -670,9 +726,14 @@ export function ImageEditorApp() {
   }, [activeTool, brushSettings, eraserSettings, retouchSettings, cloneSettings, showGrid, undo, redo, setActiveTool, setBrushSettings, setEraserSettings, setRetouchSettings, setCloneSettings, setShowGrid, setShowExportDialog, setShowShortcutHelp, selection, clearSelection, selectedLayerId, deleteLayer, currentProject])
 
   const handleImportImage = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) return
+    // Validate file before importing
+    const validation = await validateImageFile(file)
+    if (!validation.valid) {
+      showToast(validation.error || 'Invalid file', 'error')
+      return
+    }
     await importImage(file)
-  }, [importImage])
+  }, [importImage, showToast])
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {

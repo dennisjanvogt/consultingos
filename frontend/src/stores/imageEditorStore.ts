@@ -97,6 +97,72 @@ interface OpenRouterResponse {
   }>
 }
 
+// Allowed domains for fetching external images (SSRF protection)
+const ALLOWED_IMAGE_DOMAINS = [
+  'oaidalleapiprodscus.blob.core.windows.net', // OpenAI DALL-E
+  'replicate.delivery', // Replicate
+  'pbxt.replicate.delivery', // Replicate
+  'cdn.openai.com', // OpenAI CDN
+  'images.openai.com', // OpenAI images
+  'storage.googleapis.com', // Google Cloud Storage
+  'generativelanguage.googleapis.com', // Google Gemini
+  'lh3.googleusercontent.com', // Google user content
+  'fal.media', // Fal.ai
+  'v3.fal.media', // Fal.ai
+]
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    // Only allow HTTPS
+    if (parsed.protocol !== 'https:') return false
+    // Check against whitelist
+    return ALLOWED_IMAGE_DOMAINS.some(domain =>
+      parsed.hostname === domain || parsed.hostname.endsWith('.' + domain)
+    )
+  } catch {
+    return false
+  }
+}
+
+async function fetchExternalImage(url: string, timeoutMs = 30000): Promise<string> {
+  if (!isAllowedImageUrl(url)) {
+    console.warn('Blocked fetch to non-whitelisted domain:', url)
+    throw new Error('Image URL is not from an allowed domain')
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`)
+    }
+
+    const contentType = response.headers.get('content-type')
+    if (!contentType?.startsWith('image/')) {
+      throw new Error('URL did not return an image')
+    }
+
+    const blob = await response.blob()
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Image download timed out')
+    }
+    throw error
+  }
+}
+
 async function callOpenRouterProxy(request: OpenRouterRequest): Promise<OpenRouterResponse> {
   const response = await fetch('/api/ai/openrouter/chat', {
     method: 'POST',
@@ -113,6 +179,16 @@ async function callOpenRouterProxy(request: OpenRouterRequest): Promise<OpenRout
   }
 
   return response.json()
+}
+
+// Safe JSON parse helper - returns fallback on error
+function safeJsonParse<T>(json: string, fallback: T): T {
+  try {
+    return JSON.parse(json) as T
+  } catch (e) {
+    console.warn('Failed to parse JSON:', e)
+    return fallback
+  }
 }
 
 // Generate thumbnail from project layers
@@ -2617,7 +2693,7 @@ export const useImageEditorStore = create<ImageEditorState>()(
           if (!imageData && message?.tool_calls) {
             for (const toolCall of message.tool_calls) {
               if (toolCall.function?.name === 'generate_image') {
-                const args = JSON.parse(toolCall.function.arguments || '{}')
+                const args = safeJsonParse<Record<string, string>>(toolCall.function.arguments || '{}', {})
                 if (args.url) imageData = args.url
                 if (args.image) imageData = args.image
               }
@@ -2629,16 +2705,10 @@ export const useImageEditorStore = create<ImageEditorState>()(
             throw new Error('No image generated in response. Check console for details.')
           }
 
-          // If it's a URL (not base64), fetch and convert to base64
+          // If it's a URL (not base64), fetch and convert to base64 (with validation)
           if (imageData.startsWith('http')) {
             showToast('Downloading generated image...', 'info')
-            const imgResponse = await fetch(imageData)
-            const blob = await imgResponse.blob()
-            imageData = await new Promise<string>((resolve) => {
-              const reader = new FileReader()
-              reader.onloadend = () => resolve(reader.result as string)
-              reader.readAsDataURL(blob)
-            })
+            imageData = await fetchExternalImage(imageData)
           }
 
           pushHistory('AI Generate Image')
@@ -2802,16 +2872,10 @@ export const useImageEditorStore = create<ImageEditorState>()(
             throw new Error('Kein bearbeitetes Bild in der Antwort. Prüfe die Konsole für Details.')
           }
 
-          // If it's a URL (not base64), fetch and convert to base64
+          // If it's a URL (not base64), fetch and convert to base64 (with validation)
           if (imageData.startsWith('http')) {
             showToast('Bearbeitetes Bild wird heruntergeladen...', 'info')
-            const imgResponse = await fetch(imageData)
-            const blob = await imgResponse.blob()
-            imageData = await new Promise<string>((resolve) => {
-              const reader = new FileReader()
-              reader.onloadend = () => resolve(reader.result as string)
-              reader.readAsDataURL(blob)
-            })
+            imageData = await fetchExternalImage(imageData)
           }
 
           pushHistory('AI Edit Image')
@@ -3554,15 +3618,9 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`,
               throw new Error('Kein Bild in der Antwort')
             }
 
-            // Fetch if URL
+            // Fetch if URL (with validation)
             if (newImageData.startsWith('http')) {
-              const imgResponse = await fetch(newImageData)
-              const blob = await imgResponse.blob()
-              newImageData = await new Promise<string>((resolve) => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve(reader.result as string)
-                reader.readAsDataURL(blob)
-              })
+              newImageData = await fetchExternalImage(newImageData)
             }
 
             pushHistory('AI Extend Image')
@@ -4071,7 +4129,7 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`,
         // Restore from the current history entry (which is the pre-action state)
         const currentEntry = history[historyIndex]
         if (currentEntry) {
-          const layers = JSON.parse(currentEntry.snapshot)
+          const layers = safeJsonParse<Layer[]>(currentEntry.snapshot, currentProject.layers)
           set({
             currentProject: { ...currentProject, layers },
             historyIndex: historyIndex - 1,
@@ -4089,7 +4147,7 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`,
         const snapshot = newRedoStack.pop()
         if (!snapshot) return
 
-        const layers = JSON.parse(snapshot)
+        const layers = safeJsonParse<Layer[]>(snapshot, currentProject.layers)
 
         set({
           currentProject: { ...currentProject, layers },
@@ -4127,7 +4185,8 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`,
         viewMode: state.viewMode,
         // Store only the current project ID, not the full project data
         currentProjectId: state.currentProject?.id || null,
-        projects: state.projects.map(p => ({ id: p.id, name: p.name, updatedAt: p.updatedAt, thumbnailUrl: p.thumbnailUrl })),
+        // Note: thumbnailUrl intentionally excluded - too large for localStorage, loaded from server instead
+        projects: state.projects.map(p => ({ id: p.id, name: p.name, updatedAt: p.updatedAt })),
         selectedLayerId: state.selectedLayerId,
         activeTool: state.activeTool,
         disabledTools: state.disabledTools,
