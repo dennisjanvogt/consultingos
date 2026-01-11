@@ -293,7 +293,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         <div
           className="h-8 flex items-center justify-between px-3 glass-header cursor-move select-none shrink-0"
           onPointerDown={(e) => { if (!isResizing) dragControls.start(e) }}
-          onDoubleClick={() => maximizeWindow(window.id)}
+          onDoubleClick={() => toggleFullscreen(window.id)}
         >
           <TitleBarContent
             window={window}
@@ -317,10 +317,13 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
   // Determine window style based on state
   const getWindowStyle = () => {
     if (window.isFullscreen) {
+      // Reset transform position AND use fixed CSS positioning
       return {
         position: 'fixed' as const,
         left: 0,
         top: 0,
+        x: 0, // Reset transform to prevent offset
+        y: 0,
         width: '100vw',
         height: '100vh',
         zIndex: 9999, // Above everything including menubar and dock
@@ -328,8 +331,8 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
     }
     if (window.isMaximized) {
       return {
-        left: 0,
-        top: 0,
+        x: 0, // Use transform instead of left/top for consistency
+        y: 0,
         width: '100%',
         height: '100%',
         zIndex: window.zIndex,
@@ -347,10 +350,10 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
 
   return (
     <motion.div
-      layout
-      layoutId={`window-${window.id}`}
+      layout={!window.isFullscreen} // Disable layout animation in fullscreen to prevent conflicts
+      layoutId={window.isFullscreen ? undefined : `window-${window.id}`}
       data-window-id={window.id}
-      className={`${window.isFullscreen ? 'fixed' : 'absolute'} glass overflow-hidden window-shadow flex flex-col outline-none ${
+      className={`${window.isFullscreen ? 'fixed inset-0' : 'absolute'} glass overflow-hidden window-shadow flex flex-col outline-none ${
         window.isMaximized || window.isFullscreen ? 'rounded-none' : 'rounded-xl'
       } ${isActive ? 'ring-1 ring-white/20' : ''}`}
       style={getWindowStyle()}
@@ -385,7 +388,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
         onPointerDown={(e) => {
           if (!isResizing && !window.isMaximized && !window.isFullscreen) dragControls.start(e)
         }}
-        onDoubleClick={() => maximizeWindow(window.id)}
+        onDoubleClick={() => toggleFullscreen(window.id)}
       >
         <TitleBarContent
           window={window}
@@ -938,7 +941,7 @@ function TitleBarContent({ window, onClose, onTile, onMaximize }: TitleBarProps)
           }}
           onPointerDown={(e) => e.stopPropagation()}
           className="w-6 h-5 rounded-md bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 hover:from-lavender-400 hover:to-lavender-500 border border-gray-300/50 dark:border-gray-500/50 hover:border-lavender-400/50 transition-all duration-150 flex items-center justify-center group shadow-sm"
-          title={t('window.maximize', 'Maximieren')}
+          title={t('window.fullscreen', 'Vollbild')}
         >
           <Square className="w-2.5 h-2.5 text-gray-500 dark:text-gray-300 group-hover:text-white transition-colors" />
         </button>
