@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { RotateCcw, Eye, EyeOff, Layers, Globe } from 'lucide-react'
 import { useImageEditorStore } from '@/stores/imageEditorStore'
 import { useEffect } from 'react'
+import { DEFAULT_FILTERS } from '../types'
 
 export function FilterPanel() {
   const { t } = useTranslation()
@@ -84,7 +85,13 @@ export function FilterPanel() {
       {/* Brightness */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.brightness')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ brightness: DEFAULT_FILTERS.brightness })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.brightness')}
+          </span>
           <span>{filters.brightness}</span>
         </div>
         <input
@@ -101,7 +108,13 @@ export function FilterPanel() {
       {/* Contrast */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.contrast')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ contrast: DEFAULT_FILTERS.contrast })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.contrast')}
+          </span>
           <span>{filters.contrast}</span>
         </div>
         <input
@@ -118,7 +131,13 @@ export function FilterPanel() {
       {/* Saturation */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.saturation')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ saturation: DEFAULT_FILTERS.saturation })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.saturation')}
+          </span>
           <span>{filters.saturation}</span>
         </div>
         <input
@@ -135,7 +154,13 @@ export function FilterPanel() {
       {/* Hue */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.hue')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ hue: DEFAULT_FILTERS.hue })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.hue')}
+          </span>
           <span>{filters.hue}°</span>
         </div>
         <input
@@ -152,7 +177,13 @@ export function FilterPanel() {
       {/* Blur */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.blur')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ blur: DEFAULT_FILTERS.blur })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.blur')}
+          </span>
           <span>{filters.blur}px</span>
         </div>
         <input
@@ -169,7 +200,13 @@ export function FilterPanel() {
       {/* Sharpen */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.sharpen')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ sharpen: DEFAULT_FILTERS.sharpen })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.sharpen')}
+          </span>
           <span>{filters.sharpen}%</span>
         </div>
         <input
@@ -186,7 +223,13 @@ export function FilterPanel() {
       {/* Noise */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.noise')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ noise: DEFAULT_FILTERS.noise })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.noise')}
+          </span>
           <span>{filters.noise}%</span>
         </div>
         <input
@@ -203,7 +246,13 @@ export function FilterPanel() {
       {/* Pixelate */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.pixelate')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ pixelate: DEFAULT_FILTERS.pixelate })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.pixelate')}
+          </span>
           <span>{filters.pixelate}px</span>
         </div>
         <input
@@ -220,7 +269,13 @@ export function FilterPanel() {
       {/* Posterize */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.posterize')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ posterize: DEFAULT_FILTERS.posterize })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.posterize')}
+          </span>
           <span>{filters.posterize || 'Off'}</span>
         </div>
         <input
@@ -237,7 +292,13 @@ export function FilterPanel() {
       {/* Vignette */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.vignette')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ vignette: DEFAULT_FILTERS.vignette })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.vignette')}
+          </span>
           <span>{filters.vignette}%</span>
         </div>
         <input
@@ -254,7 +315,13 @@ export function FilterPanel() {
       {/* Tint */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-400">{t('imageeditor.tint')}</span>
+          <span
+            className="text-gray-400 cursor-pointer hover:text-gray-300"
+            onDoubleClick={() => setFilters({ tintColor: DEFAULT_FILTERS.tintColor, tintAmount: DEFAULT_FILTERS.tintAmount })}
+            title={t('imageeditor.doubleClickReset')}
+          >
+            {t('imageeditor.tint')}
+          </span>
           <span>{filters.tintAmount}%</span>
         </div>
         <div className="flex gap-2 items-center">

@@ -299,7 +299,7 @@ export function Window({ window, isThumbnail = false, isStageCenter = false, isS
             window={window}
             onClose={() => closeWindow(window.id)}
             onTile={() => tileWindow(window.id)}
-            onMaximize={() => maximizeWindow(window.id)}
+            onMaximize={() => toggleFullscreen(window.id)}
           />
         </div>
         <div className={`flex-1 overflow-auto bg-white/50 dark:bg-black/30 ${isDragging || isResizing ? 'select-none' : ''}`}>

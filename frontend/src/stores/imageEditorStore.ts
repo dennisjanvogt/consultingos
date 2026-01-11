@@ -428,10 +428,11 @@ interface ImageEditorState {
   // Layer Assets (Library)
   layerAssets: LayerAsset[]
   fetchLayerAssets: () => Promise<void>
-  saveLayerToLibrary: (layerId: string, name: string) => Promise<void>
+  saveLayerToLibrary: (layerId: string, name: string, category?: string) => Promise<void>
   insertLayerFromLibrary: (assetId: number) => void
   deleteLayerAsset: (assetId: number) => Promise<void>
   renameLayerAsset: (assetId: number, name: string) => Promise<void>
+  updateLayerAssetCategory: (assetId: number, category: string) => Promise<void>
 
   // History
   pushHistory: (name: string) => void
@@ -3965,7 +3966,7 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
         }
       },
 
-      saveLayerToLibrary: async (layerId, name) => {
+      saveLayerToLibrary: async (layerId, name, category = '') => {
         const { currentProject, showToast, fetchLayerAssets } = get()
         if (!currentProject) return
 
@@ -4004,7 +4005,7 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
             thumbnail,
             width: layer.width,
             height: layer.height,
-            category: '',
+            category: category,
           }
 
           await api.post('/documents/layer-assets/', assetData)
@@ -4077,6 +4078,17 @@ Antworte NUR mit dem englischen Prompt (max 150 Wörter).`
         } catch (error) {
           console.error('Failed to rename layer asset:', error)
           showToast('Fehler beim Umbenennen', 'error')
+        }
+      },
+
+      updateLayerAssetCategory: async (assetId, category) => {
+        const { showToast, fetchLayerAssets } = get()
+        try {
+          await api.patch(`/documents/layer-assets/${assetId}`, { category })
+          await fetchLayerAssets()
+        } catch (error) {
+          console.error('Failed to update layer asset category:', error)
+          showToast('Fehler beim Aktualisieren der Kategorie', 'error')
         }
       },
 
